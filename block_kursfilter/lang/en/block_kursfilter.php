@@ -35,3 +35,6 @@ $string['settings_niveaustufen_help']   = 'One per line. Freely extensible.';
 
 $string['settings_resultlimit']         = 'Max. results';
 $string['settings_resultlimit_help']    = 'Maximum number of courses per search (default: 100).';
+
+// Error messages (F-01)
+$string['ratelimitexceeded'] = 'Too many requests. Please wait {$a->seconds} seconds.';

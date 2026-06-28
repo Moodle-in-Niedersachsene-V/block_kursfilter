@@ -39,3 +39,6 @@ $string['settings_niveaustufen_help']   = 'Eine Stufe pro Zeile. Beliebig erweit
 
 $string['settings_resultlimit']         = 'Max. Ergebnisse';
 $string['settings_resultlimit_help']    = 'Maximale Anzahl Kurse pro Suchanfrage (Standard: 100).';
+
+// Fehlermeldungen (F-01)
+$string['ratelimitexceeded'] = 'Zu viele Suchanfragen. Bitte {$a->seconds} Sekunden warten.';

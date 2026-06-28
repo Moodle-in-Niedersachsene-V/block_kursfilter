@@ -6,6 +6,19 @@ require_once($CFG->libdir . '/externallib.php');
 class block_kursfilter_external extends external_api {
 
     // ---------------------------------------------------------------
+    // Konstanten
+    // ---------------------------------------------------------------
+
+    /** Absolutes serverseitiges Maximum für Suchergebnisse (F-02). */
+    const MAX_RESULT_LIMIT = 200;
+
+    /** Rate-Limit: maximale Anfragen pro Zeitfenster je Nutzer (F-01). */
+    const RATE_LIMIT_REQUESTS = 30;
+
+    /** Rate-Limit: Zeitfenster in Sekunden (F-01). */
+    const RATE_LIMIT_WINDOW = 60;
+
+    // ---------------------------------------------------------------
     // search_courses
     // ---------------------------------------------------------------
     public static function search_courses_parameters(): external_function_parameters {
@@ -31,7 +44,7 @@ class block_kursfilter_external extends external_api {
         int    $contextid   = 1,
         int    $limit       = 100
     ): array {
-        global $DB;
+        global $DB, $USER;
 
         $params = self::validate_parameters(self::search_courses_parameters(), [
             'kursbereich'  => $kursbereich,
@@ -46,6 +59,21 @@ class block_kursfilter_external extends external_api {
 
         $context = context::instance_by_id($params['contextid']);
         self::validate_context($context);
+
+        // ── F-01: Rate-Limiting ────────────────────────────────────
+        self::check_rate_limit((int)$USER->id);
+
+        // ── F-02: Serverseitiges Ergebnislimit erzwingen ──────────
+        // Admin-Konfiguration hat Vorrang; clientseitiger Wert wird
+        // nach unten auf das konfigurierte Maximum begrenzt.
+        $configLimit = (int)get_config('block_kursfilter', 'resultlimit');
+        if ($configLimit < 1 || $configLimit > self::MAX_RESULT_LIMIT) {
+            $configLimit = 100; // Fallback auf sicheren Standardwert.
+        }
+        $effectiveLimit = min((int)$params['limit'], $configLimit, self::MAX_RESULT_LIMIT);
+        if ($effectiveLimit < 1) {
+            $effectiveLimit = $configLimit;
+        }
 
         // Basis-Bedingungen.
         $conditions = ['c.visible = 1', 'c.id != :siteid'];
@@ -73,7 +101,6 @@ class block_kursfilter_external extends external_api {
         }
 
         // Tag-Filter: Schulform, Fach, Niveaustufe, freier Tag.
-        // Tags werden im Format "schulform:Gymnasium", "fach:Mathematik" usw. erwartet.
         $tagFilters = [];
         foreach (['schulform', 'fach', 'niveaustufe', 'tag'] as $key) {
             if (!empty($params[$key])) {
@@ -98,13 +125,14 @@ class block_kursfilter_external extends external_api {
                    WHERE $where
                 ORDER BY c.fullname ASC";
 
-        $records = $DB->get_records_sql($sql, $args, 0, $params['limit']);
+        // Effektives Limit aus F-02-Fix verwenden.
+        $records = $DB->get_records_sql($sql, $args, 0, $effectiveLimit);
 
         $courses = [];
         foreach ($records as $course) {
             // Kategorie-Name.
-            $cat         = core_course_category::get($course->category, IGNORE_MISSING);
-            $catname     = $cat ? $cat->get_nested_name(false) : '';
+            $cat     = core_course_category::get($course->category, IGNORE_MISSING);
+            $catname = $cat ? $cat->get_nested_name(false) : '';
 
             // Zusammenfassung kürzen.
             $summary = html_to_text(format_text($course->summary, FORMAT_HTML, ['filter' => false]), 0, false);
@@ -163,6 +191,54 @@ class block_kursfilter_external extends external_api {
     }
 
     // ---------------------------------------------------------------
+    // F-01: Rate-Limiting via Moodle MUC (Cache API)
+    // ---------------------------------------------------------------
+
+    /**
+     * Prüft ob der Nutzer das Rate-Limit überschritten hat.
+     * Wirft eine moodle_exception wenn das Limit erreicht ist.
+     *
+     * Verwendet Moodles MUC (session-Store), um Anfragen je Nutzer
+     * innerhalb eines Zeitfensters zu zählen – ohne externe Abhängigkeiten.
+     *
+     * @param int $userid ID des aktuellen Nutzers.
+     * @throws moodle_exception Bei Überschreitung des Rate-Limits.
+     */
+    private static function check_rate_limit(int $userid): void {
+        $cache    = cache::make('block_kursfilter', 'ratelimit');
+        $cachekey = 'rl_' . $userid;
+        $now      = time();
+
+        $data = $cache->get($cachekey);
+
+        if ($data === false) {
+            // Erster Aufruf in diesem Fenster.
+            $cache->set($cachekey, ['count' => 1, 'window_start' => $now]);
+            return;
+        }
+
+        // Neues Zeitfenster starten wenn das alte abgelaufen ist.
+        if (($now - $data['window_start']) >= self::RATE_LIMIT_WINDOW) {
+            $cache->set($cachekey, ['count' => 1, 'window_start' => $now]);
+            return;
+        }
+
+        // Zähler erhöhen und prüfen.
+        $data['count']++;
+        $cache->set($cachekey, $data);
+
+        if ($data['count'] > self::RATE_LIMIT_REQUESTS) {
+            $remaining = self::RATE_LIMIT_WINDOW - ($now - $data['window_start']);
+            throw new moodle_exception(
+                'ratelimitexceeded',
+                'block_kursfilter',
+                '',
+                (object)['seconds' => $remaining]
+            );
+        }
+    }
+
+    // ---------------------------------------------------------------
     // Hilfsmethoden
     // ---------------------------------------------------------------
 
@@ -170,8 +246,8 @@ class block_kursfilter_external extends external_api {
      * Alle Unterkategorie-IDs rekursiv sammeln.
      */
     private static function get_category_ids_recursive(int $catid): array {
-        $ids      = [$catid];
-        $cat      = core_course_category::get($catid, IGNORE_MISSING);
+        $ids = [$catid];
+        $cat = core_course_category::get($catid, IGNORE_MISSING);
         if ($cat) {
             foreach ($cat->get_children() as $child) {
                 $ids = array_merge($ids, self::get_category_ids_recursive($child->id));
