@@ -9,9 +9,9 @@ $string['label_kursbereich']  = 'Course area';
 $string['label_schulform']    = 'School type';
 $string['label_fach']         = 'Subject';
 $string['label_niveaustufe']  = 'Level';
-$string['label_kursname']     = 'Course name';
+$string['label_kursname']     = 'Search term';
 
-$string['placeholder_kursname'] = 'Search course name …';
+$string['placeholder_kursname'] = 'Search course name or description …';
 $string['filter_all']           = '– All –';
 $string['hint_setfilter']       = 'Set a filter to search for courses.';
 

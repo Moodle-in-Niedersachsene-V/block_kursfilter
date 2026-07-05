@@ -10,10 +10,10 @@ $string['label_kursbereich']  = 'Kursbereich';
 $string['label_schulform']    = 'Schulform';
 $string['label_fach']         = 'Fach';
 $string['label_niveaustufe']  = 'Niveaustufe';
-$string['label_kursname']     = 'Kursname';
+$string['label_kursname']     = 'Suchbegriff';
 
 // Platzhalter.
-$string['placeholder_kursname'] = 'Kursname suchen …';
+$string['placeholder_kursname'] = 'Kursname oder Beschreibung suchen …';
 $string['filter_all']           = '– Alle –';
 $string['hint_setfilter']       = 'Filter setzen, um Kurse zu suchen.';
 

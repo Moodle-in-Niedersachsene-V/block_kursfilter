@@ -1,17 +1,40 @@
-// block_kursfilter/amd/src/filter.js
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * AMD module for block_kursfilter.
+ *
+ * Tags werden direkt als Rohwert gesendet (z. B. "Oberstufe"),
+ * kein Prefix-Format – Moodle speichert Tags ohne Präfix.
+ *
+ * @module     block_kursfilter/filter
+ * @copyright  2026 Moodle in Niedersachsen e. V.
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 define(['core/ajax'], function(Ajax) {
     'use strict';
 
-    // ---------------------------------------------------------------
     function BlockState(blockid, config) {
-        this.blockid   = blockid;
-        this.config    = config;
-        this.kursbereich  = '';
-        this.schulform    = '';  // aktiver Chip-Wert
-        this.fach         = '';
-        this.niveaustufe  = '';
-        this.kursname     = '';
-        this.debounce     = null;
+        this.blockid     = blockid;
+        this.config      = config;
+        this.kursbereich = '';
+        this.schulform   = '';
+        this.fach        = '';
+        this.niveaustufe = '';
+        this.kursname    = '';
+        this.debounce    = null;
     }
 
     BlockState.prototype.el = function(id) {
@@ -21,9 +44,6 @@ define(['core/ajax'], function(Ajax) {
         return document.getElementById('kf-block-' + this.blockid);
     };
 
-    // ---------------------------------------------------------------
-    // Init
-    // ---------------------------------------------------------------
     BlockState.prototype.init = function() {
         var self = this;
 
@@ -36,19 +56,17 @@ define(['core/ajax'], function(Ajax) {
             });
         }
 
-        // Chip-Gruppen: Schulform, Fach, Niveaustufe.
+        // Chip-Gruppen.
         ['schulform', 'fach', 'niveaustufe'].forEach(function(filter) {
             var wrap = document.getElementById('kf-' + filter + '-chips-' + self.blockid);
-            if (!wrap) return;
+            if (!wrap) { return; }
             wrap.querySelectorAll('.kf-chip').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     var val = this.dataset.value;
-                    // Toggle: gleicher Wert → deaktivieren.
                     if (self[filter] === val) {
                         self[filter] = '';
                         this.classList.remove('kf-chip-active');
                     } else {
-                        // Anderen Chip in dieser Gruppe deaktivieren.
                         wrap.querySelectorAll('.kf-chip').forEach(function(b) {
                             b.classList.remove('kf-chip-active');
                         });
@@ -69,7 +87,7 @@ define(['core/ajax'], function(Ajax) {
             });
         }
 
-        // Reset-Button.
+        // Reset.
         var resetBtn = self.block().querySelector('.kf-reset');
         if (resetBtn) {
             resetBtn.addEventListener('click', function() {
@@ -78,25 +96,22 @@ define(['core/ajax'], function(Ajax) {
                 self.fach        = '';
                 self.niveaustufe = '';
                 self.kursname    = '';
-
-                // UI zurücksetzen.
-                if (selectEl) selectEl.value = '';
-                if (searchEl) searchEl.value = '';
+                if (selectEl) { selectEl.value = ''; }
+                if (searchEl) { searchEl.value = ''; }
                 self.block().querySelectorAll('.kf-chip').forEach(function(b) {
                     b.classList.remove('kf-chip-active');
                 });
-
                 var results = self.el('results');
-                if (results) results.innerHTML = '<div class="text-center text-muted small py-3">Filter setzen, um Kurse zu suchen.</div>';
+                if (results) {
+                    results.innerHTML = '<div class="text-center text-muted small py-3">'
+                        + 'Filter setzen, um Kurse zu suchen.</div>';
+                }
                 var count = self.el('count');
-                if (count) count.textContent = '–';
+                if (count) { count.textContent = '\u2013'; }
             });
         }
     };
 
-    // ---------------------------------------------------------------
-    // Suche
-    // ---------------------------------------------------------------
     BlockState.prototype.hasActiveFilter = function() {
         return this.kursbereich !== '' ||
                this.schulform   !== '' ||
@@ -118,47 +133,45 @@ define(['core/ajax'], function(Ajax) {
         var count   = self.el('count');
 
         if (!self.hasActiveFilter()) {
-            if (results) results.innerHTML = '<div class="text-center text-muted small py-3">Filter setzen, um Kurse zu suchen.</div>';
-            if (count) count.textContent = '–';
+            if (results) {
+                results.innerHTML = '<div class="text-center text-muted small py-3">'
+                    + 'Filter setzen, um Kurse zu suchen.</div>';
+            }
+            if (count) { count.textContent = '\u2013'; }
             return;
         }
 
-        if (spinner) spinner.classList.remove('d-none');
-        if (results) results.innerHTML = '';
+        if (spinner) { spinner.classList.remove('d-none'); }
+        if (results) { results.innerHTML = ''; }
 
-        // Tag-Werte mit Prefix zusammenbauen
-        // (Tags liegen als "schulform:Gymnasium" usw. in der DB).
-        var schulformTag   = self.schulform   ? 'schulform:'   + self.schulform   : '';
-        var fachTag        = self.fach        ? 'fach:'        + self.fach        : '';
-        var niveaustufeTag = self.niveaustufe ? 'niveaustufe:' + self.niveaustufe : '';
-
+        // Tags direkt als Rohwert senden – KEIN "schulform:"-Prefix.
+        // Moodle speichert Kurs-Tags ohne Präfix (z. B. "Oberstufe", nicht "niveaustufe:Oberstufe").
         Ajax.call([{
             methodname: 'block_kursfilter_search_courses',
             args: {
                 kursbereich:  parseInt(self.kursbereich, 10) || 0,
-                schulform:    schulformTag,
-                fach:         fachTag,
-                niveaustufe:  niveaustufeTag,
+                schulform:    self.schulform,
+                fach:         self.fach,
+                niveaustufe:  self.niveaustufe,
                 tag:          '',
                 kursname:     self.kursname,
                 contextid:    self.config.contextid || 1,
                 limit:        100,
             },
             done: function(result) {
-                if (spinner) spinner.classList.add('d-none');
+                if (spinner) { spinner.classList.add('d-none'); }
                 self.renderResults(result.courses || []);
             },
             fail: function(err) {
-                if (spinner) spinner.classList.add('d-none');
-                if (results) results.innerHTML = '<div class="alert alert-warning small p-2">'
-                    + escHtml(err.message || 'Suche fehlgeschlagen') + '</div>';
+                if (spinner) { spinner.classList.add('d-none'); }
+                if (results) {
+                    results.innerHTML = '<div class="alert alert-warning small p-2">'
+                        + escHtml(err.message || 'Suche fehlgeschlagen') + '</div>';
+                }
             },
         }]);
     };
 
-    // ---------------------------------------------------------------
-    // Ergebnisse rendern
-    // ---------------------------------------------------------------
     BlockState.prototype.renderResults = function(courses) {
         var self    = this;
         var results = self.el('results');
@@ -170,8 +183,10 @@ define(['core/ajax'], function(Ajax) {
         }
 
         if (!courses.length) {
-            if (results) results.innerHTML =
-                '<div class="text-center text-muted small py-3">Keine Kurse gefunden.</div>';
+            if (results) {
+                results.innerHTML = '<div class="text-center text-muted small py-3">'
+                    + 'Keine Kurse gefunden.</div>';
+            }
             return;
         }
 
@@ -190,14 +205,15 @@ define(['core/ajax'], function(Ajax) {
 
             html += '<div class="kf-item p-2 mb-2 rounded" data-courseid="' + c.id + '">'
                   + '<div class="d-flex justify-content-between align-items-start gap-1">'
-                  + '<a href="' + escHtml(c.courseurl) + '" class="fw-semibold small text-decoration-none kf-course-link" target="_blank" rel="noopener noreferrer">'
+                  + '<a href="' + escHtml(c.courseurl) + '" class="fw-semibold small text-decoration-none kf-course-link"'
+                  + ' target="_blank" rel="noopener noreferrer">'
                   + escHtml(c.fullname) + '</a>'
                   + exportBtn
                   + '</div>';
 
             if (c.categoryname) {
-                html += '<div class="text-muted" style="font-size:11px"><i class="fa fa-folder-o me-1"></i>'
-                      + escHtml(c.categoryname) + '</div>';
+                html += '<div class="text-muted" style="font-size:11px">'
+                      + '<i class="fa fa-folder-o me-1"></i>' + escHtml(c.categoryname) + '</div>';
             }
             if (c.summary) {
                 html += '<p class="small mb-1 mt-1 kf-summary">' + escHtml(c.summary) + '</p>';
@@ -208,12 +224,11 @@ define(['core/ajax'], function(Ajax) {
             html += '</div>';
         });
 
-        if (results) results.innerHTML = html;
+        if (results) { results.innerHTML = html; }
     };
 
-    // ---------------------------------------------------------------
     function escHtml(s) {
-        if (s == null) return '';
+        if (s == null) { return ''; }
         return String(s)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')

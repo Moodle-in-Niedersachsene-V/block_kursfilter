@@ -1,8 +1,34 @@
 <?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+/**
+ * External API (AJAX) for block_kursfilter.
+ *
+ * @package   block_kursfilter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 
+/**
+ * External functions for the kursfilter block.
+ */
 class block_kursfilter_external extends external_api {
 
     // ---------------------------------------------------------------
@@ -21,14 +47,15 @@ class block_kursfilter_external extends external_api {
     // ---------------------------------------------------------------
     // search_courses
     // ---------------------------------------------------------------
+
     public static function search_courses_parameters(): external_function_parameters {
         return new external_function_parameters([
             'kursbereich'  => new external_value(PARAM_INT,  'Kategorie-ID (0 = alle)', VALUE_DEFAULT, 0),
-            'schulform'    => new external_value(PARAM_TEXT, 'Schulform-Tag',           VALUE_DEFAULT, ''),
-            'fach'         => new external_value(PARAM_TEXT, 'Fach-Tag',                VALUE_DEFAULT, ''),
-            'niveaustufe'  => new external_value(PARAM_TEXT, 'Niveaustufe-Tag',         VALUE_DEFAULT, ''),
-            'tag'          => new external_value(PARAM_TEXT, 'Freier Tag',              VALUE_DEFAULT, ''),
-            'kursname'     => new external_value(PARAM_TEXT, 'Kursname (Freitext)',      VALUE_DEFAULT, ''),
+            'schulform'    => new external_value(PARAM_TEXT, 'Schulform-Tag (Rohwert)', VALUE_DEFAULT, ''),
+            'fach'         => new external_value(PARAM_TEXT, 'Fach-Tag (Rohwert)',      VALUE_DEFAULT, ''),
+            'niveaustufe'  => new external_value(PARAM_TEXT, 'Niveaustufe-Tag (Rohwert)', VALUE_DEFAULT, ''),
+            'tag'          => new external_value(PARAM_TEXT, 'Freier Tag (Rohwert)',    VALUE_DEFAULT, ''),
+            'kursname'     => new external_value(PARAM_TEXT, 'Kursname (Freitext)',     VALUE_DEFAULT, ''),
             'contextid'    => new external_value(PARAM_INT,  'Aktueller Kontext',       VALUE_DEFAULT, 1),
             'limit'        => new external_value(PARAM_INT,  'Max. Ergebnisse',         VALUE_DEFAULT, 100),
         ]);
@@ -60,15 +87,13 @@ class block_kursfilter_external extends external_api {
         $context = context::instance_by_id($params['contextid']);
         self::validate_context($context);
 
-        // ── F-01: Rate-Limiting ────────────────────────────────────
+        // F-01: Rate-Limiting.
         self::check_rate_limit((int)$USER->id);
 
-        // ── F-02: Serverseitiges Ergebnislimit erzwingen ──────────
-        // Admin-Konfiguration hat Vorrang; clientseitiger Wert wird
-        // nach unten auf das konfigurierte Maximum begrenzt.
+        // F-02: Serverseitiges Ergebnislimit erzwingen.
         $configLimit = (int)get_config('block_kursfilter', 'resultlimit');
         if ($configLimit < 1 || $configLimit > self::MAX_RESULT_LIMIT) {
-            $configLimit = 100; // Fallback auf sicheren Standardwert.
+            $configLimit = 100;
         }
         $effectiveLimit = min((int)$params['limit'], $configLimit, self::MAX_RESULT_LIMIT);
         if ($effectiveLimit < 1) {
@@ -89,18 +114,24 @@ class block_kursfilter_external extends external_api {
             }
         }
 
-        // Kursname-Freitext.
+        // Freitextsuche: Beschreibung (höchste Priorität), Kursname und Kurzname.
+        // Suchende kennen oft den Kursnamen nicht – die Beschreibung ist das primäre Suchfeld.
         if (!empty($params['kursname'])) {
             $conditions[] = '(' .
-                $DB->sql_like('c.fullname',  ':kn1', false) . ' OR ' .
-                $DB->sql_like('c.shortname', ':kn2', false) .
+                $DB->sql_like('c.summary',   ':kn1', false) . ' OR ' .
+                $DB->sql_like('c.fullname',  ':kn2', false) . ' OR ' .
+                $DB->sql_like('c.shortname', ':kn3', false) .
             ')';
             $term = '%' . $DB->sql_like_escape($params['kursname']) . '%';
             $args['kn1'] = $term;
             $args['kn2'] = $term;
+            $args['kn3'] = $term;
         }
 
-        // Tag-Filter: Schulform, Fach, Niveaustufe, freier Tag.
+        // Tag-Filter: Rohwerte direkt suchen – kein "prefix:"-Format.
+        // Moodle speichert Kurs-Tags als Rohwert (z. B. "Oberstufe", nicht "niveaustufe:Oberstufe").
+        // Die Admin-Einstellungen definieren die Chip-Labels; diese müssen exakt den Tag-Rohwerten
+        // im Kurs entsprechen.
         $tagFilters = [];
         foreach (['schulform', 'fach', 'niveaustufe', 'tag'] as $key) {
             if (!empty($params[$key])) {
@@ -114,9 +145,9 @@ class block_kursfilter_external extends external_api {
                 JOIN {tag} t{$idx} ON t{$idx}.id = ti{$idx}.tagid
                 WHERE ti{$idx}.itemtype = 'course'
                   AND ti{$idx}.itemid = c.id
-                  AND t{$idx}.rawname = :{$p}
+                  AND " . $DB->sql_like("t{$idx}.rawname", ":{$p}", false) . "
             )";
-            $args[$p] = $tagname;
+            $args[$p] = $DB->sql_like_escape($tagname);
         }
 
         $where = implode(' AND ', $conditions);
@@ -125,28 +156,21 @@ class block_kursfilter_external extends external_api {
                    WHERE $where
                 ORDER BY c.fullname ASC";
 
-        // Effektives Limit aus F-02-Fix verwenden.
         $records = $DB->get_records_sql($sql, $args, 0, $effectiveLimit);
 
         $courses = [];
         foreach ($records as $course) {
-            // Kategorie-Name.
             $cat     = core_course_category::get($course->category, IGNORE_MISSING);
             $catname = $cat ? $cat->get_nested_name(false) : '';
 
-            // Zusammenfassung kürzen.
             $summary = html_to_text(format_text($course->summary, FORMAT_HTML, ['filter' => false]), 0, false);
             if (core_text::strlen($summary) > 250) {
                 $summary = core_text::substr($summary, 0, 250) . '…';
             }
 
-            // Tags.
-            $tags = core_tag_tag::get_item_tags_array('core', 'course', $course->id);
-
-            // Kurs-URL.
+            $tags      = core_tag_tag::get_item_tags_array('core', 'course', $course->id);
             $courseurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
 
-            // Export-URL (nur wenn Capability vorhanden).
             $exporturl = null;
             $coursectx = context_course::instance($course->id);
             if (has_capability('moodle/backup:backupcourse', $coursectx)) {
@@ -191,18 +215,14 @@ class block_kursfilter_external extends external_api {
     }
 
     // ---------------------------------------------------------------
-    // F-01: Rate-Limiting via Moodle MUC (Cache API)
+    // F-01: Rate-Limiting via Moodle MUC
     // ---------------------------------------------------------------
 
     /**
      * Prüft ob der Nutzer das Rate-Limit überschritten hat.
-     * Wirft eine moodle_exception wenn das Limit erreicht ist.
      *
-     * Verwendet Moodles MUC (session-Store), um Anfragen je Nutzer
-     * innerhalb eines Zeitfensters zu zählen – ohne externe Abhängigkeiten.
-     *
-     * @param int $userid ID des aktuellen Nutzers.
-     * @throws moodle_exception Bei Überschreitung des Rate-Limits.
+     * @param int $userid
+     * @throws moodle_exception
      */
     private static function check_rate_limit(int $userid): void {
         $cache    = cache::make('block_kursfilter', 'ratelimit');
@@ -212,18 +232,15 @@ class block_kursfilter_external extends external_api {
         $data = $cache->get($cachekey);
 
         if ($data === false) {
-            // Erster Aufruf in diesem Fenster.
             $cache->set($cachekey, ['count' => 1, 'window_start' => $now]);
             return;
         }
 
-        // Neues Zeitfenster starten wenn das alte abgelaufen ist.
         if (($now - $data['window_start']) >= self::RATE_LIMIT_WINDOW) {
             $cache->set($cachekey, ['count' => 1, 'window_start' => $now]);
             return;
         }
 
-        // Zähler erhöhen und prüfen.
         $data['count']++;
         $cache->set($cachekey, $data);
 
