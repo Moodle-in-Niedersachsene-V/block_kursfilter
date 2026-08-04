@@ -1,8 +1,42 @@
 <?php
-defined('MOODLE_INTERNAL') || die();
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
+/**
+ * Renderer des Plugins block_kursfilter.
+ *
+ * @package    block_kursfilter
+ * @copyright  2026 Moodle in Niedersachsen e. V.
+ * @author     Moodle in Niedersachsen e. V.
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+/**
+ * Renderer des Kursfilters.
+ *
+ * @package    block_kursfilter
+ * @copyright  2026 Moodle in Niedersachsen e. V.
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 class block_kursfilter_renderer extends plugin_renderer_base {
-
+    /**
+     * Rendert den Blockinhalt aus dem Mustache-Template.
+     *
+     * @param int $blockid ID der Blockinstanz.
+     * @return string Gerendertes HTML.
+     */
     public function render_block(int $blockid): string {
         // Kursbereiche (Kategorien).
         $categories = core_course_category::make_categories_list('', 0, ' / ');
@@ -11,23 +45,26 @@ class block_kursfilter_renderer extends plugin_renderer_base {
             $kursbereiche[] = ['value' => (string)$id, 'label' => $name];
         }
 
-        // Konfigurierbare Schulformen aus Admin-Settings.
-        $schulformRaw = get_config('block_kursfilter', 'schulformen') ?? "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule";
-        $schulformen  = array_filter(array_map('trim', explode("\n", $schulformRaw)));
+        // Konfigurierbare Schulformen aus den Administrationseinstellungen.
+        $defaultschulformen = "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule";
+        $schulformraw = get_config('block_kursfilter', 'schulformen') ?? $defaultschulformen;
+        $schulformen = array_filter(array_map('trim', explode("\n", $schulformraw)));
 
-        // Konfigurierbare Fächer.
-        $faecherRaw = get_config('block_kursfilter', 'faecher') ?? "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte";
-        $faecher    = array_filter(array_map('trim', explode("\n", $faecherRaw)));
+        // Konfigurierbare Faecher.
+        $defaultfaecher = "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte";
+        $faecherraw = get_config('block_kursfilter', 'faecher') ?? $defaultfaecher;
+        $faecher = array_filter(array_map('trim', explode("\n", $faecherraw)));
 
         // Konfigurierbare Niveaustufen.
-        $niveauRaw  = get_config('block_kursfilter', 'niveaustufen') ?? "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe";
-        $niveaus    = array_filter(array_map('trim', explode("\n", $niveauRaw)));
+        $defaultniveaus = "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe";
+        $niveauraw = get_config('block_kursfilter', 'niveaustufen') ?? $defaultniveaus;
+        $niveaus = array_filter(array_map('trim', explode("\n", $niveauraw)));
 
         $templatedata = [
-            'blockid'      => $blockid,
+            'blockid' => $blockid,
             'kursbereiche' => $kursbereiche,
-            'schulformen'  => array_values($schulformen),
-            'faecher'      => array_values($faecher),
+            'schulformen' => array_values($schulformen),
+            'faecher' => array_values($faecher),
             'niveaustufen' => array_values($niveaus),
         ];
 

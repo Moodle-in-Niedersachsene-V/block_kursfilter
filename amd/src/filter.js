@@ -1,4 +1,4 @@
-// This file is part of Moodle - http://moodle.org/
+// This file is part of Moodle - http: //moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -7,11 +7,11 @@
 //
 // Moodle is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+// along with Moodle. If not, see <http: //www.gnu.org/licenses/>.
 
 /**
  * AMD module for block_kursfilter.
@@ -19,22 +19,28 @@
  * Tags werden direkt als Rohwert gesendet (z. B. "Oberstufe"),
  * kein Prefix-Format – Moodle speichert Tags ohne Präfix.
  *
- * @module     block_kursfilter/filter
- * @copyright  2026 Moodle in Niedersachsen e. V.
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @module block_kursfilter/filter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @license http: //www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 define(['core/ajax'], function(Ajax) {
     'use strict';
 
+    /**
+     * Zustandsobjekt einer Blockinstanz.
+     *
+     * @param {Number} blockid ID der Blockinstanz.
+     * @param {Object} config Konfiguration aus PHP.
+     */
     function BlockState(blockid, config) {
-        this.blockid     = blockid;
-        this.config      = config;
+        this.blockid = blockid;
+        this.config = config;
         this.kursbereich = '';
-        this.schulform   = '';
-        this.fach        = '';
+        this.schulform = '';
+        this.fach = '';
         this.niveaustufe = '';
-        this.kursname    = '';
-        this.debounce    = null;
+        this.kursname = '';
+        this.debounce = null;
     }
 
     BlockState.prototype.el = function(id) {
@@ -59,7 +65,9 @@ define(['core/ajax'], function(Ajax) {
         // Chip-Gruppen.
         ['schulform', 'fach', 'niveaustufe'].forEach(function(filter) {
             var wrap = document.getElementById('kf-' + filter + '-chips-' + self.blockid);
-            if (!wrap) { return; }
+            if (!wrap) {
+                return;
+            }
             wrap.querySelectorAll('.kf-chip').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     var val = this.dataset.value;
@@ -92,12 +100,16 @@ define(['core/ajax'], function(Ajax) {
         if (resetBtn) {
             resetBtn.addEventListener('click', function() {
                 self.kursbereich = '';
-                self.schulform   = '';
-                self.fach        = '';
+                self.schulform = '';
+                self.fach = '';
                 self.niveaustufe = '';
-                self.kursname    = '';
-                if (selectEl) { selectEl.value = ''; }
-                if (searchEl) { searchEl.value = ''; }
+                self.kursname = '';
+                if (selectEl) {
+                    selectEl.value = '';
+                }
+                if (searchEl) {
+                    searchEl.value = '';
+                }
                 self.block().querySelectorAll('.kf-chip').forEach(function(b) {
                     b.classList.remove('kf-chip-active');
                 });
@@ -107,63 +119,77 @@ define(['core/ajax'], function(Ajax) {
                         + 'Filter setzen, um Kurse zu suchen.</div>';
                 }
                 var count = self.el('count');
-                if (count) { count.textContent = '\u2013'; }
+                if (count) {
+                    count.textContent = '\u2013';
+                }
             });
         }
     };
 
     BlockState.prototype.hasActiveFilter = function() {
         return this.kursbereich !== '' ||
-               this.schulform   !== '' ||
-               this.fach        !== '' ||
+               this.schulform !== '' ||
+               this.fach !== '' ||
                this.niveaustufe !== '' ||
-               this.kursname    !== '';
+               this.kursname !== '';
     };
 
     BlockState.prototype.triggerSearch = function() {
         var self = this;
         clearTimeout(self.debounce);
-        self.debounce = setTimeout(function() { self.runSearch(); }, 350);
+        self.debounce = setTimeout(function() {
+            self.runSearch();
+        }, 350);
     };
 
     BlockState.prototype.runSearch = function() {
-        var self    = this;
+        var self = this;
         var spinner = self.el('spinner');
         var results = self.el('results');
-        var count   = self.el('count');
+        var count = self.el('count');
 
         if (!self.hasActiveFilter()) {
             if (results) {
                 results.innerHTML = '<div class="text-center text-muted small py-3">'
                     + 'Filter setzen, um Kurse zu suchen.</div>';
             }
-            if (count) { count.textContent = '\u2013'; }
+            if (count) {
+                count.textContent = '\u2013';
+            }
             return;
         }
 
-        if (spinner) { spinner.classList.remove('d-none'); }
-        if (results) { results.innerHTML = ''; }
+        if (spinner) {
+            spinner.classList.remove('d-none');
+        }
+        if (results) {
+            results.innerHTML = '';
+        }
 
         // Tags direkt als Rohwert senden – KEIN "schulform:"-Prefix.
         // Moodle speichert Kurs-Tags ohne Präfix (z. B. "Oberstufe", nicht "niveaustufe:Oberstufe").
         Ajax.call([{
             methodname: 'block_kursfilter_search_courses',
             args: {
-                kursbereich:  parseInt(self.kursbereich, 10) || 0,
-                schulform:    self.schulform,
-                fach:         self.fach,
-                niveaustufe:  self.niveaustufe,
-                tag:          '',
-                kursname:     self.kursname,
-                contextid:    self.config.contextid || 1,
-                limit:        100,
+                kursbereich: parseInt(self.kursbereich, 10) || 0,
+                schulform: self.schulform,
+                fach: self.fach,
+                niveaustufe: self.niveaustufe,
+                tag: '',
+                kursname: self.kursname,
+                contextid: self.config.contextid || 1,
+                limit: 100,
             },
             done: function(result) {
-                if (spinner) { spinner.classList.add('d-none'); }
+                if (spinner) {
+                    spinner.classList.add('d-none');
+                }
                 self.renderResults(result.courses || []);
             },
             fail: function(err) {
-                if (spinner) { spinner.classList.add('d-none'); }
+                if (spinner) {
+                    spinner.classList.add('d-none');
+                }
                 if (results) {
                     results.innerHTML = '<div class="alert alert-warning small p-2">'
                         + escHtml(err.message || 'Suche fehlgeschlagen') + '</div>';
@@ -173,9 +199,9 @@ define(['core/ajax'], function(Ajax) {
     };
 
     BlockState.prototype.renderResults = function(courses) {
-        var self    = this;
+        var self = this;
         var results = self.el('results');
-        var count   = self.el('count');
+        var count = self.el('count');
 
         if (count) {
             count.textContent = courses.length
@@ -224,11 +250,21 @@ define(['core/ajax'], function(Ajax) {
             html += '</div>';
         });
 
-        if (results) { results.innerHTML = html; }
+        if (results) {
+            results.innerHTML = html;
+        }
     };
 
+    /**
+     * Maskiert HTML-Sonderzeichen fuer die sichere Ausgabe.
+     *
+     * @param {String} s Zu maskierender Text.
+     * @return {String} Maskierter Text.
+     */
     function escHtml(s) {
-        if (s == null) { return ''; }
+        if (s === null || s === undefined) {
+            return '';
+        }
         return String(s)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -237,10 +273,17 @@ define(['core/ajax'], function(Ajax) {
     }
 
     return {
+        /**
+         * Initialisiert eine Blockinstanz.
+         *
+         * @param {Object} config Konfiguration aus PHP.
+         */
         init: function(config) {
             var state = new BlockState(config.blockid, config);
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() { state.init(); });
+                document.addEventListener('DOMContentLoaded', function() {
+                    state.init();
+                });
             } else {
                 state.init();
             }
