@@ -160,7 +160,9 @@ define(['core/ajax'], function(Ajax) {
     BlockState.prototype.triggerSearch = function() {
         var self = this;
         clearTimeout(self.debounce);
-        self.debounce = setTimeout(function() { self.runSearch(); }, 350);
+        self.debounce = setTimeout(function() {
+            self.runSearch();
+        }, 350);
     };
 
     /**
@@ -321,7 +323,9 @@ define(['core/ajax'], function(Ajax) {
         init: function(config) {
             var state = new BlockState(config.blockid, config);
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() { state.init(); });
+                document.addEventListener('DOMContentLoaded', function() {
+                state.init();
+            });
             } else {
                 state.init();
             }
