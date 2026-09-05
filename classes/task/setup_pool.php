@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Upgrade steps for block_kursfilter.
+ * Scheduled task: ensure pool users exist and are enroled in all courses.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -23,12 +23,32 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+namespace block_kursfilter\task;
+
 /**
- * Upgrade the block_kursfilter plugin.
+ * Nightly pool setup task.
  *
- * @param int $oldversion Previous plugin version.
- * @return bool
+ * Laeuft taeglich nach dem Backup-Task (03:00 Uhr).
+ * Legt fehlende Pool-Nutzer an und schreibt sie in alle
+ * sichtbaren Kurse als Trainer ohne Bearbeitungsrecht ein.
  */
-function xmldb_block_kursfilter_upgrade($oldversion): bool {
-    return true;
+class setup_pool extends \core\task\scheduled_task {
+    /**
+     * Return task name.
+     *
+     * @return string
+     */
+    public function get_name(): string {
+        return get_string('task_setup_pool', 'block_kursfilter');
+    }
+
+    /**
+     * Execute the task.
+     */
+    public function execute(): void {
+        $created  = \block_kursfilter\pool_manager::create_pool_users();
+        $enrolled = \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
+
+        mtrace("Kursfilter-Pool: {$created} Nutzer angelegt, {$enrolled} Einschreibungen hinzugefuegt.");
+    }
 }

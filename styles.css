@@ -1,49 +1,50 @@
-/* Stile des Plugins block_kursfilter. */
+/* block_kursfilter/styles.css */
 
 .kf-block {
     font-size: 0.875rem;
 }
 
-/* Chips und Filter-Buttons. */
-.kf-block .kf-chip {
-    cursor: pointer;
-    font-weight: 400;
-    border: 1px solid transparent;
-    margin-bottom: 3px;
-    transition: background-color 0.15s, color 0.15s;
-    background-color: #9ca3af;
-    color: #111827;
-    text-align: left;
-    white-space: normal;
-    box-shadow: none;
+/* ---- Chips ---- */
+.kf-chip {
+    cursor: pointer !important;
+    font-weight: 400 !important;
+    border: 1px solid transparent !important;
+    margin-bottom: 3px !important;
+    transition: background-color .15s, color .15s !important;
+    background-color: #9ca3af !important;
+    color: #111827 !important;
+    text-align: left !important;
+    white-space: normal !important;
+    box-shadow: none !important;
+}
+.kf-chip:hover {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+}
+.kf-chip-active {
+    background-color: #111827 !important;
+    color: #ffffff !important;
+}
+.kf-chip-schulform.kf-chip-active,
+.kf-chip-fach.kf-chip-active,
+.kf-chip-niveaustufe.kf-chip-active {
+    background-color: #111827 !important;
+    color: #ffffff !important;
 }
 
-.kf-block .kf-chip:hover {
-    background-color: #1f2937;
-    color: #fff;
-}
-
-.kf-block .kf-chip.kf-chip-active {
-    background-color: #111827;
-    color: #fff;
-}
-
-/* Ergebnisliste. */
-.kf-block .kf-results {
+/* ---- Ergebnisliste ---- */
+.kf-results {
     max-height: 380px;
     overflow-y: auto;
 }
 
-.kf-block .kf-item {
+.kf-item {
     border: 1px solid #dee2e6;
-    transition: border-color 0.1s;
+    transition: border-color .1s;
 }
+.kf-item:hover { border-color: #0d6efd; }
 
-.kf-block .kf-item:hover {
-    border-color: #0d6efd;
-}
-
-.kf-block .kf-summary {
+.kf-summary {
     color: #6c757d;
     display: -webkit-box;
     -webkit-line-clamp: 3;
@@ -51,7 +52,7 @@
     overflow: hidden;
 }
 
-.kf-block .kf-course-link {
+.kf-course-link {
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -59,13 +60,11 @@
     white-space: nowrap;
 }
 
-.kf-block .kf-export-btn {
+.kf-export-btn {
     flex-shrink: 0;
     padding: 0 6px;
     line-height: 1.4;
     font-size: 11px;
 }
 
-.kf-block .kf-spinner {
-    min-height: 32px;
-}
+.kf-spinner { min-height: 32px; }

@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,21 +12,20 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Administrationseinstellungen des Plugins block_kursfilter.
+ * Admin settings for block_kursfilter.
  *
- * @package    block_kursfilter
- * @copyright  2026 Moodle in Niedersachsen e. V.
- * @author     Moodle in Niedersachsen e. V.
- * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   block_kursfilter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @author    Moodle in Niedersachsen e. V.
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
-    // Schulformen.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/schulformen_heading',
         get_string('settings_schulformen_heading', 'block_kursfilter'),
@@ -39,7 +38,6 @@ if ($ADMIN->fulltree) {
         "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule"
     ));
 
-    // Fächer.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/faecher_heading',
         get_string('settings_faecher_heading', 'block_kursfilter'),
@@ -52,7 +50,6 @@ if ($ADMIN->fulltree) {
         "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte\nKunst\nMusik\nSport"
     ));
 
-    // Niveaustufen.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/niveaustufen_heading',
         get_string('settings_niveaustufen_heading', 'block_kursfilter'),
@@ -65,12 +62,25 @@ if ($ADMIN->fulltree) {
         "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe"
     ));
 
-    // Ergebnislimit.
     $settings->add(new admin_setting_configtext(
         'block_kursfilter/resultlimit',
         get_string('settings_resultlimit', 'block_kursfilter'),
         get_string('settings_resultlimit_help', 'block_kursfilter'),
         '100',
+        PARAM_INT
+    ));
+
+    // Backup-Einstellungen.
+    $settings->add(new admin_setting_heading(
+        'block_kursfilter/backup_heading',
+        get_string('settings_backup_heading', 'block_kursfilter'),
+        get_string('settings_backup_desc', 'block_kursfilter')
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/backup_adminid',
+        get_string('settings_backup_adminid', 'block_kursfilter'),
+        get_string('settings_backup_adminid_help', 'block_kursfilter'),
+        '',
         PARAM_INT
     ));
 }

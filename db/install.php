@@ -15,7 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Upgrade steps for block_kursfilter.
+ * Post-install hook for block_kursfilter.
+ *
+ * Legt die Pool-Nutzer bei der ersten Installation an
+ * und schreibt sie in alle vorhandenen Kurse ein.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -24,11 +27,12 @@
  */
 
 /**
- * Upgrade the block_kursfilter plugin.
- *
- * @param int $oldversion Previous plugin version.
- * @return bool
+ * Post-install tasks for block_kursfilter.
  */
-function xmldb_block_kursfilter_upgrade($oldversion): bool {
-    return true;
+function xmldb_block_kursfilter_install(): void {
+    // Pool-Nutzer anlegen.
+    \block_kursfilter\pool_manager::create_pool_users();
+
+    // In alle vorhandenen sichtbaren Kurse einschreiben.
+    \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
 }

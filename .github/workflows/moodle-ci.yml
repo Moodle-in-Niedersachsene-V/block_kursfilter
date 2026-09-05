@@ -2,11 +2,12 @@
 # GitHub Actions Workflow fuer Moodle-Plugin-Pruefung
 # Moodle in Niedersachsen e. V.
 #
-# Plugin: tiny_textgestaltung
+# Plugin: block_kursfilter
 # Ablage: .github/workflows/moodle-ci.yml
 #
-# Angepasst: kein templates/, kein tests/ vorhanden, daher ohne
-# mustache-, phpunit- und behat-Schritt. amd/ ist vorhanden, grunt bleibt.
+# Angepasst: templates/ vorhanden (Mustache-Lint aktiv),
+# kein tests/ vorhanden (phpunit und behat entfallen),
+# amd/ vorhanden (grunt bleibt).
 ##############################################################################
 
 name: Moodle Plugin CI
@@ -115,6 +116,10 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci savepoints
 
+      - name: Mustache-Templates pruefen
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci mustache
+
       - name: Grunt (JS/CSS-Lint, AMD-Build-Abgleich)
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci grunt --max-lint-warnings 0
@@ -124,5 +129,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: amd-build-${{ matrix.php }}
-          path: moodle/public/lib/editor/tiny/plugins/textgestaltung/amd/build/
+          path: moodle/public/blocks/kursfilter/amd/build/
           if-no-files-found: warn

@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,31 +12,30 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Bibliotheksfunktionen des Plugins block_kursfilter.
+ * Library functions for block_kursfilter.
  *
- * @package    block_kursfilter
- * @copyright  2026 Moodle in Niedersachsen e. V.
- * @author     Moodle in Niedersachsen e. V.
- * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   block_kursfilter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @author    Moodle in Niedersachsen e. V.
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 /**
- * Datei-Download-Handler des Kursfilters.
+ * Serve backup files from the kursfilter file area.
+ * Delegiert an backup.php – diese Funktion wird fuer den
+ * Moodle pluginfile()-Mechanismus nicht benoetigt, da der
+ * Download ueber backup.php direkt erfolgt.
  *
- * Das Plugin verwendet aktuell keine eigenen Dateibereiche.
- * Die Funktion ist ein Platzhalter fuer kuenftige Erweiterungen.
- *
- * @param stdClass $course Kursobjekt.
- * @param stdClass $cm Kursmodulobjekt.
- * @param context $context Kontext der Datei.
- * @param string $filearea Dateibereich.
- * @param array $args Restliche Pfadbestandteile.
- * @param bool $forcedownload Ob der Download erzwungen wird.
- * @param array $options Zusaetzliche Optionen fuer die Auslieferung.
- * @return void
+ * @param stdClass $course
+ * @param stdClass $cm
+ * @param context  $context
+ * @param string   $filearea
+ * @param array    $args
+ * @param bool     $forcedownload
+ * @param array    $options
  */
 function block_kursfilter_pluginfile(
     $course,
@@ -47,5 +46,6 @@ function block_kursfilter_pluginfile(
     $forcedownload,
     array $options = []
 ): void {
+    // Downloads laufen ueber blocks/kursfilter/backup.php.
     send_file_not_found();
 }

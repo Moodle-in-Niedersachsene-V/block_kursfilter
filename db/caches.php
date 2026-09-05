@@ -1,5 +1,5 @@
 <?php
-// This file is part of Moodle - https://moodle.org/
+// This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -12,28 +12,33 @@
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Cache-Definitionen des Plugins block_kursfilter.
+ * Cache definitions for block_kursfilter.
  *
- * @package    block_kursfilter
- * @copyright  2026 Moodle in Niedersachsen e. V.
- * @author     Moodle in Niedersachsen e. V.
- * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   block_kursfilter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @author    Moodle in Niedersachsen e. V.
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $definitions = [
-    // Zaehlt AJAX-Anfragen je Nutzer innerhalb eines Zeitfensters.
-    // Die Lebensdauer entspricht RATE_LIMIT_WINDOW in classes/external.php.
+    // Rate-Limiting fuer den AJAX-Endpoint (F-01).
     'ratelimit' => [
-        'mode' => cache_store::MODE_APPLICATION,
+        'mode'       => cache_store::MODE_APPLICATION,
         'simplekeys' => true,
         'simpledata' => true,
-        'ttl' => 60,
-        'invalidationevents' => [],
-        'staticacceleration' => false,
+        'ttl'        => 60,
+    ],
+    // Aktive Pool-Nutzer-Sessions (TTL entspricht der Sitzungsdauer).
+    // Verhindert, dass zwei Besucher denselben Pool-Nutzer gleichzeitig nutzen.
+    'poolsessions' => [
+        'mode'       => cache_store::MODE_APPLICATION,
+        'simplekeys' => true,
+        'simpledata' => true,
+        'ttl'        => 7200, // 2 Stunden.
     ],
 ];

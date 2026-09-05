@@ -1,55 +1,84 @@
 {{!
     @template block_kursfilter/block
-    Kurs-Filter-Block
+    Kurs-Filter-Block mit Chip-Auswahl und Freitextsuche.
+
+    Example context (json):
+    {
+        "blockid": 1,
+        "kursbereiche": [{"value": "", "label": "– Alle –"}, {"value": "2", "label": "Sprachen"}],
+        "schulformen": ["Gymnasium", "Grundschule"],
+        "faecher": ["Mathematik", "Deutsch"],
+        "niveaustufen": ["Oberstufe", "Klasse 10"]
+    }
 }}
 <div class="kf-block" data-blockid="{{blockid}}" id="kf-block-{{blockid}}">
 
-  {{! === Kursbereich (Select) === }}
+  {{! Kursbereich }}
   <div class="mb-2">
-    <small class="text-muted fw-semibold text-uppercase d-block mb-1">{{#str}} label_kursbereich, block_kursfilter {{/str}}</small>
-    <select class="form-select form-select-sm kf-select" id="kf-kursbereich-{{blockid}}" data-filter="kursbereich">
+    <small class="text-muted fw-semibold text-uppercase d-block mb-1">
+      {{#str}} label_kursbereich, block_kursfilter {{/str}}
+    </small>
+    <select class="form-select form-select-sm kf-select"
+            id="kf-kursbereich-{{blockid}}"
+            data-filter="kursbereich">
       {{#kursbereiche}}
       <option value="{{value}}">{{label}}</option>
       {{/kursbereiche}}
     </select>
   </div>
 
-  {{! === Schulform (Chips) === }}
+  {{! Schulform }}
   <div class="mb-2">
-    <small class="text-muted fw-semibold text-uppercase d-block mb-1">{{#str}} label_schulform, block_kursfilter {{/str}}</small>
+    <small class="text-muted fw-semibold text-uppercase d-block mb-1">
+      {{#str}} label_schulform, block_kursfilter {{/str}}
+    </small>
     <div id="kf-schulform-chips-{{blockid}}">
       {{#schulformen}}
-      <button class="badge kf-chip kf-chip-schulform" data-filter="schulform" data-value="{{.}}">{{.}}</button>
+      <button class="badge kf-chip kf-chip-schulform"
+              data-filter="schulform"
+              data-value="{{.}}">{{.}}</button>
       {{/schulformen}}
     </div>
   </div>
 
-  {{! === Fach (Chips) === }}
+  {{! Fach }}
   <div class="mb-2">
-    <small class="text-muted fw-semibold text-uppercase d-block mb-1">{{#str}} label_fach, block_kursfilter {{/str}}</small>
+    <small class="text-muted fw-semibold text-uppercase d-block mb-1">
+      {{#str}} label_fach, block_kursfilter {{/str}}
+    </small>
     <div id="kf-fach-chips-{{blockid}}">
       {{#faecher}}
-      <button class="badge kf-chip kf-chip-fach" data-filter="fach" data-value="{{.}}">{{.}}</button>
+      <button class="badge kf-chip kf-chip-fach"
+              data-filter="fach"
+              data-value="{{.}}">{{.}}</button>
       {{/faecher}}
     </div>
   </div>
 
-  {{! === Niveaustufe (Chips) === }}
+  {{! Niveaustufe }}
   <div class="mb-2">
-    <small class="text-muted fw-semibold text-uppercase d-block mb-1">{{#str}} label_niveaustufe, block_kursfilter {{/str}}</small>
+    <small class="text-muted fw-semibold text-uppercase d-block mb-1">
+      {{#str}} label_niveaustufe, block_kursfilter {{/str}}
+    </small>
     <div id="kf-niveaustufe-chips-{{blockid}}">
       {{#niveaustufen}}
-      <button class="badge kf-chip kf-chip-niveaustufe" data-filter="niveaustufe" data-value="{{.}}">{{.}}</button>
+      <button class="badge kf-chip kf-chip-niveaustufe"
+              data-filter="niveaustufe"
+              data-value="{{.}}">{{.}}</button>
       {{/niveaustufen}}
     </div>
   </div>
 
-  {{! === Kursname (Freitext) === }}
+  {{! Suchbegriff }}
   <div class="mb-3">
-    <small class="text-muted fw-semibold text-uppercase d-block mb-1">{{#str}} label_kursname, block_kursfilter {{/str}}</small>
+    <small class="text-muted fw-semibold text-uppercase d-block mb-1">
+      {{#str}} label_kursname, block_kursfilter {{/str}}
+    </small>
     <div class="input-group input-group-sm">
       <span class="input-group-text"><i class="fa fa-search"></i></span>
-      <input type="text" class="form-control" id="kf-search-{{blockid}}"
+      <input type="text"
+             class="form-control"
+             id="kf-search-{{blockid}}"
              placeholder="{{#str}} placeholder_kursname, block_kursfilter {{/str}}"
              autocomplete="off">
     </div>
@@ -57,7 +86,7 @@
 
   <hr class="my-2">
 
-  {{! === Ergebnis-Header === }}
+  {{! Ergebnis-Header }}
   <div class="d-flex justify-content-between align-items-center mb-1">
     <small class="text-muted" id="kf-count-{{blockid}}">–</small>
     <button class="btn btn-link btn-sm p-0 text-muted kf-reset" style="font-size:12px">
@@ -65,9 +94,11 @@
     </button>
   </div>
 
-  {{! === Ergebnisliste === }}
+  {{! Ergebnisliste }}
   <div class="kf-results" id="kf-results-{{blockid}}">
-    <div class="text-center text-muted small py-3">{{#str}} hint_setfilter, block_kursfilter {{/str}}</div>
+    <div class="text-center text-muted small py-3">
+      {{#str}} hint_setfilter, block_kursfilter {{/str}}
+    </div>
   </div>
 
   <div class="kf-spinner text-center py-2 d-none" id="kf-spinner-{{blockid}}">
