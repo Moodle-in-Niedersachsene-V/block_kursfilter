@@ -51,7 +51,7 @@ if (!confirm_sesskey()) {
 }
 
 $courseid = required_param('courseid', PARAM_INT);
-$stars    = required_param('stars',    PARAM_INT);
+$stars    = required_param('stars', PARAM_INT);
 
 // Validate stars range.
 if ($stars < 1 || $stars > 5) {

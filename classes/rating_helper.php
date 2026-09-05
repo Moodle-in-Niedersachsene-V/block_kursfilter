@@ -32,7 +32,6 @@ namespace block_kursfilter;
  * Handles anonymous course ratings via browser cookie.
  */
 class rating_helper {
-
     /** Cookie name stored in the browser. */
     const COOKIE_NAME = 'kf_rater_id';
 
@@ -64,7 +63,7 @@ class rating_helper {
             self::COOKIE_NAME,
             $hash,
             [
-                'expires'  => 0,          // Session cookie – survives until browser data cleared.
+                'expires'  => 0, // Session cookie – survives until browser data cleared.
                 'path'     => '/',
                 'secure'   => true,
                 'httponly' => true,

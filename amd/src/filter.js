@@ -357,9 +357,10 @@ define(['core/ajax'], function(Ajax) {
             if (data.success) {
                 renderStarsFixed(widget, stars);
             }
+            return data;
         })
         .catch(function() {
-            // Silent fail – do not disrupt the user experience.
+            // Silent fail – rating errors do not disrupt the user experience.
         });
     }
 

@@ -32,8 +32,11 @@ namespace block_kursfilter;
  * Manages the guest pool user accounts.
  */
 class pool_manager {
-    /** Number of pool users. */
-    const POOL_SIZE = 10;
+    /** Default number of pool users (used if no config value is set). */
+    const POOL_SIZE_DEFAULT = 10;
+
+    /** Maximum allowed pool size (hard cap). */
+    const POOL_SIZE_MAX = 50;
 
     /** Username prefix for pool users. */
     const USERNAME_PREFIX = 'kursfilter_guest';
@@ -45,13 +48,26 @@ class pool_manager {
     const CACHE_PREFIX = 'pool_active_';
 
     /**
-     * Return all pool usernames.
+     * Return the configured pool size (from admin settings, capped at POOL_SIZE_MAX).
+     *
+     * @return int
+     */
+    public static function get_pool_size(): int {
+        $configured = (int)get_config('block_kursfilter', 'poolsize');
+        if ($configured < 1) {
+            $configured = self::POOL_SIZE_DEFAULT;
+        }
+        return min($configured, self::POOL_SIZE_MAX);
+    }
+
+    /**
+     * Return all pool usernames based on the current configured pool size.
      *
      * @return string[]
      */
     public static function get_pool_usernames(): array {
         $names = [];
-        for ($i = 1; $i <= self::POOL_SIZE; $i++) {
+        for ($i = 1; $i <= self::get_pool_size(); $i++) {
             $names[] = self::USERNAME_PREFIX . str_pad((string)$i, 2, '0', STR_PAD_LEFT);
         }
         return $names;

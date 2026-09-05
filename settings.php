@@ -70,6 +70,20 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
+    // Pool-Nutzer.
+    $settings->add(new admin_setting_heading(
+        'block_kursfilter/pool_heading',
+        get_string('settings_pool_heading', 'block_kursfilter'),
+        get_string('settings_pool_desc', 'block_kursfilter')
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/poolsize',
+        get_string('settings_poolsize', 'block_kursfilter'),
+        get_string('settings_poolsize_help', 'block_kursfilter'),
+        '10',
+        PARAM_INT
+    ));
+
     // Backup-Einstellungen.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/backup_heading',
