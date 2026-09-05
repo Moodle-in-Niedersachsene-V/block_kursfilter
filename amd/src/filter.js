@@ -289,11 +289,28 @@ define(['core/ajax'], function(Ajax) {
             if (tagPills) {
                 html += '<div class="mt-1">' + tagPills + '</div>';
             }
+            // Star rating widget.
+            html += '<div class="kf-stars mt-2" data-courseid="' + c.id + '"'
+                  + ' data-alreadyrated="' + (c.alreadyrated ? '1' : '0') + '"'
+                  + ' data-userrating="' + (c.userrating || 0) + '"></div>';
             html += '</div>';
         });
 
         if (results) {
             results.innerHTML = html;
+            // Initialise star widgets for each result card.
+            var rateUrl = M.cfg.wwwroot + '/blocks/kursfilter/rate.php';
+            var sesskey = M.cfg.sesskey;
+            results.querySelectorAll('.kf-stars').forEach(function(widget) {
+                var courseid = parseInt(widget.dataset.courseid, 10);
+                var alreadyrated = widget.dataset.alreadyrated === '1';
+                var userrating = parseInt(widget.dataset.userrating, 10) || 0;
+                if (alreadyrated) {
+                    renderStarsFixed(widget, userrating);
+                } else {
+                    renderStarsInteractive(widget, 0, rateUrl, sesskey, courseid);
+                }
+            });
         }
     };
 
@@ -312,6 +329,104 @@ define(['core/ajax'], function(Ajax) {
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+    }
+
+    /**
+     * Send a star rating via POST to rate.php.
+     *
+     * @param {string} rateUrl  URL of rate.php.
+     * @param {string} sesskey  Moodle session key.
+     * @param {number} courseid Course ID.
+     * @param {number} stars    Rating 1-5.
+     * @param {HTMLElement} widget Star widget element.
+     */
+    function submitRating(rateUrl, sesskey, courseid, stars, widget) {
+        var body = 'courseid=' + encodeURIComponent(courseid)
+            + '&stars=' + encodeURIComponent(stars)
+            + '&sesskey=' + encodeURIComponent(sesskey);
+
+        fetch(rateUrl, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+            body: body,
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                renderStarsFixed(widget, stars);
+            }
+        })
+        .catch(function() {
+            // Silent fail – do not disrupt the user experience.
+        });
+    }
+
+    /**
+     * Render interactive star widget (not yet rated).
+     *
+     * @param {HTMLElement} widget   Container element.
+     * @param {number}      current  Pre-selected rating (0 = none).
+     * @param {string}      rateUrl  POST endpoint URL.
+     * @param {string}      sesskey  Moodle session key.
+     * @param {number}      courseid Course ID.
+     */
+    function renderStarsInteractive(widget, current, rateUrl, sesskey, courseid) {
+        widget.innerHTML = '';
+        var selected = current;
+        [1, 2, 3, 4, 5].forEach(function(val) {
+            var btn = document.createElement('button');
+            btn.className = 'kf-star' + (val <= selected ? ' kf-star-filled' : '');
+            btn.dataset.value = String(val);
+            btn.setAttribute('aria-label', val + ' Stern' + (val > 1 ? 'e' : ''));
+            btn.textContent = val <= selected ? '★' : '☆';
+            btn.addEventListener('mouseenter', function() {
+                highlightStars(widget, val);
+            });
+            btn.addEventListener('mouseleave', function() {
+                highlightStars(widget, selected);
+            });
+            btn.addEventListener('click', function() {
+                selected = val;
+                submitRating(rateUrl, sesskey, courseid, val, widget);
+            });
+            widget.appendChild(btn);
+        });
+    }
+
+    /**
+     * Render fixed star display (already rated – no interaction).
+     *
+     * @param {HTMLElement} widget Container element.
+     * @param {number}      stars  Rating 1-5.
+     */
+    function renderStarsFixed(widget, stars) {
+        widget.innerHTML = '';
+        for (var i = 1; i <= 5; i++) {
+            var span = document.createElement('span');
+            span.className = 'kf-star kf-star-fixed' + (i <= stars ? ' kf-star-filled' : '');
+            span.textContent = i <= stars ? '★' : '☆';
+            widget.appendChild(span);
+        }
+        var note = document.createElement('span');
+        note.className = 'kf-star-note';
+        note.textContent = ' Bewertet';
+        widget.appendChild(note);
+    }
+
+    /**
+     * Highlight stars up to a given value.
+     *
+     * @param {HTMLElement} widget Container element.
+     * @param {number}      val    Highlight up to this star.
+     */
+    function highlightStars(widget, val) {
+        widget.querySelectorAll('.kf-star').forEach(function(s, idx) {
+            var filled = (idx + 1) <= val;
+            s.classList.toggle('kf-star-filled', filled);
+            s.textContent = filled ? '★' : '☆';
+        });
     }
 
     return {

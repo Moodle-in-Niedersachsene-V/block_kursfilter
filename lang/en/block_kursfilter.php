@@ -43,7 +43,9 @@ $string['label_schulform']                = 'School type';
 $string['placeholder_kursname']           = 'Search course name or description …';
 $string['pluginname']                     = 'Course Filter';
 $string['pool_full']                      = 'All preview accounts are currently in use. Please try again in a few minutes.';
-$string['ratelimitexceeded']              = 'Too many requests. Please wait {$a->seconds} seconds.';
+$string['ratelimitexceeded']
+$string['rating_saved']              = 'Rating saved.';
+$string['rating_already_done']      = 'You have already rated this course.';              = 'Too many requests. Please wait {$a->seconds} seconds.';
 $string['settings_backup_adminid']        = 'User ID for course backups';
 $string['settings_backup_adminid_help']   = 'User ID of the administrator used for nightly backups. Leave empty to use the first site admin.';
 $string['settings_backup_desc']           = 'The scheduled task creates one .mbz backup per course nightly at 02:00. Guests can download these via the download button. Only one file per course is kept.';

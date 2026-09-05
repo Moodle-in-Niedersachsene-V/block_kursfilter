@@ -195,16 +195,28 @@ class block_kursfilter_external extends external_api {
                 ))->out(false);
             }
 
+            // Rating data.
+            $ratingdata = \block_kursfilter\rating_helper::get_course_rating($course->id);
+            $cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
+            $existingrating = \block_kursfilter\rating_helper::get_existing_rating(
+                $course->id,
+                $cookiehash
+            );
+
             $courses[] = [
-                'id'           => (int)$course->id,
-                'fullname'     => format_string($course->fullname),
-                'shortname'    => format_string($course->shortname),
-                'summary'      => $summary,
-                'categoryname' => $catname,
-                'tags'         => array_values($tags),
-                'courseurl'    => $courseurl,
-                'exporturl'    => $exporturl,
-                'hasexport'    => ($exporturl !== ''),
+                'id'            => (int)$course->id,
+                'fullname'      => format_string($course->fullname),
+                'shortname'     => format_string($course->shortname),
+                'summary'       => $summary,
+                'categoryname'  => $catname,
+                'tags'          => array_values($tags),
+                'courseurl'     => $courseurl,
+                'exporturl'     => $exporturl,
+                'hasexport'     => ($exporturl !== ''),
+                'ratingavg'     => $ratingdata['avg'],
+                'ratingcount'   => $ratingdata['count'],
+                'userrating'    => $existingrating ?? 0,
+                'alreadyrated'  => ($existingrating !== null),
             ];
         }
 
@@ -231,6 +243,10 @@ class block_kursfilter_external extends external_api {
                     'courseurl'    => new external_value(PARAM_URL),
                     'exporturl'    => new external_value(PARAM_URL),
                     'hasexport'    => new external_value(PARAM_BOOL),
+                    'ratingavg'    => new external_value(PARAM_FLOAT),
+                    'ratingcount'  => new external_value(PARAM_INT),
+                    'userrating'   => new external_value(PARAM_INT),
+                    'alreadyrated' => new external_value(PARAM_BOOL),
                 ])
             ),
             'total' => new external_value(PARAM_INT),

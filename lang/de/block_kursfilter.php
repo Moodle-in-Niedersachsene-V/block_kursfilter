@@ -43,7 +43,9 @@ $string['label_schulform']                = 'Schulform';
 $string['placeholder_kursname']           = 'Kursname oder Beschreibung suchen …';
 $string['pluginname']                     = 'Kursfilter';
 $string['pool_full']                      = 'Aktuell sind alle Kursbesucher-Zugänge belegt. Bitte versuchen Sie es in einigen Minuten erneut.';
-$string['ratelimitexceeded']              = 'Zu viele Suchanfragen. Bitte {$a->seconds} Sekunden warten.';
+$string['ratelimitexceeded']
+$string['rating_saved']              = 'Bewertung gespeichert.';
+$string['rating_already_done']      = 'Du hast diesen Kurs bereits bewertet.';              = 'Zu viele Suchanfragen. Bitte {$a->seconds} Sekunden warten.';
 $string['settings_backup_adminid']        = 'Nutzer-ID für Kurssicherungen';
 $string['settings_backup_adminid_help']   = 'Nutzer-ID eines Administrators, der für die nächtlichen Kurssicherungen verwendet wird. Leer lassen, um den ersten Site-Administrator zu verwenden.';
 $string['settings_backup_desc']           = 'Der Scheduled Task erzeugt täglich um 02:00 Uhr eine Kurssicherung (.mbz) pro Kurs. Gäste können diese Datei über den Download-Button herunterladen. Es wird immer nur eine Datei pro Kurs gespeichert.';

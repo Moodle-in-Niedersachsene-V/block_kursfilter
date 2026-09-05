@@ -73,3 +73,46 @@
 .kf-spinner {
     min-height: 32px;
 }
+
+/* ---- Sternebewertung ---- */
+.kf-stars {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.kf-block .kf-star {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+    cursor: pointer;
+    color: #d1d5db;
+    transition: color .1s;
+    box-shadow: none;
+    white-space: nowrap;
+}
+
+.kf-block .kf-star.kf-star-filled {
+    color: #f59e0b;
+}
+
+.kf-block .kf-star.kf-star-fixed {
+    cursor: default;
+}
+
+.kf-block .kf-star:hover,
+.kf-block .kf-star:focus {
+    background: none;
+    color: #f59e0b;
+    box-shadow: none;
+    outline: none;
+}
+
+.kf-star-note {
+    font-size: 0.75rem;
+    color: #6b7280;
+    margin-left: 4px;
+}
