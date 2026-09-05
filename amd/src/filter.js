@@ -33,14 +33,14 @@ define(['core/ajax'], function(Ajax) {
      * @param {Object} config   Configuration object from PHP.
      */
     function BlockState(blockid, config) {
-        this.blockid     = blockid;
-        this.config      = config;
+        this.blockid = blockid;
+        this.config = config;
         this.kursbereich = '';
-        this.schulform   = '';
-        this.fach        = '';
+        this.schulform = '';
+        this.fach = '';
         this.niveaustufe = '';
-        this.kursname    = '';
-        this.debounce    = null;
+        this.kursname = '';
+        this.debounce = null;
     }
 
     /**
@@ -80,7 +80,9 @@ define(['core/ajax'], function(Ajax) {
         // Chip-Gruppen.
         ['schulform', 'fach', 'niveaustufe'].forEach(function(filter) {
             var wrap = document.getElementById('kf-' + filter + '-chips-' + self.blockid);
-            if (!wrap) { return; }
+            if (!wrap) {
+                return;
+            }
             wrap.querySelectorAll('.kf-chip').forEach(function(btn) {
                 btn.addEventListener('click', function() {
                     var val = this.dataset.value;
@@ -113,12 +115,16 @@ define(['core/ajax'], function(Ajax) {
         if (resetBtn) {
             resetBtn.addEventListener('click', function() {
                 self.kursbereich = '';
-                self.schulform   = '';
-                self.fach        = '';
+                self.schulform = '';
+                self.fach = '';
                 self.niveaustufe = '';
-                self.kursname    = '';
-                if (selectEl) { selectEl.value = ''; }
-                if (searchEl) { searchEl.value = ''; }
+                self.kursname = '';
+                if (selectEl) {
+                    selectEl.value = '';
+                }
+                if (searchEl) {
+                    searchEl.value = '';
+                }
                 self.block().querySelectorAll('.kf-chip').forEach(function(b) {
                     b.classList.remove('kf-chip-active');
                 });
@@ -128,7 +134,9 @@ define(['core/ajax'], function(Ajax) {
                         + 'Filter setzen, um Kurse zu suchen.</div>';
                 }
                 var count = self.el('count');
-                if (count) { count.textContent = '\u2013'; }
+                if (count) {
+                    count.textContent = '\u2013';
+                }
             });
         }
     };
@@ -140,10 +148,10 @@ define(['core/ajax'], function(Ajax) {
      */
     BlockState.prototype.hasActiveFilter = function() {
         return this.kursbereich !== '' ||
-               this.schulform   !== '' ||
-               this.fach        !== '' ||
+               this.schulform !== '' ||
+               this.fach !== '' ||
                this.niveaustufe !== '' ||
-               this.kursname    !== '';
+               this.kursname !== '';
     };
 
     /**
@@ -159,22 +167,28 @@ define(['core/ajax'], function(Ajax) {
      * Execute AJAX search.
      */
     BlockState.prototype.runSearch = function() {
-        var self    = this;
+        var self = this;
         var spinner = self.el('spinner');
         var results = self.el('results');
-        var count   = self.el('count');
+        var count = self.el('count');
 
         if (!self.hasActiveFilter()) {
             if (results) {
                 results.innerHTML = '<div class="text-center text-muted small py-3">'
                     + 'Filter setzen, um Kurse zu suchen.</div>';
             }
-            if (count) { count.textContent = '\u2013'; }
+            if (count) {
+                count.textContent = '\u2013';
+            }
             return;
         }
 
-        if (spinner) { spinner.classList.remove('d-none'); }
-        if (results) { results.innerHTML = ''; }
+        if (spinner) {
+            spinner.classList.remove('d-none');
+        }
+        if (results) {
+            results.innerHTML = '';
+        }
 
         // Tags direkt als Rohwert senden – KEIN "schulform:"-Prefix.
         Ajax.call([{
@@ -190,11 +204,15 @@ define(['core/ajax'], function(Ajax) {
                 limit:        100,
             },
             done: function(result) {
-                if (spinner) { spinner.classList.add('d-none'); }
+                if (spinner) {
+                    spinner.classList.add('d-none');
+                }
                 self.renderResults(result.courses || []);
             },
             fail: function(err) {
-                if (spinner) { spinner.classList.add('d-none'); }
+                if (spinner) {
+                    spinner.classList.add('d-none');
+                }
                 if (results) {
                     results.innerHTML = '<div class="alert alert-warning small p-2">'
                         + escHtml(err.message || 'Suche fehlgeschlagen') + '</div>';
@@ -209,9 +227,9 @@ define(['core/ajax'], function(Ajax) {
      * @param {Array} courses
      */
     BlockState.prototype.renderResults = function(courses) {
-        var self    = this;
+        var self = this;
         var results = self.el('results');
-        var count   = self.el('count');
+        var count = self.el('count');
 
         if (count) {
             count.textContent = courses.length
@@ -243,8 +261,8 @@ define(['core/ajax'], function(Ajax) {
                 : '';
 
             // Vorschau-Button: Kurs als Trainer ohne Bearbeitungsrecht ansehen.
-            var previewUrl  = M.cfg.wwwroot + '/blocks/kursfilter/guest_login.php?courseid=' + c.id;
-            var previewBtn  = '<a href="' + escHtml(previewUrl) + '"'
+            var previewUrl = M.cfg.wwwroot + '/blocks/kursfilter/guest_login.php?courseid=' + c.id;
+            var previewBtn = '<a href="' + escHtml(previewUrl) + '"'
                   + ' class="btn btn-sm btn-outline-primary kf-preview-btn"'
                   + ' title="Kurs als Trainer ohne Bearbeitungsrecht ansehen">'
                   + '<i class="fa fa-eye me-1"></i>Kurs ansehen</a>';
@@ -272,7 +290,9 @@ define(['core/ajax'], function(Ajax) {
             html += '</div>';
         });
 
-        if (results) { results.innerHTML = html; }
+        if (results) {
+            results.innerHTML = html;
+        }
     };
 
     /**
@@ -282,7 +302,9 @@ define(['core/ajax'], function(Ajax) {
      * @returns {string}
      */
     function escHtml(s) {
-        if (s === null || s === undefined) { return ''; }
+        if (s === null || s === undefined) {
+            return '';
+        }
         return String(s)
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')

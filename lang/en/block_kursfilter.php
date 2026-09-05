@@ -25,60 +25,41 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-// Plugin metadata.
-$string['pluginname']                     = 'Course Filter';
+$string['back_to_search']                 = 'Back to search';
+$string['backup_not_available']           = 'No backup available for this course yet. Please try again later.';
 $string['block_kursfilter:addinstance']   = 'Add a Course Filter block';
 $string['block_kursfilter:myaddinstance'] = 'Add a Course Filter block to My page';
-
-// Backup.
-$string['backup_not_available']      = 'No backup available for this course yet. Please try again later.';
-$string['btn_export']                = 'Download';
-$string['btn_opencourse']            = 'Open course';
-$string['btn_reset']                 = 'Reset';
-
-// Filter labels.
-$string['filter_all']                = '– All –';
-$string['hint_setfilter']            = 'Set a filter to search for courses.';
-$string['label_fach']                = 'Subject';
-$string['label_kursbereich']         = 'Course area';
-$string['label_kursname']            = 'Search term';
-$string['label_niveaustufe']         = 'Level';
-$string['label_schulform']           = 'School type';
-
-// Placeholders.
-$string['placeholder_kursname']      = 'Search course name or description …';
-
-// Error messages.
-$string['ratelimitexceeded']         = 'Too many requests. Please wait {$a->seconds} seconds.';
-
-// Admin settings – filters.
-$string['settings_faecher']          = 'Subjects';
-$string['settings_faecher_heading']  = 'Subjects';
-$string['settings_faecher_help']     = 'One per line. Course must carry tag "fach:Mathematik" etc.';
-$string['settings_niveaustufen']     = 'Levels';
-$string['settings_niveaustufen_desc'] = 'One per line. Course must carry tag "niveaustufe:Klasse 10" etc.';
+$string['btn_export']                     = 'Download';
+$string['btn_opencourse']                 = 'Open course';
+$string['btn_reset']                      = 'Reset';
+$string['course_not_found']               = 'This course was not found or is not publicly accessible.';
+$string['filter_all']                     = '– All –';
+$string['hint_setfilter']                 = 'Set a filter to search for courses.';
+$string['label_fach']                     = 'Subject';
+$string['label_kursbereich']              = 'Course area';
+$string['label_kursname']                 = 'Search term';
+$string['label_niveaustufe']              = 'Level';
+$string['label_schulform']                = 'School type';
+$string['placeholder_kursname']           = 'Search course name or description …';
+$string['pluginname']                     = 'Course Filter';
+$string['pool_full']                      = 'All preview accounts are currently in use. Please try again in a few minutes.';
+$string['ratelimitexceeded']              = 'Too many requests. Please wait {$a->seconds} seconds.';
+$string['settings_backup_adminid']        = 'User ID for course backups';
+$string['settings_backup_adminid_help']   = 'User ID of the administrator used for nightly backups. Leave empty to use the first site admin.';
+$string['settings_backup_desc']           = 'The scheduled task creates one .mbz backup per course nightly at 02:00. Guests can download these via the download button. Only one file per course is kept.';
+$string['settings_backup_heading']        = 'Course backups (guest download)';
+$string['settings_faecher']              = 'Subjects';
+$string['settings_faecher_heading']      = 'Subjects';
+$string['settings_faecher_help']         = 'One per line. Course must carry tag "fach:Mathematik" etc.';
+$string['settings_niveaustufen']         = 'Levels';
+$string['settings_niveaustufen_desc']    = 'One per line. Course must carry tag "niveaustufe:Klasse 10" etc.';
 $string['settings_niveaustufen_heading'] = 'Levels';
-$string['settings_niveaustufen_help'] = 'One per line. Freely extensible.';
-$string['settings_resultlimit']      = 'Max. results';
-$string['settings_resultlimit_help'] = 'Maximum number of courses per search (default: 100, max. 200).';
-$string['settings_schulformen']      = 'School types';
-$string['settings_schulformen_desc'] = 'Values shown as chips. Courses must be tagged "schulform:Value".';
-$string['settings_schulformen_heading'] = 'School types';
-$string['settings_schulformen_help'] = 'One per line. Course must carry tag "schulform:Gymnasium" etc.';
-
-// Admin settings – backup.
-$string['settings_backup_adminid']      = 'User ID for course backups';
-$string['settings_backup_adminid_help'] = 'User ID of the administrator used for nightly backups. Leave empty to use the first site admin.';
-$string['settings_backup_desc']         = 'The scheduled task creates one .mbz backup per course nightly at 02:00. Guests can download these via the download button. Only one file per course is kept.';
-$string['settings_backup_heading']      = 'Course backups (guest download)';
-
-// Scheduled task.
-$string['task_backup_courses']       = 'Generate course backups for Course Filter block';
-
-// Guest pool.
-$string['back_to_search']        = 'Back to search';
-$string['btn_preview']           = 'Preview course';
-$string['btn_preview_title']     = 'View course as teacher without editing rights';
-$string['course_not_found']      = 'This course was not found or is not publicly accessible.';
-$string['pool_full']             = 'All preview accounts are currently in use. Please try again in a few minutes.';
-$string['task_setup_pool']       = 'Set up course filter pool users and enrol into new courses';
+$string['settings_niveaustufen_help']    = 'One per line. Freely extensible.';
+$string['settings_resultlimit']          = 'Max. results';
+$string['settings_resultlimit_help']     = 'Maximum number of courses per search (default: 100, max. 200).';
+$string['settings_schulformen']          = 'School types';
+$string['settings_schulformen_desc']     = 'Values shown as chips. Courses must be tagged "schulform:Value".';
+$string['settings_schulformen_heading']  = 'School types';
+$string['settings_schulformen_help']     = 'One per line. Course must carry tag "schulform:Gymnasium" etc.';
+$string['task_backup_courses']           = 'Generate course backups for Course Filter block';
+$string['task_setup_pool']               = 'Set up course filter pool users and enrol into new courses';

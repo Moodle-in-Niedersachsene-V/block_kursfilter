@@ -25,60 +25,41 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-// Plugin-Metadaten.
-$string['pluginname']                     = 'Kursfilter';
+$string['back_to_search']                 = 'Zurück zur Suche';
+$string['backup_not_available']           = 'Für diesen Kurs ist noch keine Sicherung vorhanden. Bitte später erneut versuchen.';
 $string['block_kursfilter:addinstance']   = 'Block „Kursfilter" hinzufügen';
 $string['block_kursfilter:myaddinstance'] = 'Block „Kursfilter" zum Dashboard hinzufügen';
-
-// Backup.
-$string['backup_not_available']      = 'Für diesen Kurs ist noch keine Sicherung vorhanden. Bitte später erneut versuchen.';
-$string['btn_export']                = 'Herunterladen';
-$string['btn_opencourse']            = 'Zum Kurs';
-$string['btn_reset']                 = 'Zurücksetzen';
-
-// Filter-Labels.
-$string['filter_all']                = '– Alle –';
-$string['hint_setfilter']            = 'Filter setzen, um Kurse zu suchen.';
-$string['label_fach']                = 'Fach';
-$string['label_kursbereich']         = 'Kursbereich';
-$string['label_kursname']            = 'Suchbegriff';
-$string['label_niveaustufe']         = 'Niveaustufe';
-$string['label_schulform']           = 'Schulform';
-
-// Platzhalter.
-$string['placeholder_kursname']      = 'Kursname oder Beschreibung suchen …';
-
-// Fehlermeldungen.
-$string['ratelimitexceeded']         = 'Zu viele Suchanfragen. Bitte {$a->seconds} Sekunden warten.';
-
-// Admin-Einstellungen – Filter.
-$string['settings_faecher']          = 'Fächer';
-$string['settings_faecher_heading']  = 'Fächer';
-$string['settings_faecher_help']     = 'Ein Fach pro Zeile. Am Kurs muss der Tag „fach:Mathematik" o. ä. gesetzt sein.';
-$string['settings_niveaustufen']     = 'Niveaustufen';
-$string['settings_niveaustufen_desc'] = 'Eine Stufe pro Zeile. Am Kurs muss der Tag „niveaustufe:Klasse 10" o. ä. gesetzt sein.';
+$string['btn_export']                     = 'Herunterladen';
+$string['btn_opencourse']                 = 'Zum Kurs';
+$string['btn_reset']                      = 'Zurücksetzen';
+$string['course_not_found']               = 'Dieser Kurs wurde nicht gefunden oder ist nicht öffentlich zugänglich.';
+$string['filter_all']                     = '– Alle –';
+$string['hint_setfilter']                 = 'Filter setzen, um Kurse zu suchen.';
+$string['label_fach']                     = 'Fach';
+$string['label_kursbereich']              = 'Kursbereich';
+$string['label_kursname']                 = 'Suchbegriff';
+$string['label_niveaustufe']              = 'Niveaustufe';
+$string['label_schulform']                = 'Schulform';
+$string['placeholder_kursname']           = 'Kursname oder Beschreibung suchen …';
+$string['pluginname']                     = 'Kursfilter';
+$string['pool_full']                      = 'Aktuell sind alle Kursbesucher-Zugänge belegt. Bitte versuchen Sie es in einigen Minuten erneut.';
+$string['ratelimitexceeded']              = 'Zu viele Suchanfragen. Bitte {$a->seconds} Sekunden warten.';
+$string['settings_backup_adminid']        = 'Nutzer-ID für Kurssicherungen';
+$string['settings_backup_adminid_help']   = 'Nutzer-ID eines Administrators, der für die nächtlichen Kurssicherungen verwendet wird. Leer lassen, um den ersten Site-Administrator zu verwenden.';
+$string['settings_backup_desc']           = 'Der Scheduled Task erzeugt täglich um 02:00 Uhr eine Kurssicherung (.mbz) pro Kurs. Gäste können diese Datei über den Download-Button herunterladen. Es wird immer nur eine Datei pro Kurs gespeichert.';
+$string['settings_backup_heading']        = 'Kurssicherungen (Gäste-Download)';
+$string['settings_faecher']              = 'Fächer';
+$string['settings_faecher_heading']      = 'Fächer';
+$string['settings_faecher_help']         = 'Ein Fach pro Zeile. Am Kurs muss der Tag „fach:Mathematik" o. ä. gesetzt sein.';
+$string['settings_niveaustufen']         = 'Niveaustufen';
+$string['settings_niveaustufen_desc']    = 'Eine Stufe pro Zeile. Am Kurs muss der Tag „niveaustufe:Klasse 10" o. ä. gesetzt sein.';
 $string['settings_niveaustufen_heading'] = 'Niveaustufen';
-$string['settings_niveaustufen_help'] = 'Eine Stufe pro Zeile. Beliebig erweiterbar.';
-$string['settings_resultlimit']      = 'Max. Ergebnisse';
-$string['settings_resultlimit_help'] = 'Maximale Anzahl Kurse pro Suchanfrage (Standard: 100, max. 200).';
-$string['settings_schulformen']      = 'Schulformen';
-$string['settings_schulformen_desc'] = 'Diese Werte erscheinen als Chips im Block. Jede Schulform wird als Tag „schulform:Wert" an Kursen erwartet.';
-$string['settings_schulformen_heading'] = 'Schulformen';
-$string['settings_schulformen_help'] = 'Eine Schulform pro Zeile, z. B. Gymnasium. Am Kurs muss dann der Tag „schulform:Gymnasium" gesetzt sein.';
-
-// Admin-Einstellungen – Backup.
-$string['settings_backup_adminid']      = 'Nutzer-ID für Kurssicherungen';
-$string['settings_backup_adminid_help'] = 'Nutzer-ID eines Administrators, der für die nächtlichen Kurssicherungen verwendet wird. Leer lassen, um den ersten Site-Administrator zu verwenden.';
-$string['settings_backup_desc']         = 'Der Scheduled Task erzeugt täglich um 02:00 Uhr eine Kurssicherung (.mbz) pro Kurs. Gäste können diese Datei über den Download-Button herunterladen. Es wird immer nur eine Datei pro Kurs gespeichert.';
-$string['settings_backup_heading']      = 'Kurssicherungen (Gäste-Download)';
-
-// Scheduled Task.
-$string['task_backup_courses']       = 'Kurssicherungen für Kursfilter-Block erzeugen';
-
-// Gastnutzer-Pool.
-$string['back_to_search']        = 'Zurück zur Suche';
-$string['btn_preview']           = 'Kurs ansehen';
-$string['btn_preview_title']     = 'Kurs als Trainer ohne Bearbeitungsrecht ansehen';
-$string['course_not_found']      = 'Dieser Kurs wurde nicht gefunden oder ist nicht öffentlich zugänglich.';
-$string['pool_full']             = 'Aktuell sind alle Kursbesucher-Zugänge belegt. Bitte versuchen Sie es in einigen Minuten erneut.';
-$string['task_setup_pool']       = 'Kursfilter-Pool-Nutzer einrichten und in neue Kurse einschreiben';
+$string['settings_niveaustufen_help']    = 'Eine Stufe pro Zeile. Beliebig erweiterbar.';
+$string['settings_resultlimit']          = 'Max. Ergebnisse';
+$string['settings_resultlimit_help']     = 'Maximale Anzahl Kurse pro Suchanfrage (Standard: 100, max. 200).';
+$string['settings_schulformen']          = 'Schulformen';
+$string['settings_schulformen_desc']     = 'Diese Werte erscheinen als Chips im Block. Jede Schulform wird als Tag „schulform:Wert" an Kursen erwartet.';
+$string['settings_schulformen_heading']  = 'Schulformen';
+$string['settings_schulformen_help']     = 'Eine Schulform pro Zeile, z. B. Gymnasium. Am Kurs muss dann der Tag „schulform:Gymnasium" gesetzt sein.';
+$string['task_backup_courses']           = 'Kurssicherungen für Kursfilter-Block erzeugen';
+$string['task_setup_pool']               = 'Kursfilter-Pool-Nutzer einrichten und in neue Kurse einschreiben';

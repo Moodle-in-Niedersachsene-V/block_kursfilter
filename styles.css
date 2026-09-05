@@ -4,32 +4,32 @@
     font-size: 0.875rem;
 }
 
-/* ---- Chips ---- */
-.kf-chip {
-    cursor: pointer !important;
-    font-weight: 400 !important;
-    border: 1px solid transparent !important;
-    margin-bottom: 3px !important;
-    transition: background-color .15s, color .15s !important;
-    background-color: #9ca3af !important;
-    color: #111827 !important;
-    text-align: left !important;
-    white-space: normal !important;
-    box-shadow: none !important;
+/* ---- Chips – erhöhte Spezifizität statt !important ---- */
+.kf-block .kf-chip {
+    cursor: pointer;
+    font-weight: 400;
+    border: 1px solid transparent;
+    margin-bottom: 3px;
+    transition: background-color .15s, color .15s;
+    background-color: #9ca3af;
+    color: #111827;
+    text-align: left;
+    white-space: normal;
+    box-shadow: none;
 }
-.kf-chip:hover {
-    background-color: #1f2937 !important;
-    color: #ffffff !important;
+.kf-block .kf-chip:hover {
+    background-color: #1f2937;
+    color: #fff;
 }
-.kf-chip-active {
-    background-color: #111827 !important;
-    color: #ffffff !important;
+.kf-block .kf-chip-active {
+    background-color: #111827;
+    color: #fff;
 }
-.kf-chip-schulform.kf-chip-active,
-.kf-chip-fach.kf-chip-active,
-.kf-chip-niveaustufe.kf-chip-active {
-    background-color: #111827 !important;
-    color: #ffffff !important;
+.kf-block .kf-chip-schulform.kf-chip-active,
+.kf-block .kf-chip-fach.kf-chip-active,
+.kf-block .kf-chip-niveaustufe.kf-chip-active {
+    background-color: #111827;
+    color: #fff;
 }
 
 /* ---- Ergebnisliste ---- */
@@ -42,7 +42,10 @@
     border: 1px solid #dee2e6;
     transition: border-color .1s;
 }
-.kf-item:hover { border-color: #0d6efd; }
+
+.kf-item:hover {
+    border-color: #0d6efd;
+}
 
 .kf-summary {
     color: #6c757d;
@@ -67,4 +70,6 @@
     font-size: 11px;
 }
 
-.kf-spinner { min-height: 32px; }
+.kf-spinner {
+    min-height: 32px;
+}
