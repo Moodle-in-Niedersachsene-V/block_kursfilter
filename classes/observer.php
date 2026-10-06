@@ -14,19 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_kursfilter;
+
 /**
- * Plugin version definition for block_kursfilter.
+ * Releases pool accounts when their session ends.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+class observer {
+    /**
+     * Free the pool account of a user who logged out; other users are ignored.
+     *
+     * @param \core\event\user_loggedout $event Logout event.
+     */
+    public static function user_loggedout(\core\event\user_loggedout $event): void {
+        global $DB;
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->component = 'block_kursfilter';
-$plugin->version   = 2026100601;
-$plugin->requires  = 2025041400; // Moodle 5.1.
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '1.4.1';
+        $username = $DB->get_field('user', 'username', ['id' => $event->userid]);
+        if ($username !== false && in_array($username, pool_manager::get_pool_usernames(), true)) {
+            pool_manager::mark_free($username);
+        }
+    }
+}

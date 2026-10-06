@@ -210,4 +210,24 @@ final class pool_manager_test extends \advanced_testcase {
 
         $this->assertFalse($DB->record_exists('role', ['shortname' => pool_manager::ROLE_SHORTNAME]));
     }
+
+    public function test_marking_active_ends_existing_sessions_of_the_account(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('poolsize', 2, 'block_kursfilter');
+        pool_manager::create_pool_users();
+        [$first, $second] = $this->pool_userids();
+        $usernames = pool_manager::get_pool_usernames();
+        foreach ([[$first, 'sid-first'], [$second, 'sid-second']] as [$userid, $sid]) {
+            $DB->insert_record('sessions', (object)[
+                'state' => 0, 'sid' => $sid, 'userid' => $userid, 'sessdata' => null,
+                'timecreated' => time(), 'timemodified' => time(), 'firstip' => '127.0.0.1', 'lastip' => '127.0.0.1',
+            ]);
+        }
+
+        pool_manager::mark_active($usernames[0]);
+
+        $this->assertSame(0, $DB->count_records('sessions', ['userid' => $first]));
+        $this->assertSame(1, $DB->count_records('sessions', ['userid' => $second]));
+    }
 }

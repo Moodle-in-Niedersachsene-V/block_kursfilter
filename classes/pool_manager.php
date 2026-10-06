@@ -271,12 +271,19 @@ class pool_manager {
     }
 
     /**
-     * Mark a pool user as active (session started).
+     * Mark a pool user as active (session started) and end all earlier sessions of the account,
+     * so that never two visitors share one account.
      *
      * @param string $username Pool username.
      * @param int    $ttl      Seconds until the session marker expires.
      */
     public static function mark_active(string $username, int $ttl = 3600): void {
+        global $DB;
+
+        $userid = $DB->get_field('user', 'id', ['username' => $username, 'deleted' => 0]);
+        if ($userid) {
+            \core\session\manager::destroy_user_sessions($userid);
+        }
         $cache = \cache::make('block_kursfilter', 'poolsessions');
         $cache->set(self::CACHE_PREFIX . $username, time());
     }
