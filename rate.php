@@ -60,8 +60,8 @@ if ($stars < 1 || $stars > 5) {
 }
 
 // Course must exist and be visible.
-$course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], 'id', IGNORE_MISSING);
-if (!$course || $course->id === SITEID) {
+$course = \block_kursfilter\course_access::get_public_course($courseid);
+if (!$course) {
     echo json_encode(['success' => false, 'error' => 'Course not found']);
     exit;
 }

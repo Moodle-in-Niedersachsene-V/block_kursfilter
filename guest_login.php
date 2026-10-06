@@ -37,8 +37,8 @@ require_once($CFG->dirroot . '/blocks/kursfilter/classes/pool_manager.php');
 $courseid = required_param('courseid', PARAM_INT);
 
 // Kurs muss sichtbar und vorhanden sein.
-$course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], '*', IGNORE_MISSING);
-if (!$course || $course->id === SITEID) {
+$course = \block_kursfilter\course_access::get_public_course($courseid);
+if (!$course) {
     $PAGE->set_context(context_system::instance());
     $PAGE->set_url(new moodle_url('/blocks/kursfilter/guest_login.php'));
     echo $OUTPUT->header();

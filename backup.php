@@ -38,8 +38,8 @@ require_once($CFG->dirroot . '/blocks/kursfilter/classes/backup_helper.php');
 $courseid = required_param('courseid', PARAM_INT);
 
 // Kurs muss sichtbar und vorhanden sein.
-$course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], '*', IGNORE_MISSING);
-if (!$course || $course->id === SITEID) {
+$course = \block_kursfilter\course_access::get_public_course($courseid);
+if (!$course) {
     send_file_not_found();
 }
 
