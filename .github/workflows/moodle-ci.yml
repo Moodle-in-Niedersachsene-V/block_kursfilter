@@ -6,7 +6,7 @@
 # Ablage: .github/workflows/moodle-ci.yml
 #
 # Angepasst: templates/ vorhanden (Mustache-Lint aktiv),
-# kein tests/ vorhanden (phpunit und behat entfallen),
+# tests/ mit PHPUnit vorhanden (phpunit aktiv, behat entfaellt),
 # amd/ vorhanden (grunt bleibt).
 ##############################################################################
 
@@ -90,6 +90,29 @@ jobs:
         env:
           DB: ${{ matrix.database }}
           MOODLE_BRANCH: ${{ matrix.moodle-branch }}
+
+      - name: Webserver fuer Request-Tests starten
+        run: |
+          cd moodle
+          cat > kf-web-config.php <<'EOF'
+          <?php
+          // Der Webserver der Request-Tests liest die PHPUnit-Tabellen.
+          if (getenv('KURSFILTER_WEB_TESTS')) {
+              $CFG->prefix = $CFG->phpunit_prefix;
+              $CFG->dataroot = $CFG->phpunit_dataroot;
+              $CFG->wwwroot = getenv('KURSFILTER_WEB_TESTS');
+              unset($CFG->phpunit_prefix, $CFG->phpunit_dataroot);
+          }
+          EOF
+          sed -i "s#^require_once(.*lib/setup.php.*#require_once(__DIR__ . '/kf-web-config.php');\n&#" config.php
+          KURSFILTER_WEB_TESTS=http://127.0.0.1:8080 nohup php -S 127.0.0.1:8080 -t public > ../webserver.log 2>&1 &
+          sleep 2
+
+      - name: PHPUnit (inkl. Request-Tests gegen echten Webserver)
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit --fail-on-warning
+        env:
+          KURSFILTER_WEB_URL: http://127.0.0.1:8080
 
       - name: PHP Lint (Syntaxpruefung)
         if: ${{ !cancelled() }}
