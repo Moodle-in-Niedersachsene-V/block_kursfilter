@@ -332,9 +332,10 @@ final class request_test extends \advanced_testcase {
         $this->assertStringContainsString('/course/view.php?id=' . $course->id . '&kf_preview=1', $headers);
         $this->assertSame(1, $this->count_sessions($poolids));
         $context = \context_course::instance($course->id);
+        $roleid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
         foreach ($poolids as $id) {
             $this->assertTrue(is_enrolled($context, $id, '', true));
-            $this->assertTrue(user_has_role_assignment($id, $DB->get_field('role', 'id', ['shortname' => 'teacher']), $context->id));
+            $this->assertTrue(user_has_role_assignment($id, $roleid, $context->id));
         }
     }
 

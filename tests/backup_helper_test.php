@@ -72,7 +72,10 @@ final class backup_helper_test extends \advanced_testcase {
         $content = $this->extracted_content($file);
         $this->assertStringContainsString('Materialkurs Demo', $content);
         $this->assertStringContainsString('Austausch', $content);
-        foreach ([self::STUDENT_EMAIL, get_admin()->email, 'schueler.geheim', 'Geheimvorname', 'Geheimnachname', 'Text des Kindes'] as $secret) {
+        $secrets = [
+            self::STUDENT_EMAIL, get_admin()->email, 'schueler.geheim', 'Geheimvorname', 'Geheimnachname', 'Text des Kindes',
+        ];
+        foreach ($secrets as $secret) {
             $this->assertStringNotContainsString($secret, $content, "Archiv enthaelt '$secret'");
         }
     }
@@ -90,9 +93,15 @@ final class backup_helper_test extends \advanced_testcase {
         $this->assertNotNull($first);
         $this->assertEquals($second->get_id(), backup_helper::get_backup_file($course->id)->get_id());
         $this->assertTrue(backup_helper::has_backup($other->id));
-        $this->assertCount(1, get_file_storage()->get_area_files(
-            \context_system::instance()->id, 'block_kursfilter', 'course_backups', $course->id, 'id', false
-        ));
+        $files = get_file_storage()->get_area_files(
+            \context_system::instance()->id,
+            'block_kursfilter',
+            'course_backups',
+            $course->id,
+            'id',
+            false
+        );
+        $this->assertCount(1, $files);
     }
 
     public function test_has_backup_is_false_for_course_without_backup(): void {

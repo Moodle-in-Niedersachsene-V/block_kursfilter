@@ -26,8 +26,9 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
  * @copyright  2026 Moodle in Niedersachsen e. V.
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \block_kursfilter_external
+ *
+ * Prozessisolation noetig: die Klasse bindet das veraltete lib/externallib.php ein.
  */
-// Die Klasse bindet das veraltete lib/externallib.php ein; das verlangt Prozessisolation.
 #[RunTestsInSeparateProcesses]
 final class external_test extends \advanced_testcase {
     /**
