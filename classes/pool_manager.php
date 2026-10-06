@@ -99,7 +99,7 @@ class pool_manager {
             $user->lastname         = ltrim(substr($username, strlen(self::USERNAME_PREFIX)));
             $user->email            = $username . '@kursfilter.invalid';
             $user->emailstop        = 1;
-            $user->lang             = 'de';
+            $user->lang             = get_string_manager()->translation_exists('de') ? 'de' : $CFG->lang;
             $user->timecreated      = time();
             $user->timemodified     = time();
             $user->description      = 'Automatisch angelegter Gastnutzer fuer den Kursfilter-Block.';

@@ -54,6 +54,9 @@ final class pool_manager_test extends \advanced_testcase {
         $first = pool_manager::create_pool_users();
         $second = pool_manager::create_pool_users();
 
+        // Neue Konten duerfen keine Moodle-Validierungswarnungen ausloesen (z. B. nicht installierte Sprache).
+        $this->assertDebuggingNotCalled();
+
         $this->assertSame(0, $second);
         $this->assertCount(12, $this->pool_userids());
         $this->assertLessThanOrEqual(12, $first);
