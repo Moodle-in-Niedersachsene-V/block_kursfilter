@@ -16,14 +16,16 @@
 
 namespace block_kursfilter;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+
 /**
  * Tests for the pool accounts (creation, enrolment, role rights, occupancy).
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \block_kursfilter\pool_manager
  */
+#[CoversClass(pool_manager::class)]
 final class pool_manager_test extends \advanced_testcase {
     /**
      * Returns the pool user IDs according to the current pool size.

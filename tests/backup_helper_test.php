@@ -16,14 +16,16 @@
 
 namespace block_kursfilter;
 
+use PHPUnit\Framework\Attributes\CoversClass;
+
 /**
  * Tests for the publicly distributed course backups (file management, archive content).
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \block_kursfilter\backup_helper
  */
+#[CoversClass(backup_helper::class)]
 final class backup_helper_test extends \advanced_testcase {
     /** @var string Unique part of the student email address. */
     private const STUDENT_EMAIL = 'privat.kind@schule-geheim.example';
