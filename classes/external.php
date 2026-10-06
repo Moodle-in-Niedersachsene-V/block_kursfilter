@@ -31,13 +31,13 @@ require_once($CFG->libdir . '/externallib.php');
  * External functions for the kursfilter block.
  */
 class block_kursfilter_external extends external_api {
-    /** Absolutes serverseitiges Maximum fuer Suchergebnisse (F-02). */
+    /** Absolute server-side maximum for search results. */
     const MAX_RESULT_LIMIT = 200;
 
-    /** Rate-Limit: maximale Anfragen pro Zeitfenster je Nutzer (F-01). */
+    /** Rate limit: maximum requests per time window and user. */
     const RATE_LIMIT_REQUESTS = 30;
 
-    /** Rate-Limit: Zeitfenster in Sekunden (F-01). */
+    /** Rate limit: time window in seconds. */
     const RATE_LIMIT_WINDOW = 60;
 
     // Search_courses.
@@ -99,10 +99,10 @@ class block_kursfilter_external extends external_api {
         $context = context::instance_by_id($params['contextid']);
         self::validate_context($context);
 
-        // F-01: Rate-Limiting.
+        // Rate limiting.
         self::check_rate_limit((int)$USER->id);
 
-        // F-02: Serverseitiges Limit erzwingen.
+        // Enforce the server-side limit.
         $configlimit = (int)get_config('block_kursfilter', 'resultlimit');
         if ($configlimit < 1 || $configlimit > self::MAX_RESULT_LIMIT) {
             $configlimit = 100;
@@ -112,11 +112,11 @@ class block_kursfilter_external extends external_api {
             $effectivelimit = $configlimit;
         }
 
-        // Basis-Bedingungen.
+        // Base conditions.
         $conditions = ['c.visible = 1', 'c.id != :siteid'];
         $args       = ['siteid' => SITEID];
 
-        // Kursbereich (inkl. Unterkategorien).
+        // Course area (including subcategories).
         if (!empty($params['kursbereich'])) {
             $catids = self::get_category_ids_recursive((int)$params['kursbereich']);
             if ($catids) {
@@ -126,7 +126,7 @@ class block_kursfilter_external extends external_api {
             }
         }
 
-        // Freitextsuche: Beschreibung (primaer), Kursname, Kurzname.
+        // Free-text search: summary (primary), course name, short name.
         if (!empty($params['kursname'])) {
             $conditions[] = '(' .
                 $DB->sql_like('c.summary', ':kn1', false) . ' OR ' .
@@ -139,8 +139,8 @@ class block_kursfilter_external extends external_api {
             $args['kn3'] = $term;
         }
 
-        // Tag-Filter: Rohwerte direkt suchen – kein Prefix-Format.
-        // Moodle speichert Tags als Rohwert (z. B. "Oberstufe")..
+        // Tag filter: search raw values directly, no prefix format.
+        // Moodle stores tags as raw values (e.g. "Oberstufe").
         $tagfilters = [];
         foreach (['schulform', 'fach', 'niveaustufe', 'tag'] as $key) {
             if (!empty($params[$key])) {
@@ -184,9 +184,9 @@ class block_kursfilter_external extends external_api {
             $tags      = core_tag_tag::get_item_tags_array('core', 'course', $course->id);
             $courseurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
 
-            // Export-URL: oeffentlicher Download fuer alle Nutzer inkl. Gaeste.
-            // Die mbz-Datei wird nachts durch den Scheduled Task erzeugt.
-            // Kein Capability-Check – Datei ist fuer alle sichtbaren Kurse verfuegbar..
+            // Export URL: public download for all users including guests.
+            // The mbz file is generated nightly by the scheduled task.
+            // No capability check: the file is available for all visible courses.
             $exporturl = '';
             if (\block_kursfilter\backup_helper::has_backup($course->id)) {
                 $exporturl = (new moodle_url(
@@ -253,7 +253,7 @@ class block_kursfilter_external extends external_api {
         ]);
     }
 
-    // F-01: Rate-limiting via Moodle MUC.
+    // Rate limiting via Moodle MUC.
 
     /**
      * Check rate limit for the given user.
@@ -291,7 +291,7 @@ class block_kursfilter_external extends external_api {
         }
     }
 
-    // Hilfsmethoden.
+    // Helper methods.
 
     /**
      * Recursively collect all child category IDs.

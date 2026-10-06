@@ -17,7 +17,7 @@
 namespace block_kursfilter;
 
 /**
- * Tests fuer die Pool-Konten (Anlage, Einschreibung, Rollenrechte, Belegung).
+ * Tests for the pool accounts (creation, enrolment, role rights, occupancy).
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
@@ -26,9 +26,9 @@ namespace block_kursfilter;
  */
 final class pool_manager_test extends \advanced_testcase {
     /**
-     * Liefert die Pool-Nutzer-IDs gemaess aktueller Poolgroesse.
+     * Returns the pool user IDs according to the current pool size.
      *
-     * @return int[] Nutzer-IDs.
+     * @return int[] User IDs.
      */
     private function pool_userids(): array {
         global $DB;
@@ -54,7 +54,7 @@ final class pool_manager_test extends \advanced_testcase {
         $first = pool_manager::create_pool_users();
         $second = pool_manager::create_pool_users();
 
-        // Neue Konten duerfen keine Moodle-Validierungswarnungen ausloesen (z. B. nicht installierte Sprache).
+        // New accounts must not trigger Moodle validation warnings (e.g. language not installed).
         $this->assertDebuggingNotCalled();
 
         $this->assertSame(0, $second);

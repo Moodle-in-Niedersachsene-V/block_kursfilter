@@ -21,9 +21,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests fuer die Kurssuche (Sichtbarkeit, Ergebnislimit, Rate-Limit).
+ * Tests for the course search (visibility, result limit, rate limit).
  *
- * Prozessisolation noetig: die Klasse bindet das veraltete lib/externallib.php ein.
+ * Process isolation required: the class includes the deprecated lib/externallib.php.
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
@@ -33,10 +33,10 @@ use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 #[RunTestsInSeparateProcesses]
 final class external_test extends \advanced_testcase {
     /**
-     * Fuehrt die Suche als angemeldeter Nutzer im Systemkontext aus.
+     * Runs the search as a logged-in user in the system context.
      *
-     * @param array $args Parameter fuer search_courses (Name => Wert).
-     * @return array Suchergebnis.
+     * @param array $args Parameters for search_courses (name => value).
+     * @return array Search result.
      */
     private function search(array $args = []): array {
         $args += ['contextid' => \context_system::instance()->id];
@@ -44,10 +44,10 @@ final class external_test extends \advanced_testcase {
     }
 
     /**
-     * Liefert die Kurs-IDs eines Suchergebnisses.
+     * Returns the course IDs of a search result.
      *
-     * @param array $result Ergebnis von search_courses.
-     * @return int[] Kurs-IDs.
+     * @param array $result Result of search_courses.
+     * @return int[] Course IDs.
      */
     private function ids(array $result): array {
         return array_map(fn($c) => $c['id'], $result['courses']);
@@ -147,7 +147,7 @@ final class external_test extends \advanced_testcase {
             $this->getDataGenerator()->create_course();
         }
 
-        // Ungueltige Konfiguration faellt auf 100 zurueck; nie ueber MAX_RESULT_LIMIT.
+        // An invalid configuration falls back to 100; never above MAX_RESULT_LIMIT.
         $this->assertLessThanOrEqual(
             block_kursfilter_external::MAX_RESULT_LIMIT,
             count($this->search(['limit' => 100000])['courses'])

@@ -17,8 +17,8 @@
 /**
  * Post-install hook for block_kursfilter.
  *
- * Legt die Pool-Nutzer bei der ersten Installation an
- * und schreibt sie in alle vorhandenen Kurse ein.
+ * Creates the pool users on first installation
+ * and enrols them in all existing courses.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -30,9 +30,9 @@
  * Post-install tasks for block_kursfilter.
  */
 function xmldb_block_kursfilter_install(): void {
-    // Pool-Nutzer anlegen.
+    // Create the pool users.
     \block_kursfilter\pool_manager::create_pool_users();
 
-    // In alle vorhandenen sichtbaren Kurse einschreiben.
+    // Enrol them in all existing visible courses.
     \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
 }

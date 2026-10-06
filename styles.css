@@ -4,7 +4,7 @@
     font-size: 0.875rem;
 }
 
-/* ---- Chips – erhöhte Spezifizität statt !important ---- */
+/* ---- Chips: higher specificity instead of !important ---- */
 .block_kursfilter .kf-chip {
     cursor: pointer;
     font-weight: 400;
@@ -32,7 +32,7 @@
     color: #fff;
 }
 
-/* ---- Ergebnisliste ---- */
+/* ---- Result list ---- */
 .block_kursfilter .kf-results {
     max-height: 380px;
     overflow-y: auto;
@@ -74,7 +74,7 @@
     min-height: 32px;
 }
 
-/* ---- Sternebewertung ---- */
+/* ---- Star rating ---- */
 .block_kursfilter .kf-stars {
     display: flex;
     align-items: center;

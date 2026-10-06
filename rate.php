@@ -17,12 +17,12 @@
 /**
  * Public rating endpoint for block_kursfilter.
  *
- * Nimmt eine Sternebewertung entgegen, setzt den Cookie
- * und speichert die Bewertung in der Datenbank.
- * Antwortet mit JSON.
+ * Accepts a star rating, sets the cookie
+ * and stores the rating in the database.
+ * Responds with JSON.
  *
- * Aufruf: POST /blocks/kursfilter/rate.php
- *         Body: courseid=42&stars=4&sesskey=...
+ * Usage: POST /blocks/kursfilter/rate.php
+ *        Body: courseid=42&stars=4&sesskey=...
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.

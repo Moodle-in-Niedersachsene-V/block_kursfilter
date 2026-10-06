@@ -17,8 +17,8 @@
 /**
  * Pool manager for block_kursfilter guest access.
  *
- * Verwaltet einen Pool aus festen Testnutzern, die Gaesten
- * den Kursbesuch als Trainer ohne Bearbeitungsrecht ermoeglichen.
+ * Manages a pool of fixed accounts that let guests visit a course
+ * as a teacher without editing rights.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.

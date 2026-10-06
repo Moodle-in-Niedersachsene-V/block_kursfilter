@@ -17,8 +17,8 @@
 /**
  * Backup helper for block_kursfilter.
  *
- * Erzeugt eine Moodle-Kurssicherung (.mbz) und speichert sie
- * im Moodle-Dateibereich. Immer nur eine Datei pro Kurs vorhanden.
+ * Creates a Moodle course backup (.mbz) and stores it in the
+ * Moodle file area. Only one file per course exists at any time.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.

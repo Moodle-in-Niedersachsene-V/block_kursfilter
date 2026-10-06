@@ -26,19 +26,19 @@
 defined('MOODLE_INTERNAL') || die();
 
 $definitions = [
-    // Rate-Limiting fuer den AJAX-Endpoint (F-01).
+    // Rate limiting for the AJAX endpoint.
     'ratelimit' => [
         'mode'       => cache_store::MODE_APPLICATION,
         'simplekeys' => true,
         'simpledata' => true,
         'ttl'        => 60,
     ],
-    // Aktive Pool-Nutzer-Sessions (TTL entspricht der Sitzungsdauer).
-    // Verhindert, dass zwei Besucher denselben Pool-Nutzer gleichzeitig nutzen.
+    // Active pool user sessions (TTL matches the session duration).
+    // Prevents two visitors from using the same pool user at the same time.
     'poolsessions' => [
         'mode'       => cache_store::MODE_APPLICATION,
         'simplekeys' => true,
         'simpledata' => true,
-        'ttl'        => 7200, // 2 Stunden.
+        'ttl'        => 7200, // 2 hours.
     ],
 ];

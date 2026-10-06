@@ -28,9 +28,9 @@ namespace block_kursfilter\task;
 /**
  * Nightly pool setup task.
  *
- * Laeuft taeglich nach dem Backup-Task (03:00 Uhr).
- * Legt fehlende Pool-Nutzer an und schreibt sie in alle
- * sichtbaren Kurse als Trainer ohne Bearbeitungsrecht ein.
+ * Runs daily after the backup task (03:00).
+ * Creates missing pool users and enrols them in all visible
+ * courses as teachers without editing rights.
  */
 class setup_pool extends \core\task\scheduled_task {
     /**

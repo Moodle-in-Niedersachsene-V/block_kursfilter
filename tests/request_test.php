@@ -19,10 +19,10 @@ namespace block_kursfilter;
 use PHPUnit\Framework\Attributes\DataProvider;
 
 /**
- * Request-Tests gegen die echten Endpunkte rate.php, backup.php und guest_login.php.
+ * Request tests against the real endpoints rate.php, backup.php and guest_login.php.
  *
- * Benoetigt einen laufenden Webserver auf denselben (PHPUnit-)Tabellen; die URL
- * steht in der Umgebungsvariable KURSFILTER_WEB_URL. Ohne sie werden die Tests uebersprungen.
+ * Needs a running web server on the same (PHPUnit) tables; the URL is
+ * given in the environment variable KURSFILTER_WEB_URL. Without it the tests are skipped.
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
@@ -30,16 +30,16 @@ use PHPUnit\Framework\Attributes\DataProvider;
  * @coversNothing
  */
 final class request_test extends \advanced_testcase {
-    /** @var string Basis-URL des Testwebservers. */
+    /** @var string Base URL of the test web server. */
     private string $baseurl;
 
-    /** @var string Cookie-Datei dieser Test-Sitzung. */
+    /** @var string Cookie file of this test session. */
     private string $cookiejar;
 
     protected function setUp(): void {
         global $DB;
         parent::setUp();
-        // Der Webserver sieht Testdaten nur, wenn sie committet sind: Test-Transaktion beenden.
+        // The web server only sees test data once it is committed: end the test transaction.
         if ($DB->is_transaction_started()) {
             $DB->force_transaction_rollback();
         }
@@ -56,9 +56,9 @@ final class request_test extends \advanced_testcase {
         if (!empty($this->cookiejar)) {
             @unlink($this->cookiejar);
         }
-        // Schreibzugriffe des Webservers erkennt PHPUnit nicht: leere Tabellenliste erzwingt vollstaendigen Reset.
+        // PHPUnit does not detect writes by the web server: an empty table list forces a full reset.
         \testing_util::$tableupdated = [];
-        // Belegungsmarken des Pools liegen im Datei-Cache des Webservers.
+        // Pool occupancy markers live in the web server's file cache.
         fulldelete($CFG->dataroot . '/cache/cachestore_file/default_application/block_kursfilter_poolsessions');
         \phpunit_util::$lastdbwrites = null;
         self::resetAllData(false);
@@ -66,12 +66,12 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Sendet eine HTTP-Anfrage an den Testwebserver.
+     * Sends an HTTP request to the test web server.
      *
-     * @param string $method GET oder POST.
-     * @param string $path Pfad ab Webroot.
-     * @param array $fields POST-Felder bzw. GET-Query.
-     * @param string $cookie Zusaetzlicher Cookie-Header.
+     * @param string $method GET or POST.
+     * @param string $path Path from the web root.
+     * @param array $fields POST fields or GET query.
+     * @param string $cookie Additional cookie header.
      * @return array [status, headers, body].
      */
     private function request(string $method, string $path, array $fields = [], string $cookie = ''): array {
@@ -103,7 +103,7 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Holt einen gueltigen Sesskey fuer die laufende Sitzung.
+     * Fetches a valid sesskey for the current session.
      *
      * @return string Sesskey.
      */
@@ -114,11 +114,11 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Sendet eine Bewertung und liefert die dekodierte JSON-Antwort.
+     * Sends a rating and returns the decoded JSON response.
      *
-     * @param array $fields POST-Felder.
-     * @param string $cookie Optionaler Cookie-Header.
-     * @return array JSON-Antwort.
+     * @param array $fields POST fields.
+     * @param string $cookie Optional cookie header.
+     * @return array JSON response.
      */
     private function rate(array $fields, string $cookie = ''): array {
         [, , $body] = $this->request('POST', '/blocks/kursfilter/rate.php', $fields, $cookie);
@@ -128,10 +128,10 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Legt eine Backup-Datei im Bereich des Blocks ab.
+     * Stores a backup file in the block's file area.
      *
-     * @param int $courseid Kurs-ID (itemid).
-     * @param string $content Dateiinhalt.
+     * @param int $courseid Course ID (itemid).
+     * @param string $content File content.
      */
     private function seed_backup(int $courseid, string $content): void {
         get_file_storage()->create_file_from_string([
@@ -179,7 +179,7 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Unzulaessige Sternewerte.
+     * Invalid star values.
      *
      * @return array[]
      */
@@ -295,10 +295,10 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Legt Pool-Konten an und liefert deren Nutzer-IDs.
+     * Creates pool accounts and returns their user IDs.
      *
-     * @param int $size Poolgroesse.
-     * @return int[] Nutzer-IDs.
+     * @param int $size Pool size.
+     * @return int[] User IDs.
      */
     private function create_pool(int $size): array {
         global $DB;
@@ -309,10 +309,10 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Zaehlt aktive Sitzungen der angegebenen Nutzer.
+     * Counts active sessions of the given users.
      *
-     * @param int[] $userids Nutzer-IDs.
-     * @return int Anzahl.
+     * @param int[] $userids User IDs.
+     * @return int Number.
      */
     private function count_sessions(array $userids): int {
         global $DB;

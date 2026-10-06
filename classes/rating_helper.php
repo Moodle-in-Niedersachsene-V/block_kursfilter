@@ -17,8 +17,8 @@
 /**
  * Rating helper for block_kursfilter.
  *
- * Verwaltet anonyme Kursbewertungen per Cookie-Hash.
- * Kein Nutzerkonto erforderlich – auch Gaeste koennen bewerten.
+ * Manages anonymous course ratings via cookie hash.
+ * No user account required: guests can rate as well.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.

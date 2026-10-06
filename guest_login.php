@@ -17,11 +17,11 @@
 /**
  * Guest login endpoint for block_kursfilter.
  *
- * Waehlt einen freien Pool-Nutzer, loggt ihn ein und leitet
- * den Besucher direkt zum angefragten Kurs weiter.
- * Kein require_login() – der Endpunkt ist oeffentlich.
+ * Picks a free pool user, logs them in and redirects
+ * the visitor straight to the requested course.
+ * No require_login(): the endpoint is public.
  *
- * Aufruf: /blocks/kursfilter/guest_login.php?courseid=42
+ * Usage: /blocks/kursfilter/guest_login.php?courseid=42
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -36,7 +36,7 @@ require_once($CFG->dirroot . '/blocks/kursfilter/classes/pool_manager.php');
 
 $courseid = required_param('courseid', PARAM_INT);
 
-// Kurs muss sichtbar und vorhanden sein.
+// The course must exist and be visible.
 $course = \block_kursfilter\course_access::get_public_course($courseid);
 if (!$course) {
     $PAGE->set_context(context_system::instance());
@@ -50,17 +50,17 @@ if (!$course) {
     exit;
 }
 
-// Wenn der Nutzer bereits angemeldet ist (echter Nutzer oder Pool-Nutzer),
-// direkt zum Kurs weiterleiten.
+// If the user is already logged in (real user or pool user),
+// redirect straight to the course.
 if (isloggedin() && !isguestuser()) {
     redirect(new moodle_url('/course/view.php', ['id' => $courseid]));
 }
 
-// Freien Pool-Nutzer suchen.
+// Find a free pool user.
 $pooluser = \block_kursfilter\pool_manager::get_free_pool_user();
 
 if (!$pooluser) {
-    // Alle Pool-Nutzer belegt – Hinweis anzeigen.
+    // All pool users are taken: show a notice.
     $PAGE->set_context(context_system::instance());
     $PAGE->set_url(new moodle_url('/blocks/kursfilter/guest_login.php', ['courseid' => $courseid]));
     echo $OUTPUT->header();
@@ -68,7 +68,7 @@ if (!$pooluser) {
         get_string('pool_full', 'block_kursfilter'),
         \core\output\notification::NOTIFY_WARNING
     );
-    // Link zurueck zur Suche.
+    // Link back to the search.
     echo html_writer::div(
         html_writer::link(
             new moodle_url('/'),
@@ -80,18 +80,18 @@ if (!$pooluser) {
     exit;
 }
 
-// Pool-Nutzer sicherstellen: muss im Kurs eingeschrieben sein.
+// Make sure the pool user is enrolled in the course.
 \block_kursfilter\pool_manager::enrol_pool_into_course($courseid);
 
-// Pool-Nutzer als aktiv markieren (TTL: 2 Stunden).
+// Mark the pool user as active (TTL: 2 hours).
 \block_kursfilter\pool_manager::mark_active($pooluser->username, 7200);
 
-// Moodle-Session des Pool-Nutzers starten.
-// complete_user_login() setzt alle noetigen Session-Variablen.
+// Start the Moodle session of the pool user.
+// complete_user_login() sets all required session variables.
 $pooluser = get_complete_user_data('id', $pooluser->id);
 complete_user_login($pooluser);
 
-// Kurs-URL mit Hinweis-Parameter.
+// Course URL with notice parameter.
 $courseurl = new moodle_url('/course/view.php', [
     'id'         => $courseid,
     'kf_preview' => 1,

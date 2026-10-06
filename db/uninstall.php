@@ -17,9 +17,9 @@
 /**
  * Uninstall hook for block_kursfilter.
  *
- * Loescht alle Pool-Nutzer (kursfilter_guest01 … kursfilter_guest10)
- * sauber aus der Moodle-Nutzerverwaltung, damit nach einer
- * Deinstallation kein Datenmüll zurueckbleibt.
+ * Cleanly deletes all pool users (kursfilter_guest01 … kursfilter_guest10)
+ * from Moodle user management so that no leftover data remains
+ * after uninstallation.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -42,7 +42,7 @@ function xmldb_block_kursfilter_uninstall(): void {
         if (!$user) {
             continue;
         }
-        // Delete_user() setzt deleted = 1, entfernt Einschreibungen und bereinigt Nutzerdaten.
+        // Delete_user() sets deleted = 1, removes enrolments and cleans up user data.
         delete_user($user);
     }
 }

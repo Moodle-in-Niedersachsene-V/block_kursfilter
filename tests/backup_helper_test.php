@@ -17,7 +17,7 @@
 namespace block_kursfilter;
 
 /**
- * Tests fuer die oeffentlich verteilten Kurssicherungen (Dateiverwaltung, Archivinhalt).
+ * Tests for the publicly distributed course backups (file management, archive content).
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
@@ -25,14 +25,14 @@ namespace block_kursfilter;
  * @covers     \block_kursfilter\backup_helper
  */
 final class backup_helper_test extends \advanced_testcase {
-    /** @var string Eindeutiger Teil der Schueler-Mailadresse. */
+    /** @var string Unique part of the student email address. */
     private const STUDENT_EMAIL = 'privat.kind@schule-geheim.example';
 
     /**
-     * Entpackt eine Sicherung und liefert den Inhalt aller Dateien als ein String.
+     * Extracts a backup and returns the content of all files as one string.
      *
-     * @param \stored_file $file Sicherungsdatei.
-     * @return string Verketteter Dateiinhalt.
+     * @param \stored_file $file Backup file.
+     * @return string Concatenated file content.
      */
     private function extracted_content(\stored_file $file): string {
         global $CFG;

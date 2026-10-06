@@ -25,9 +25,9 @@
 
 /**
  * Serve backup files from the kursfilter file area.
- * Delegiert an backup.php – diese Funktion wird fuer den
- * Moodle pluginfile()-Mechanismus nicht benoetigt, da der
- * Download ueber backup.php direkt erfolgt.
+ * Delegates to backup.php: this function is not needed for
+ * Moodle's pluginfile() mechanism because downloads go
+ * through backup.php directly.
  *
  * @param stdClass $course
  * @param stdClass $cm
@@ -46,6 +46,6 @@ function block_kursfilter_pluginfile(
     $forcedownload,
     array $options = []
 ): void {
-    // Downloads laufen ueber blocks/kursfilter/backup.php.
+    // Downloads go through blocks/kursfilter/backup.php.
     send_file_not_found();
 }
