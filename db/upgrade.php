@@ -30,5 +30,11 @@
  * @return bool
  */
 function xmldb_block_kursfilter_upgrade($oldversion): bool {
+    if ($oldversion < 2026100600) {
+        // Pool accounts get a role without access to participants, user identity and grades.
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
+        upgrade_block_savepoint(true, 2026100600, 'kursfilter');
+    }
+
     return true;
 }

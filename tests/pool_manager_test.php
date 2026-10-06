@@ -75,7 +75,7 @@ final class pool_manager_test extends \advanced_testcase {
         }
     }
 
-    public function test_enrol_pool_into_course_assigns_teacher_role_once(): void {
+    public function test_enrol_pool_into_course_assigns_pool_role_once(): void {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 3, 'block_kursfilter');
@@ -83,10 +83,10 @@ final class pool_manager_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $other = $this->getDataGenerator()->create_course();
         $context = \context_course::instance($course->id);
-        $roleid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
 
         $first = pool_manager::enrol_pool_into_course($course->id);
         $second = pool_manager::enrol_pool_into_course($course->id);
+        $roleid = $DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
 
         $this->assertSame(3, $first);
         $this->assertSame(0, $second);
@@ -145,5 +145,69 @@ final class pool_manager_test extends \advanced_testcase {
         $this->assertNull(pool_manager::get_free_pool_user());
         pool_manager::mark_free($first);
         $this->assertSame($first, pool_manager::get_free_pool_user()->username);
+    }
+
+    public function test_pool_role_cannot_see_participants_identity_or_grades(): void {
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_users();
+        $course = $this->getDataGenerator()->create_course();
+        pool_manager::enrol_pool_into_course($course->id);
+        $userid = $this->pool_userids()[0];
+        $context = \context_course::instance($course->id);
+
+        foreach (['moodle/course:viewparticipants', 'moodle/site:viewuseridentity', 'moodle/grade:viewall'] as $capability) {
+            $this->assertFalse(has_capability($capability, $context, $userid), $capability);
+        }
+    }
+
+    public function test_pool_role_still_sees_hidden_activities(): void {
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_users();
+        $course = $this->getDataGenerator()->create_course();
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'visible' => 0]);
+        pool_manager::enrol_pool_into_course($course->id);
+
+        $this->assertTrue(has_capability(
+            'moodle/course:viewhiddenactivities',
+            \context_module::instance($page->cmid),
+            $this->pool_userids()[0]
+        ));
+    }
+
+    public function test_migrate_moves_teacher_assignments_of_pool_users_only(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_users();
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $teacherid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
+        $poolid = $this->pool_userids()[0];
+        $realteacher = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->enrol_user($poolid, $course->id, 'teacher');
+        $this->getDataGenerator()->enrol_user($realteacher->id, $course->id, 'teacher');
+
+        pool_manager::migrate_to_pool_role();
+        pool_manager::migrate_to_pool_role();
+
+        $poolroleid = $DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
+        $this->assertTrue(user_has_role_assignment($poolid, $poolroleid, $context->id));
+        $this->assertFalse(user_has_role_assignment($poolid, $teacherid, $context->id));
+        $this->assertTrue(user_has_role_assignment($realteacher->id, $teacherid, $context->id));
+        $this->assertFalse(has_capability('moodle/course:viewparticipants', $context, $poolid));
+    }
+
+    public function test_remove_role_deletes_the_pool_role(): void {
+        global $DB;
+        $this->resetAfterTest();
+        pool_manager::ensure_role();
+        pool_manager::ensure_role();
+        $this->assertSame(1, $DB->count_records('role', ['shortname' => pool_manager::ROLE_SHORTNAME]));
+
+        pool_manager::remove_role();
+
+        $this->assertFalse($DB->record_exists('role', ['shortname' => pool_manager::ROLE_SHORTNAME]));
     }
 }

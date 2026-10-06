@@ -41,8 +41,15 @@ class pool_manager {
     /** Username prefix for pool users. */
     const USERNAME_PREFIX = 'kursfilter_guest';
 
-    /** Role shortname for course access. */
-    const ROLE_SHORTNAME = 'teacher';
+    /** Role shortname for course access (non-editing teacher without access to personal data). */
+    const ROLE_SHORTNAME = 'kursfilter_pool';
+
+    /** Capabilities prohibited for the pool role: they would expose participants of real courses. */
+    const PROHIBITED_CAPABILITIES = [
+        'moodle/course:viewparticipants',
+        'moodle/site:viewuseridentity',
+        'moodle/grade:viewall',
+    ];
 
     /** Cache key for tracking active sessions per pool user. */
     const CACHE_PREFIX = 'pool_active_';
@@ -111,7 +118,68 @@ class pool_manager {
     }
 
     /**
-     * Enrol all pool users into a course with the teacher role (no editing).
+     * Create the pool role if missing: a non-editing teacher that may not see participants, user identity or grades.
+     *
+     * @return int Role ID.
+     */
+    public static function ensure_role(): int {
+        global $DB;
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
+        if ($roleid) {
+            return (int)$roleid;
+        }
+        $roleid = create_role(
+            get_string('role_pool_name', 'block_kursfilter'),
+            self::ROLE_SHORTNAME,
+            get_string('role_pool_description', 'block_kursfilter'),
+            'teacher'
+        );
+        set_role_contextlevels($roleid, get_default_contextlevels('teacher'));
+        // Take over the default capabilities of the archetype (create_role() does not).
+        reset_role_capabilities($roleid);
+        foreach (self::PROHIBITED_CAPABILITIES as $capability) {
+            assign_capability($capability, CAP_PROHIBIT, $roleid, \context_system::instance()->id, true);
+        }
+        return (int)$roleid;
+    }
+
+    /**
+     * Delete the pool role together with its assignments.
+     */
+    public static function remove_role(): void {
+        global $DB;
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
+        if ($roleid) {
+            delete_role($roleid);
+        }
+    }
+
+    /**
+     * Replace the former teacher role of pool users by the pool role. Safe to run repeatedly.
+     */
+    public static function migrate_to_pool_role(): void {
+        global $DB;
+
+        $teacherid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
+        $poolroleid = self::ensure_role();
+        [$insql, $params] = $DB->get_in_or_equal(self::get_pool_usernames(), SQL_PARAMS_NAMED);
+        $assignments = $DB->get_records_sql(
+            "SELECT ra.id, ra.userid, ra.contextid
+               FROM {role_assignments} ra
+               JOIN {user} u ON u.id = ra.userid
+              WHERE ra.roleid = :roleid AND ra.component = '' AND u.username $insql",
+            ['roleid' => $teacherid] + $params
+        );
+        foreach ($assignments as $assignment) {
+            role_unassign($teacherid, $assignment->userid, $assignment->contextid);
+            role_assign($poolroleid, $assignment->userid, $assignment->contextid);
+        }
+    }
+
+    /**
+     * Enrol all pool users into a course with the pool role (no editing).
      * Skips users already enroled.
      *
      * @param int $courseid Target course ID.
@@ -120,11 +188,7 @@ class pool_manager {
     public static function enrol_pool_into_course(int $courseid): int {
         global $DB;
 
-        $role = $DB->get_record('role', ['shortname' => self::ROLE_SHORTNAME], '*', IGNORE_MISSING);
-        if (!$role) {
-            debugging('block_kursfilter pool_manager: role "' . self::ROLE_SHORTNAME . '" not found.', DEBUG_DEVELOPER);
-            return 0;
-        }
+        $roleid = self::ensure_role();
 
         // Use manual enrolment plugin.
         $enrol  = enrol_get_plugin('manual');
@@ -152,7 +216,7 @@ class pool_manager {
             if (is_enrolled($context, $user->id, '', true)) {
                 continue;
             }
-            $enrol->enrol_user($instance, $user->id, $role->id);
+            $enrol->enrol_user($instance, $user->id, $roleid);
             $enrolled++;
         }
         return $enrolled;

@@ -31,7 +31,7 @@
  * Pre-uninstall tasks for block_kursfilter.
  */
 function xmldb_block_kursfilter_uninstall(): void {
-    global $DB;
+    global $DB, $CFG;
 
     require_once($CFG->dirroot . '/user/lib.php');
 
@@ -45,4 +45,6 @@ function xmldb_block_kursfilter_uninstall(): void {
         // Delete_user() sets deleted = 1, removes enrolments and cleans up user data.
         delete_user($user);
     }
+
+    \block_kursfilter\pool_manager::remove_role();
 }
