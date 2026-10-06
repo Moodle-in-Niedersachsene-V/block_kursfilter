@@ -33,6 +33,7 @@ $string['btn_export']                     = 'Herunterladen';
 $string['btn_opencourse']                 = 'Zum Kurs';
 $string['btn_reset']                      = 'Zurücksetzen';
 $string['course_not_found']               = 'Dieser Kurs wurde nicht gefunden oder ist nicht öffentlich zugänglich.';
+$string['event_course_rated']             = 'Kurs bewertet';
 $string['filter_all']                     = '– Alle –';
 $string['hint_setfilter']                 = 'Filter setzen, um Kurse zu suchen.';
 $string['label_fach']                     = 'Fach';

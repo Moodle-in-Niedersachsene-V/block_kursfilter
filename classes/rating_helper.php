@@ -103,7 +103,15 @@ class rating_helper {
         $record->stars       = $stars;
         $record->timecreated = time();
 
-        $DB->insert_record(self::TABLE, $record);
+        $record->id = $DB->insert_record(self::TABLE, $record);
+
+        event\course_rated::create([
+            'context'  => \context_course::instance($courseid),
+            'objectid' => $record->id,
+            'courseid' => $courseid,
+            'other'    => ['stars' => $stars],
+        ])->trigger();
+
         return true;
     }
 

@@ -33,6 +33,7 @@ $string['btn_export']                     = 'Download';
 $string['btn_opencourse']                 = 'Open course';
 $string['btn_reset']                      = 'Reset';
 $string['course_not_found']               = 'This course was not found or is not publicly accessible.';
+$string['event_course_rated']             = 'Course rated';
 $string['filter_all']                     = '– All –';
 $string['hint_setfilter']                 = 'Set a filter to search for courses.';
 $string['label_fach']                     = 'Subject';
