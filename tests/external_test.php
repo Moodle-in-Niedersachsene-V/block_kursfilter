@@ -17,18 +17,19 @@
 namespace block_kursfilter;
 
 use block_kursfilter_external;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
  * Tests fuer die Kurssuche (Sichtbarkeit, Ergebnislimit, Rate-Limit).
  *
+ * Prozessisolation noetig: die Klasse bindet das veraltete lib/externallib.php ein.
+ *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \block_kursfilter_external
- *
- * Prozessisolation noetig: die Klasse bindet das veraltete lib/externallib.php ein.
  */
+#[CoversClass(block_kursfilter_external::class)]
 #[RunTestsInSeparateProcesses]
 final class external_test extends \advanced_testcase {
     /**
