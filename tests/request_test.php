@@ -16,8 +16,10 @@
 
 namespace block_kursfilter;
 
+use PHPUnit\Framework\Attributes\DataProvider;
+
 /**
- * Request-Tests gegen die echten Endpunkte rate.php und backup.php.
+ * Request-Tests gegen die echten Endpunkte rate.php, backup.php und guest_login.php.
  *
  * Benoetigt einen laufenden Webserver auf denselben (PHPUnit-)Tabellen; die URL
  * steht in der Umgebungsvariable KURSFILTER_WEB_URL. Ohne sie werden die Tests uebersprungen.
@@ -50,12 +52,14 @@ final class request_test extends \advanced_testcase {
     }
 
     protected function tearDown(): void {
-        global $DB;
+        global $CFG;
         if (!empty($this->cookiejar)) {
             @unlink($this->cookiejar);
         }
-        // Committete Testdaten zuruecksetzen; Schreibzugriffe des Webservers erkennt PHPUnit nicht.
-        $DB->delete_records('block_kursfilter_ratings');
+        // Schreibzugriffe des Webservers erkennt PHPUnit nicht: leere Tabellenliste erzwingt vollstaendigen Reset.
+        \testing_util::$tableupdated = [];
+        // Belegungsmarken des Pools liegen im Datei-Cache des Webservers.
+        fulldelete($CFG->dataroot . '/cache/cachestore_file/default_application/block_kursfilter_poolsessions');
         \phpunit_util::$lastdbwrites = null;
         self::resetAllData(false);
         parent::tearDown();
@@ -162,10 +166,7 @@ final class request_test extends \advanced_testcase {
         $this->assertSame(0, $DB->count_records('block_kursfilter_ratings'));
     }
 
-    /**
-     * @dataProvider invalid_stars_provider
-     * @param int $stars Unzulaessiger Wert.
-     */
+    #[DataProvider('invalid_stars_provider')]
     public function test_rate_rejects_out_of_range_stars(int $stars): void {
         global $DB;
         $this->resetAfterTest();
@@ -291,5 +292,98 @@ final class request_test extends \advanced_testcase {
 
         $this->assertSame(200, $status);
         $this->assertStringNotContainsStringIgnoringCase('attachment', $headers);
+    }
+
+    /**
+     * Legt Pool-Konten an und liefert deren Nutzer-IDs.
+     *
+     * @param int $size Poolgroesse.
+     * @return int[] Nutzer-IDs.
+     */
+    private function create_pool(int $size): array {
+        global $DB;
+        set_config('poolsize', $size, 'block_kursfilter');
+        pool_manager::create_pool_users();
+        [$insql, $params] = $DB->get_in_or_equal(pool_manager::get_pool_usernames());
+        return array_keys($DB->get_records_select('user', "username $insql", $params, '', 'id'));
+    }
+
+    /**
+     * Zaehlt aktive Sitzungen der angegebenen Nutzer.
+     *
+     * @param int[] $userids Nutzer-IDs.
+     * @return int Anzahl.
+     */
+    private function count_sessions(array $userids): int {
+        global $DB;
+        [$insql, $params] = $DB->get_in_or_equal($userids);
+        return $DB->count_records_select('sessions', "userid $insql", $params);
+    }
+
+    public function test_guest_login_signs_in_pool_user_and_redirects_to_preview(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(2);
+
+        [$status, $headers] = $this->request('GET', '/blocks/kursfilter/guest_login.php', ['courseid' => $course->id]);
+
+        $this->assertSame(303, $status);
+        $this->assertStringContainsString('/course/view.php?id=' . $course->id . '&kf_preview=1', $headers);
+        $this->assertSame(1, $this->count_sessions($poolids));
+        $context = \context_course::instance($course->id);
+        foreach ($poolids as $id) {
+            $this->assertTrue(is_enrolled($context, $id, '', true));
+            $this->assertTrue(user_has_role_assignment($id, $DB->get_field('role', 'id', ['shortname' => 'teacher']), $context->id));
+        }
+    }
+
+    public function test_guest_login_rejects_hidden_unknown_and_site_course(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
+        $poolids = $this->create_pool(2);
+
+        foreach ([$hidden->id, 99999, SITEID] as $courseid) {
+            [$status, $headers, $body] = $this->request('GET', '/blocks/kursfilter/guest_login.php', ['courseid' => $courseid]);
+            $this->assertStringNotContainsString('Location:', $headers, "Kurs $courseid");
+            $this->assertStringContainsString(get_string('course_not_found', 'block_kursfilter'), $body, "Kurs $courseid");
+        }
+        $this->assertSame(0, $this->count_sessions($poolids));
+        [$insql, $params] = $DB->get_in_or_equal($poolids);
+        $this->assertSame(0, $DB->count_records_select('user_enrolments', "userid $insql", $params));
+    }
+
+    public function test_guest_login_shows_pool_full_when_all_accounts_are_taken(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(1);
+
+        $this->request('GET', '/blocks/kursfilter/guest_login.php', ['courseid' => $course->id]);
+        $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
+        [, $headers, $body] = $this->request('GET', '/blocks/kursfilter/guest_login.php', ['courseid' => $course->id]);
+
+        $this->assertStringNotContainsString('Location:', $headers);
+        $this->assertStringContainsString(get_string('pool_full', 'block_kursfilter'), $body);
+        $this->assertSame(1, $this->count_sessions($poolids));
+    }
+
+    public function test_guest_login_does_not_replace_a_real_login(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(2);
+        $user = $this->getDataGenerator()->create_user(['username' => 'echtnutzer', 'password' => 'Test-Passwort1!']);
+        [, , $loginpage] = $this->request('GET', '/login/index.php');
+        $this->assertSame(1, preg_match('/name="logintoken" value="([^"]+)"/', $loginpage, $m));
+        $this->request('POST', '/login/index.php', [
+            'username' => 'echtnutzer', 'password' => 'Test-Passwort1!', 'logintoken' => $m[1],
+        ]);
+
+        [$status, $headers] = $this->request('GET', '/blocks/kursfilter/guest_login.php', ['courseid' => $course->id]);
+
+        $this->assertSame(303, $status);
+        $this->assertStringNotContainsString('kf_preview', $headers);
+        $this->assertSame(0, $this->count_sessions($poolids));
+        $this->assertSame(1, $this->count_sessions([$user->id]));
     }
 }
