@@ -1,0 +1,82 @@
+# Kursfilter
+
+Ein Block, mit dem Lehrkräfte öffentliche Kurse finden, ansehen, bewerten und als Kurssicherung herunterladen.
+
+## Suche
+
+**Öffentlicher Kurs**:
+Ein sichtbarer Kurs, der nicht die Startseite ist. Nur öffentliche Kurse erscheinen in der Suche und können angesehen, bewertet oder heruntergeladen werden.
+_Avoid_: freier Kurs, sichtbarer Kurs
+Code: `public course`
+
+**Kursbereich**:
+Ein Moodle-Kursbereich als Filter; er schließt seine Unterbereiche ein.
+_Avoid_: Kategorie
+Code: `category`
+
+**Schulform**:
+Filter nach der Schulform, für die ein Kurs gedacht ist (z. B. Gymnasium).
+Code: `school type` (`schooltype`)
+
+**Fach**:
+Filter nach dem Unterrichtsfach eines Kurses.
+Code: `subject`
+
+**Niveaustufe**:
+Filter nach Jahrgang oder Stufe, für die ein Kurs gedacht ist (z. B. Klasse 5-6).
+_Avoid_: Level, Klassenstufe
+Code: `level`
+
+**Kurs-Tag**:
+Ein Schlagwort am Kurs; Schulform, Fach und Niveaustufe sind Kurs-Tags, deren Wert in der Liste der Einstellungen steht.
+_Avoid_: Präfix-Tag
+Code: `tag`
+
+**Suchbegriff**:
+Freier Text, der in Kursbeschreibung, Kursname und Kurzname gesucht wird.
+_Avoid_: Kursname
+Code: `search term` (`searchterm`)
+
+## Besuch
+
+**Besucher**:
+Eine Person, die den Kursfilter nutzt, mit oder ohne eigenes Moodle-Konto.
+_Avoid_: Gast, Kursbesucher, Nutzer
+Code: `visitor`
+
+**Vorschau**:
+Der Blick eines Besuchers in einen öffentlichen Kurs über ein Pool-Konto, ohne Bearbeitungsrechte.
+_Avoid_: Gast-Login, Gastzugang, Kurs ansehen
+Code: `preview`
+
+**Pool-Konto**:
+Ein vom Plugin angelegtes Moodle-Konto, das genau einem Besucher für eine Vorschau überlassen wird.
+_Avoid_: Pool-Nutzer, Gastnutzer, Vorschaukonto, Gastkonto
+Code: `pool account`
+
+**Pool-Rolle**:
+Die Rolle der Pool-Konten in öffentlichen Kursen: sieht den Kurs wie eine Lehrkraft ohne Bearbeitungsrecht, aber keine Teilnehmenden, Identitäten oder Noten.
+_Avoid_: Trainer-Rolle, Gastrolle
+Code: `pool role`
+
+**Belegt / frei**:
+Ein Pool-Konto ist belegt, solange ein Besucher es für eine Vorschau nutzt, sonst frei.
+_Avoid_: aktiv, besetzt
+Code: `occupied` / `free`
+
+## Bewertung und Download
+
+**Bewertung**:
+Ein bis fünf Sterne, die ein Besucher einem öffentlichen Kurs gibt; höchstens eine je Besucher und Kurs.
+_Avoid_: Rating, Kursbewertung, Stimme
+Code: `rating`
+
+**Kurssicherung**:
+Die nächtlich erzeugte Sicherungsdatei (.mbz) eines öffentlichen Kurses ohne Nutzerdaten; je Kurs gibt es höchstens eine.
+_Avoid_: Export, Backup-Datei, Kursexport
+Code: `backup`
+
+**Sicherungskonto**:
+Das Administratorkonto, unter dem die Kurssicherungen erzeugt werden.
+_Avoid_: Backup-Admin
+Code: `backup user`
