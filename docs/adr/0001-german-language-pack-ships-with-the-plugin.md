@@ -4,4 +4,4 @@ Kursfilter läuft vorerst nur im Aufgabenpool des Vereins Moodle in Niedersachse
 
 ## Consequences
 
-Soll Kursfilter später in den Marketplace, wird diese ADR abgelöst und `lang/de/` wie bei Coursepilot (ADR 0024 dort) aus dem Release-Paket genommen.
+Soll Kursfilter später auf weitere Instanzen (etwa die NLQ-Instanzen), wird diese ADR überprüft. Für den Marketplace wird sie abgelöst, und `lang/de/` wie bei Coursepilot (ADR 0024 dort) aus dem Release-Paket genommen.
