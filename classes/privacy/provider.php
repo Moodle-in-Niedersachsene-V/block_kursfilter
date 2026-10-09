@@ -14,38 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_kursfilter\privacy;
+
 /**
- * Library functions for block_kursfilter.
+ * Privacy provider: ratings carry only a random browser cookie, no link to a user account.
+ *
+ * Pool accounts are Moodle accounts of the plugin, not of persons; their data is core data.
+ * Changes to the rating model (TODO https://github.com/Moodle-in-Niedersachsene-V/block_kursfilter/issues/2)
+ * must revisit this provider.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-/**
- * Serve backup files from the kursfilter file area.
- * Delegates to backup.php: this function is not needed for
- * Moodle's pluginfile() mechanism because downloads go
- * through backup.php directly.
- *
- * @param stdClass $course
- * @param stdClass $cm
- * @param context  $context
- * @param string   $filearea
- * @param array    $args
- * @param bool     $forcedownload
- * @param array    $options
- */
-function block_kursfilter_pluginfile(
-    $course,
-    $cm,
-    $context,
-    $filearea,
-    $args,
-    $forcedownload,
-    array $options = []
-): void {
-    // Downloads go through blocks/kursfilter/backup.php.
-    send_file_not_found();
+class provider implements \core_privacy\local\metadata\null_provider {
+    /**
+     * Language string key explaining why no personal data of users is stored.
+     *
+     * @return string
+     */
+    public static function get_reason(): string {
+        return 'privacy:metadata';
+    }
 }

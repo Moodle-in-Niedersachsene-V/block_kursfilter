@@ -45,7 +45,7 @@ final class request_test extends \advanced_testcase {
         }
         $url = getenv('KURSFILTER_WEB_URL');
         if (!$url) {
-            $this->markTestSkipped('KURSFILTER_WEB_URL nicht gesetzt.');
+            $this->markTestSkipped('KURSFILTER_WEB_URL is not set.');
         }
         $this->baseurl = rtrim($url, '/');
         $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
@@ -95,7 +95,7 @@ final class request_test extends \advanced_testcase {
             curl_setopt($ch, CURLOPT_COOKIE, $cookie);
         }
         $raw = curl_exec($ch);
-        $this->assertNotFalse($raw, 'Testwebserver nicht erreichbar: ' . curl_error($ch));
+        $this->assertNotFalse($raw, 'Test web server not reachable: ' . curl_error($ch));
         $status = curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
         $headersize = curl_getinfo($ch, CURLINFO_HEADER_SIZE);
         curl_close($ch);
@@ -109,7 +109,7 @@ final class request_test extends \advanced_testcase {
      */
     private function sesskey(): string {
         [, , $body] = $this->request('GET', '/login/index.php');
-        $this->assertSame(1, preg_match('/"sesskey":"([A-Za-z0-9]+)"/', $body, $m), 'Kein Sesskey gefunden.');
+        $this->assertSame(1, preg_match('/"sesskey":"([A-Za-z0-9]+)"/', $body, $m), 'No sesskey found.');
         return $m[1];
     }
 
@@ -123,7 +123,7 @@ final class request_test extends \advanced_testcase {
     private function rate(array $fields, string $cookie = ''): array {
         [, , $body] = $this->request('POST', '/blocks/kursfilter/rate.php', $fields, $cookie);
         $json = json_decode($body, true);
-        $this->assertIsArray($json, 'Keine JSON-Antwort: ' . $body);
+        $this->assertIsArray($json, 'No JSON response: ' . $body);
         return $json;
     }
 
@@ -184,7 +184,7 @@ final class request_test extends \advanced_testcase {
      * @return array[]
      */
     public static function invalid_stars_provider(): array {
-        return ['null' => [0], 'sechs' => [6], 'negativ' => [-1], 'riesig' => [2147483647]];
+        return ['zero' => [0], 'six' => [6], 'negative' => [-1], 'huge' => [2147483647]];
     }
 
     public function test_rate_rejects_hidden_and_unknown_courses(): void {
@@ -244,26 +244,26 @@ final class request_test extends \advanced_testcase {
 
     public function test_backup_download_serves_file_of_visible_course(): void {
         $this->resetAfterTest();
-        $course = $this->getDataGenerator()->create_course(['shortname' => 'OFFEN1']);
-        $this->seed_backup($course->id, 'MBZ-INHALT');
+        $course = $this->getDataGenerator()->create_course(['shortname' => 'PUBLIC1']);
+        $this->seed_backup($course->id, 'MBZ-CONTENT');
 
         [$status, $headers, $body] = $this->request('GET', '/blocks/kursfilter/backup.php', ['courseid' => $course->id]);
 
         $this->assertSame(200, $status);
         $this->assertStringContainsStringIgnoringCase('attachment', $headers);
-        $this->assertStringContainsString('OFFEN1_backup.mbz', $headers);
-        $this->assertSame('MBZ-INHALT', $body);
+        $this->assertStringContainsString('PUBLIC1_backup.mbz', $headers);
+        $this->assertSame('MBZ-CONTENT', $body);
     }
 
     public function test_backup_download_rejects_hidden_course_with_file(): void {
         $this->resetAfterTest();
         $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
-        $this->seed_backup($hidden->id, 'GEHEIM');
+        $this->seed_backup($hidden->id, 'HIDDEN-CONTENT');
 
         [$status, , $body] = $this->request('GET', '/blocks/kursfilter/backup.php', ['courseid' => $hidden->id]);
 
         $this->assertSame(404, $status);
-        $this->assertStringNotContainsString('GEHEIM', $body);
+        $this->assertStringNotContainsString('HIDDEN-CONTENT', $body);
     }
 
     public function test_backup_download_rejects_unknown_course(): void {
@@ -276,12 +276,27 @@ final class request_test extends \advanced_testcase {
 
     public function test_backup_download_rejects_site_course_with_file(): void {
         $this->resetAfterTest();
-        $this->seed_backup(SITEID, 'STARTSEITE');
+        $this->seed_backup(SITEID, 'SITE-CONTENT');
 
         [$status, , $body] = $this->request('GET', '/blocks/kursfilter/backup.php', ['courseid' => SITEID]);
 
         $this->assertSame(404, $status);
-        $this->assertStringNotContainsString('STARTSEITE', $body);
+        $this->assertStringNotContainsString('SITE-CONTENT', $body);
+    }
+
+    public function test_backup_is_not_served_through_pluginfile(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $this->seed_backup((int)$course->id, 'MBZ-CONTENT');
+        $systemcontextid = \context_system::instance()->id;
+
+        [$status, , $body] = $this->request(
+            'GET',
+            "/pluginfile.php/{$systemcontextid}/block_kursfilter/course_backups/{$course->id}/backup_{$course->id}.mbz"
+        );
+
+        $this->assertSame(404, $status);
+        $this->assertStringNotContainsString('MBZ-CONTENT', $body);
     }
 
     public function test_backup_download_without_file_sends_no_attachment(): void {
