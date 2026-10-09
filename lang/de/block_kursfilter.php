@@ -27,8 +27,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['back_to_search']                 = 'Zurück zur Suche';
 $string['backup_not_available']           = 'Für diesen Kurs ist noch keine Sicherung vorhanden. Bitte später erneut versuchen.';
-$string['block_kursfilter:addinstance']   = 'Block „Kursfilter" hinzufügen';
-$string['block_kursfilter:myaddinstance'] = 'Block „Kursfilter" zum Dashboard hinzufügen';
 $string['btn_export']                     = 'Herunterladen';
 $string['btn_opencourse']                 = 'Zum Kurs';
 $string['btn_reset']                      = 'Zurücksetzen';
@@ -38,6 +36,9 @@ $string['error_backups_failed']           = '{$a->failed} von {$a->total} Kurssi
 $string['event_course_rated']             = 'Kurs bewertet';
 $string['filter_all']                     = '– Alle –';
 $string['hint_setfilter']                 = 'Filter setzen, um Kurse zu suchen.';
+$string['kursfilter:addinstance']          = 'Block „Kursfilter" hinzufügen';
+$string['kursfilter:myaddinstance']        = 'Block „Kursfilter" zum Dashboard hinzufügen';
+$string['kursfilter:search']              = 'Kurse mit dem Kursfilter suchen';
 $string['label_fach']                     = 'Fach';
 $string['label_kursbereich']              = 'Kursbereich';
 $string['label_kursname']                 = 'Suchbegriff';

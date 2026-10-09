@@ -196,14 +196,11 @@ define(['core/ajax'], function(Ajax) {
         Ajax.call([{
             methodname: 'block_kursfilter_search_courses',
             args: {
-                kursbereich:  parseInt(self.kursbereich, 10) || 0,
-                schulform:    self.schulform,
-                fach:         self.fach,
-                niveaustufe:  self.niveaustufe,
-                tag:          '',
-                kursname:     self.kursname,
-                contextid:    self.config.contextid || 1,
-                limit:        100,
+                category:   parseInt(self.kursbereich, 10) || 0,
+                schooltype: self.schulform,
+                subject:    self.fach,
+                level:      self.niveaustufe,
+                searchterm: self.kursname,
             },
             done: function(result) {
                 if (spinner) {
@@ -254,8 +251,8 @@ define(['core/ajax'], function(Ajax) {
             }).join(' ');
 
             // Download-Button: Kurssicherung (.mbz) fuer alle wenn Backup vorhanden.
-            var exportBtn = c.hasexport
-                ? '<a href="' + escHtml(c.exporturl) + '"'
+            var exportBtn = c.hasbackup
+                ? '<a href="' + escHtml(c.backupurl) + '"'
                   + ' class="btn btn-sm btn-outline-secondary kf-export-btn"'
                   + ' title="Kurssicherung herunterladen (.mbz)"'
                   + ' download>'

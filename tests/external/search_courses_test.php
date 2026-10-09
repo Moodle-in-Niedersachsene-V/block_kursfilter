@@ -14,39 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace block_kursfilter;
+namespace block_kursfilter\external;
 
-use block_kursfilter_external;
+use core_external\external_api;
 use PHPUnit\Framework\Attributes\CoversClass;
-use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
 
 /**
- * Tests for the course search (visibility, result limit, rate limit).
- *
- * Process isolation required: the class includes the deprecated lib/externallib.php.
+ * Tests for the course search web service (visibility, filters, limits, access).
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-#[CoversClass(block_kursfilter_external::class)]
-#[RunTestsInSeparateProcesses]
-final class external_test extends \advanced_testcase {
+#[CoversClass(search_courses::class)]
+final class search_courses_test extends \advanced_testcase {
     /**
-     * Runs the search as a logged-in user in the system context.
+     * Runs the search the way a web service client does, including return value cleaning.
      *
-     * @param array $args Parameters for search_courses (name => value).
-     * @return array Search result.
+     * @param array $args Parameters for the search (name => value).
+     * @return array Cleaned search result.
      */
     private function search(array $args = []): array {
-        $args += ['contextid' => \context_system::instance()->id];
-        return block_kursfilter_external::search_courses(...$args);
+        $result = search_courses::execute(...$args);
+        return external_api::clean_returnvalue(search_courses::execute_returns(), $result);
     }
 
     /**
      * Returns the course IDs of a search result.
      *
-     * @param array $result Result of search_courses.
+     * @param array $result Search result.
      * @return int[] Course IDs.
      */
     private function ids(array $result): array {
@@ -72,7 +68,7 @@ final class external_test extends \advanced_testcase {
         $match = $this->getDataGenerator()->create_course(['fullname' => 'Mathematik Klasse 7']);
         $other = $this->getDataGenerator()->create_course(['fullname' => 'Deutsch Klasse 7']);
 
-        $ids = $this->ids($this->search(['kursname' => 'mathematik']));
+        $ids = $this->ids($this->search(['searchterm' => 'mathematik']));
 
         $this->assertSame([(int)$match->id], $ids);
         $this->assertNotContains((int)$other->id, $ids);
@@ -83,8 +79,8 @@ final class external_test extends \advanced_testcase {
         $this->setUser($this->getDataGenerator()->create_user());
         $this->getDataGenerator()->create_course(['fullname' => 'Physik']);
 
-        $this->assertSame([], $this->ids($this->search(['kursname' => '%'])));
-        $this->assertSame([], $this->ids($this->search(['kursname' => '_hysik'])));
+        $this->assertSame([], $this->ids($this->search(['searchterm' => '%'])));
+        $this->assertSame([], $this->ids($this->search(['searchterm' => '_hysik'])));
     }
 
     public function test_category_filter_includes_subcategories_and_excludes_others(): void {
@@ -96,7 +92,7 @@ final class external_test extends \advanced_testcase {
         $inchild = $this->getDataGenerator()->create_course(['category' => $child->id]);
         $elsewhere = $this->getDataGenerator()->create_course();
 
-        $ids = $this->ids($this->search(['kursbereich' => $parent->id]));
+        $ids = $this->ids($this->search(['category' => $parent->id]));
 
         $this->assertEqualsCanonicalizing([(int)$inparent->id, (int)$inchild->id], $ids);
         $this->assertNotContains((int)$elsewhere->id, $ids);
@@ -109,7 +105,7 @@ final class external_test extends \advanced_testcase {
         $untagged = $this->getDataGenerator()->create_course();
         \core_tag_tag::set_item_tags('core', 'course', $tagged->id, \context_course::instance($tagged->id), ['Gymnasium']);
 
-        $ids = $this->ids($this->search(['schulform' => 'gymnasium']));
+        $ids = $this->ids($this->search(['schooltype' => 'gymnasium']));
 
         $this->assertSame([(int)$tagged->id], $ids);
         $this->assertNotContains((int)$untagged->id, $ids);
@@ -139,26 +135,27 @@ final class external_test extends \advanced_testcase {
         $this->assertCount(2, $this->search(['limit' => -5])['courses']);
     }
 
-    public function test_configured_limit_above_hard_maximum_is_ignored(): void {
+    public function test_configured_limit_above_hard_maximum_falls_back_to_default(): void {
+        global $DB;
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
         set_config('resultlimit', 100000, 'block_kursfilter');
-        for ($i = 0; $i < 3; $i++) {
-            $this->getDataGenerator()->create_course();
+        $category = $this->getDataGenerator()->create_category();
+        // Plain course rows keep the setup fast; the search reads only the course table.
+        for ($i = 0; $i <= search_courses::DEFAULT_RESULT_LIMIT; $i++) {
+            $DB->insert_record('course', [
+                'category' => $category->id, 'fullname' => "Course $i", 'shortname' => "c$i", 'summary' => '', 'visible' => 1,
+            ]);
         }
 
-        // An invalid configuration falls back to 100; never above MAX_RESULT_LIMIT.
-        $this->assertLessThanOrEqual(
-            block_kursfilter_external::MAX_RESULT_LIMIT,
-            count($this->search(['limit' => 100000])['courses'])
-        );
+        $this->assertCount(search_courses::DEFAULT_RESULT_LIMIT, $this->search(['limit' => 100000])['courses']);
     }
 
     public function test_rate_limit_blocks_request_over_threshold(): void {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
 
-        for ($i = 0; $i < block_kursfilter_external::RATE_LIMIT_REQUESTS; $i++) {
+        for ($i = 0; $i < search_courses::RATE_LIMIT_REQUESTS; $i++) {
             $this->search();
         }
 
@@ -172,12 +169,34 @@ final class external_test extends \advanced_testcase {
         $second = $this->getDataGenerator()->create_user();
 
         $this->setUser($first);
-        for ($i = 0; $i < block_kursfilter_external::RATE_LIMIT_REQUESTS; $i++) {
+        for ($i = 0; $i < search_courses::RATE_LIMIT_REQUESTS; $i++) {
             $this->search();
         }
 
+        $course = $this->getDataGenerator()->create_course();
         $this->setUser($second);
-        $this->assertArrayHasKey('courses', $this->search());
+        $this->assertSame([(int)$course->id], $this->ids($this->search()));
+    }
+
+    public function test_search_requires_the_search_capability(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->getDataGenerator()->create_course();
+        $userrole = $DB->get_field('role', 'id', ['shortname' => 'user']);
+        assign_capability('block/kursfilter:search', CAP_PROHIBIT, $userrole, \context_system::instance()->id, true);
+        $this->setUser($user);
+
+        $this->expectException(\required_capability_exception::class);
+        $this->search();
+    }
+
+    public function test_guest_may_search(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $this->setGuestUser();
+
+        $this->assertSame([(int)$course->id], $this->ids($this->search()));
     }
 
     public function test_course_summary_markup_is_not_returned_as_html(): void {

@@ -27,8 +27,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $string['back_to_search']                 = 'Back to search';
 $string['backup_not_available']           = 'No backup available for this course yet. Please try again later.';
-$string['block_kursfilter:addinstance']   = 'Add a Course Filter block';
-$string['block_kursfilter:myaddinstance'] = 'Add a Course Filter block to My page';
 $string['btn_export']                     = 'Download';
 $string['btn_opencourse']                 = 'Open course';
 $string['btn_reset']                      = 'Reset';
@@ -38,6 +36,9 @@ $string['error_backups_failed']           = '{$a->failed} of {$a->total} course 
 $string['event_course_rated']             = 'Course rated';
 $string['filter_all']                     = '– All –';
 $string['hint_setfilter']                 = 'Set a filter to search for courses.';
+$string['kursfilter:addinstance']          = 'Add a Course Filter block';
+$string['kursfilter:myaddinstance']        = 'Add a Course Filter block to My page';
+$string['kursfilter:search']              = 'Search courses with the Course Filter';
 $string['label_fach']                     = 'Subject';
 $string['label_kursbereich']              = 'Course area';
 $string['label_kursname']                 = 'Search term';

@@ -39,38 +39,32 @@ class rating_helper {
     const TABLE = 'block_kursfilter_ratings';
 
     /**
-     * Get or create the rater cookie hash for the current visitor.
-     * Sets the cookie in the response if it does not exist yet.
-     * Cookie has no expiry (session=false, expires=0 → permanent).
+     * Rater cookie of the current visitor, if the browser sent a valid one.
+     *
+     * @return string|null SHA-256 hash identifying this browser, or null.
+     */
+    public static function get_cookie_hash(): ?string {
+        $raw = $_COOKIE[self::COOKIE_NAME] ?? '';
+        return is_string($raw) && preg_match('/^[0-9a-f]{64}$/', $raw) ? $raw : null;
+    }
+
+    /**
+     * Give the current visitor a new rater cookie.
+     *
+     * It is a session cookie: it ends with the browser session, so one rating per course is only
+     * enforced within a session (see TODO https://github.com/Moodle-in-Niedersachsene-V/block_kursfilter/issues/2).
      *
      * @return string SHA-256 hash identifying this browser.
      */
-    public static function get_or_create_cookie_hash(): string {
-        if (!empty($_COOKIE[self::COOKIE_NAME])) {
-            $raw = $_COOKIE[self::COOKIE_NAME];
-            // Validate: must be 64 hex chars.
-            if (preg_match('/^[0-9a-f]{64}$/', $raw)) {
-                return $raw;
-            }
-        }
-
-        // Generate a new random identifier and store as cookie.
-        $token = bin2hex(random_bytes(32));
-        $hash  = hash('sha256', $token);
-
-        // Permanent cookie (expires = 0 means session; use far-future date for permanent).
-        setcookie(
-            self::COOKIE_NAME,
-            $hash,
-            [
-                'expires'  => 0, // Session cookie – survives until browser data cleared.
-                'path'     => '/',
-                'secure'   => true,
-                'httponly' => true,
-                'samesite' => 'Lax',
-            ]
-        );
-
+    public static function create_cookie_hash(): string {
+        $hash = hash('sha256', bin2hex(random_bytes(32)));
+        setcookie(self::COOKIE_NAME, $hash, [
+            'expires'  => 0,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         return $hash;
     }
 
@@ -80,7 +74,7 @@ class rating_helper {
      * (one rating per cookie per course).
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash SHA-256 hash from get_or_create_cookie_hash().
+     * @param string $cookiehash SHA-256 hash from the rater cookie.
      * @param int    $stars      Rating 1–5.
      * @return bool True if saved, false if already rated.
      */

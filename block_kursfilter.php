@@ -71,8 +71,7 @@ class block_kursfilter extends block_base {
 
         $this->page->requires->js_call_amd('block_kursfilter/filter', 'init', [
             [
-                'blockid'   => (int)$this->instance->id,
-                'contextid' => (int)$this->page->context->id,
+                'blockid' => (int)$this->instance->id,
             ],
         ]);
 

@@ -66,8 +66,8 @@ if (!$course) {
     exit;
 }
 
-// Get or create visitor cookie hash.
-$cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
+$cookiehash = \block_kursfilter\rating_helper::get_cookie_hash()
+    ?? \block_kursfilter\rating_helper::create_cookie_hash();
 
 // Save rating (returns false if already rated).
 $saved = \block_kursfilter\rating_helper::save_rating($courseid, $cookiehash, $stars);
