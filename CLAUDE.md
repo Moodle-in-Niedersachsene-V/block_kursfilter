@@ -4,7 +4,7 @@ Moodle-Block `block_kursfilter` von Moodle in Niedersachsen e. V.: Kurssuche nac
 
 - **Stack:** PHP-Plugin für Moodle 5.1+ (`version.php`), AMD-Modul in `amd/src/`, Mustache-Template.
 - **GitHub:** `Moodle-in-Niedersachsene-V/block_kursfilter`
-- **Ziel:** vorerst nur der Aufgabenpool des Vereins Moodle in Niedersachsen e. V.; weder die NLQ-Instanzen der Schulen noch der Moodle-Marketplace (siehe ADR 0001).
+- **Ziel:** vorerst nur der Materialien-Hub des Vereins Moodle in Niedersachsen e. V.; weder die NLQ-Instanzen der Schulen noch der Moodle-Marketplace (siehe ADR 0001).
 
 ## Wichtige Dateien
 

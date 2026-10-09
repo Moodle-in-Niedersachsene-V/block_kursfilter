@@ -16,4 +16,5 @@ Reviews zitieren die Regel mit Nummer (`S2`, `N3`, `E4`).
 
 | Regel | Abweichung | Begründung |
 |---|---|---|
-| N3 (nur `lang/en/` ausliefern) | `lang/de/` wird mit ausgeliefert | [ADR 0001](docs/adr/0001-german-language-pack-ships-with-the-plugin.md) |
+| N3 (nur `lang/en/` ausliefern) | `lang/de/` wird mit ausgeliefert | [ADR 0001](docs/adr/0001-kursfilter-runs-only-in-the-materials-hub.md) |
+| D2 (alle Datenbanken) | nur die Datenbank des Materialien-Hubs; DML-API und Platzhalter bleiben Pflicht | [ADR 0001](docs/adr/0001-kursfilter-runs-only-in-the-materials-hub.md) |

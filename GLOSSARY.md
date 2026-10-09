@@ -1,6 +1,22 @@
 # Kursfilter
 
-Ein Block, mit dem Lehrkräfte öffentliche Kurse finden, ansehen, bewerten und als Kurssicherung herunterladen.
+Ein Block, mit dem Lehrkräfte im Materialien-Hub öffentliche Kurse finden, ansehen, bewerten und als Kurssicherung herunterladen. Testfragen findet man im Materialien-Hub auf anderem Weg; sie sind nicht Teil des Kursfilters.
+
+## Materialien-Hub
+
+**Materialien-Hub**:
+Das Moodle des Vereins Moodle in Niedersachsen e. V., in dem Lehrkräfte Kurse und Testfragen zur Nachnutzung finden.
+_Avoid_: Aufgabenpool, Vereins-Moodle
+
+**Kurs**:
+Ein Moodle-Kurs im Materialien-Hub, den Lehrkräfte ansehen und für den eigenen Unterricht übernehmen können; Gegenstand des Kursfilters.
+_Avoid_: Material, Kursvorlage
+Code: `course`
+
+**Testfrage**:
+Eine Frage aus der Fragensammlung des Materialien-Hubs, die Lehrkräfte für eigene Tests übernehmen können; nicht Gegenstand des Kursfilters.
+_Avoid_: Aufgabe (in Moodle eine Aktivität), Quizfrage
+Code: `question`
 
 ## Suche
 
