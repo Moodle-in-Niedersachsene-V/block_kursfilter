@@ -36,6 +36,7 @@ use block_kursfilter\ai_connector;
  * applies tag suggestions directly or stores them for review.
  */
 class tag_courses extends \core\task\scheduled_task {
+
     /**
      * Returns the task display name.
      *
