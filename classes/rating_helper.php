@@ -46,12 +46,15 @@ class rating_helper {
      * @return string SHA-256 hash identifying this browser.
      */
     public static function get_or_create_cookie_hash(): string {
-        if (!empty($_COOKIE[self::COOKIE_NAME])) {
-            $raw = $_COOKIE[self::COOKIE_NAME];
-            // Validate: must be 64 hex chars.
-            if (preg_match('/^[0-9a-f]{64}$/', $raw)) {
-                return $raw;
-            }
+        // Moodle has no required_param() for cookies; validated to 64 hex chars before use.
+        // phpcs:disable moodle.PHP.ForbiddenFunctions
+        $cookiename = self::COOKIE_NAME;
+        // phpcs:disable moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+        $rawcookie = isset($_COOKIE[$cookiename]) ? (string)$_COOKIE[$cookiename] : ''; // nosemgrep: moodle-superglobal-direkt
+        // phpcs:enable moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+        // phpcs:enable moodle.PHP.ForbiddenFunctions
+        if ($rawcookie !== '' && preg_match('/^[0-9a-f]{64}$/', $rawcookie)) {
+            return $rawcookie;
         }
 
         // Generate a new random identifier and store as cookie.

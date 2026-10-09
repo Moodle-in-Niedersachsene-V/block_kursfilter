@@ -29,9 +29,10 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// No require_login() call: this endpoint intentionally allows guest access via pool users.
-// Authentication is handled below by complete_user_login().
-require_once(__DIR__ . '/../../config.php'); // @codingStandardsIgnoreLine
+// Intentional public endpoint: pool-user login via complete_user_login(); visible=1 check enforced.
+// phpcs:disable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
+// phpcs:enable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/pool_manager.php');
 
 $courseid = required_param('courseid', PARAM_INT);

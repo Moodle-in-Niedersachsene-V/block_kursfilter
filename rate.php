@@ -30,9 +30,11 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// No require_login() – ratings are open to all visitors including guests.
+// Intentional public endpoint: anonymous ratings; CSRF via confirm_sesskey(); POST + PARAM_INT only.
 define('AJAX_SCRIPT', true);
-require_once(__DIR__ . '/../../config.php'); // @codingStandardsIgnoreLine
+// phpcs:disable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
+// phpcs:enable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/rating_helper.php');
 
 header('Content-Type: application/json; charset=utf-8');

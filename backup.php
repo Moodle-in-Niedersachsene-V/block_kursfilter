@@ -29,9 +29,11 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// No require_login() call: this endpoint intentionally serves public backup downloads.
-// Access is controlled by course visibility (visible = 1 check below).
-require_once(__DIR__ . '/../../config.php'); // @codingStandardsIgnoreLine
+// Intentional public endpoint: serves pre-generated .mbz backup downloads to guests.
+// No user data is exposed. Access is limited to courses with visible=1 (checked below).
+// phpcs:disable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
+// phpcs:enable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/backup_helper.php');
 
 // Parameter einlesen und validieren.

@@ -84,6 +84,82 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
+    // KI-Verschlagwortung.
+    $settings->add(new admin_setting_heading(
+        'block_kursfilter/ai_heading',
+        get_string('settings_ai_heading', 'block_kursfilter'),
+        get_string('settings_ai_desc', 'block_kursfilter')
+    ));
+    $settings->add(new admin_setting_configcheckbox(
+        'block_kursfilter/ai_enabled',
+        get_string('settings_ai_enabled', 'block_kursfilter'),
+        get_string('settings_ai_enabled_help', 'block_kursfilter'),
+        0
+    ));
+    $settings->add(new admin_setting_configselect(
+        'block_kursfilter/ai_backend',
+        get_string('settings_ai_backend', 'block_kursfilter'),
+        get_string('settings_ai_backend_help', 'block_kursfilter'),
+        'claude',
+        [
+            'claude' => get_string('settings_ai_backend_claude', 'block_kursfilter'),
+            'ollama' => get_string('settings_ai_backend_ollama', 'block_kursfilter'),
+        ]
+    ));
+    $settings->add(new admin_setting_configcheckbox(
+        'block_kursfilter/ai_autoapply',
+        get_string('settings_ai_autoapply', 'block_kursfilter'),
+        get_string('settings_ai_autoapply_help', 'block_kursfilter'),
+        0
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/ai_batch_size',
+        get_string('settings_ai_batch_size', 'block_kursfilter'),
+        get_string('settings_ai_batch_size_help', 'block_kursfilter'),
+        '20',
+        PARAM_INT
+    ));
+
+    // Claude API settings.
+    $settings->add(new admin_setting_heading(
+        'block_kursfilter/ai_claude_heading',
+        get_string('settings_ai_claude_heading', 'block_kursfilter'),
+        get_string('settings_ai_claude_desc', 'block_kursfilter')
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/ai_claude_apikey',
+        get_string('settings_ai_claude_apikey', 'block_kursfilter'),
+        get_string('settings_ai_claude_apikey_help', 'block_kursfilter'),
+        '',
+        PARAM_RAW
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/ai_claude_model',
+        get_string('settings_ai_claude_model', 'block_kursfilter'),
+        get_string('settings_ai_claude_model_help', 'block_kursfilter'),
+        'claude-haiku-4-5-20251001',
+        PARAM_TEXT
+    ));
+
+    // Ollama settings.
+    $settings->add(new admin_setting_heading(
+        'block_kursfilter/ai_ollama_heading',
+        get_string('settings_ai_ollama_heading', 'block_kursfilter'),
+        ''
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/ai_ollama_url',
+        get_string('settings_ai_ollama_url', 'block_kursfilter'),
+        get_string('settings_ai_ollama_url_help', 'block_kursfilter'),
+        'http://localhost:11434'
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/ai_ollama_model',
+        get_string('settings_ai_ollama_model', 'block_kursfilter'),
+        get_string('settings_ai_ollama_model_help', 'block_kursfilter'),
+        'gemma3:4b'
+    ));
+
     // Backup-Einstellungen.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/backup_heading',
