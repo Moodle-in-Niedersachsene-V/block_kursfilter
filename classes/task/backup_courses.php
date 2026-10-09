@@ -43,21 +43,19 @@ class backup_courses extends \core\task\scheduled_task {
     }
 
     /**
-     * Execute the task.
+     * Back up every public course; a failed course does not stop the others, but fails the task.
+     *
+     * @throws \moodle_exception If at least one backup failed.
      */
     public function execute(): void {
-        global $DB, $CFG;
+        global $DB;
 
-        // Find an admin user to run backups as.
-        $adminid = (int)get_config('block_kursfilter', 'backup_adminid');
-        if ($adminid < 1) {
-            // Fall back to the first site admin.
-            $admins  = get_admins();
-            $admin   = reset($admins);
-            $adminid = (int)$admin->id;
+        $userid = (int)get_config('block_kursfilter', 'backup_adminid');
+        if ($userid < 1) {
+            // Documented in the setting: an empty value means the first site admin.
+            $userid = (int)get_admin()->id;
         }
 
-        // Fetch all visible non-site courses.
         $courses = $DB->get_records_select(
             'course',
             'visible = 1 AND id != :siteid',
@@ -66,21 +64,23 @@ class backup_courses extends \core\task\scheduled_task {
             'id, fullname'
         );
 
-        $success = 0;
-        $failed  = 0;
-
+        $failed = 0;
         foreach ($courses as $course) {
-            mtrace("  Sichere Kurs: [{$course->id}] {$course->fullname}");
-            $file = \block_kursfilter\backup_helper::backup_course((int)$course->id, $adminid);
-            if ($file) {
-                mtrace("    → OK ({$file->get_filename()}, " . display_size($file->get_filesize()) . ")");
-                $success++;
-            } else {
-                mtrace("    → FEHLER");
+            try {
+                $file = \block_kursfilter\backup_helper::backup_course((int)$course->id, $userid);
+                $size = display_size($file->get_filesize());
+                mtrace("Course {$course->id}: backup stored ({$file->get_filename()}, {$size})");
+            } catch (\Throwable $e) {
+                mtrace("Course {$course->id}: backup failed: " . $e->getMessage());
                 $failed++;
             }
         }
 
-        mtrace("Kursfilter-Backup abgeschlossen: {$success} erfolgreich, {$failed} fehlgeschlagen.");
+        if ($failed > 0) {
+            throw new \moodle_exception('error_backups_failed', 'block_kursfilter', '', (object)[
+                'failed' => $failed,
+                'total' => count($courses),
+            ]);
+        }
     }
 }
