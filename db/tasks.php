@@ -37,7 +37,7 @@ $tasks = [
         'dayofweek' => '*',
         'disabled'  => 0,
     ],
-    // Check pool users and enrol them in new courses (after the backup).
+    // Create missing pool accounts and enrol them into new public courses (after the backup).
     [
         'classname' => '\block_kursfilter\task\setup_pool',
         'blocking'  => 0,

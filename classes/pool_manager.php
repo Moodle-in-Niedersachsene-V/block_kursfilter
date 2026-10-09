@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Pool manager for block_kursfilter guest access.
+ * Pool manager for the course preview of block_kursfilter.
  *
  * Manages the pool accounts that let visitors preview a public course
  * with the pool role.

@@ -78,7 +78,7 @@ final class backup_helper_test extends \advanced_testcase {
             self::STUDENT_EMAIL, get_admin()->email, 'schueler.geheim', 'Geheimvorname', 'Geheimnachname', 'Text des Kindes',
         ];
         foreach ($secrets as $secret) {
-            $this->assertStringNotContainsString($secret, $content, "Archiv enthaelt '$secret'");
+            $this->assertStringNotContainsString($secret, $content, "Archive contains '$secret'");
         }
     }
 

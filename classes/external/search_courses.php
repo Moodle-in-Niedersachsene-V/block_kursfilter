@@ -109,7 +109,7 @@ class search_courses extends external_api {
         $cookiehash = rating_helper::get_cookie_hash();
         $courses = [];
         foreach ($records as $course) {
-            $courses[] = self::export_course($course, $cookiehash);
+            $courses[] = self::course_result($course, $cookiehash);
         }
         return ['courses' => $courses, 'total' => count($courses)];
     }
@@ -215,7 +215,7 @@ class search_courses extends external_api {
      * @param string|null $cookiehash Rater cookie of this visitor, null if none.
      * @return array Result entry.
      */
-    private static function export_course(\stdClass $course, ?string $cookiehash): array {
+    private static function course_result(\stdClass $course, ?string $cookiehash): array {
         $category = \core_course_category::get($course->category, IGNORE_MISSING);
         $summary = html_to_text(format_text($course->summary, FORMAT_HTML, ['filter' => false]), 0, false);
         if (\core_text::strlen($summary) > self::SUMMARY_LENGTH) {

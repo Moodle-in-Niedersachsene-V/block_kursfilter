@@ -18,7 +18,7 @@
  * Rating helper for block_kursfilter.
  *
  * Manages anonymous course ratings via cookie hash.
- * No user account required: guests can rate as well.
+ * No user account required: visitors without an account can rate as well.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -113,7 +113,7 @@ class rating_helper {
      * Check if a visitor has already rated a course.
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash Visitor cookie hash.
+     * @param string $cookiehash Rater cookie hash.
      * @return int|null The star rating if already rated, null otherwise.
      */
     public static function get_existing_rating(int $courseid, string $cookiehash): ?int {

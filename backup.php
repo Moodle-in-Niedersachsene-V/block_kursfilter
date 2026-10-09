@@ -17,7 +17,7 @@
 /**
  * Public backup download endpoint for block_kursfilter.
  *
- * Allows users who are not logged in (guests) to download
+ * Allows visitors without an account to download
  * a prebuilt course backup (.mbz).
  * The file is generated daily by the scheduled task.
  *

@@ -33,8 +33,8 @@ $definitions = [
         'simpledata' => true,
         'ttl'        => 60,
     ],
-    // Active pool user sessions (TTL matches the session duration).
-    // Prevents two visitors from using the same pool user at the same time.
+    // Occupied pool accounts; an occupancy ends at the latest after the TTL (2 hours).
+    // Prevents two visitors from using the same pool account at the same time.
     'poolsessions' => [
         'mode'       => cache_store::MODE_APPLICATION,
         'simplekeys' => true,

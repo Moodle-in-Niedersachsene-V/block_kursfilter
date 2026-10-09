@@ -52,6 +52,7 @@ final class pool_manager_test extends \advanced_testcase {
     public function test_create_pool_accounts_creates_missing_accounts_only_once(): void {
         $this->resetAfterTest();
         set_config('poolsize', 12, 'block_kursfilter');
+        $existing = count($this->pool_userids());
 
         $first = pool_manager::create_pool_accounts();
         $second = pool_manager::create_pool_accounts();
@@ -61,7 +62,7 @@ final class pool_manager_test extends \advanced_testcase {
 
         $this->assertSame(0, $second);
         $this->assertCount(12, $this->pool_userids());
-        $this->assertLessThanOrEqual(12, $first);
+        $this->assertSame(12 - $existing, $first);
     }
 
     public function test_pool_accounts_cannot_be_logged_into_with_guessable_passwords(): void {
@@ -71,7 +72,7 @@ final class pool_manager_test extends \advanced_testcase {
         $_SERVER['HTTP_USER_AGENT'] = 'phpunit';
 
         foreach (['', $username, 'password', 'Kursbesucher', 'kursfilter'] as $password) {
-            $this->assertFalse(authenticate_user_login($username, $password), "Passwort '$password'");
+            $this->assertFalse(authenticate_user_login($username, $password), "Password '$password'");
         }
     }
 

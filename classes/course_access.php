@@ -17,7 +17,7 @@
 namespace block_kursfilter;
 
 /**
- * Visibility rule for the public endpoints (rating, backup download, guest login).
+ * Visibility rule for the public endpoints (rating, backup download, preview).
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.

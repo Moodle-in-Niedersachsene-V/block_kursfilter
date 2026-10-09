@@ -17,7 +17,7 @@
 /**
  * Post-install hook for block_kursfilter.
  *
- * Creates the pool users on first installation
+ * Creates the pool accounts on first installation
  * and enrols them in all existing courses.
  *
  * @package   block_kursfilter
@@ -30,7 +30,7 @@
  * Post-install tasks for block_kursfilter.
  */
 function xmldb_block_kursfilter_install(): void {
-    // Create the pool users.
+    // Create the pool accounts.
     \block_kursfilter\pool_manager::create_pool_accounts();
 
     // Enrol them in all existing visible courses.

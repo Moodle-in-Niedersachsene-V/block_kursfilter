@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Validate sesskey to prevent CSRF from external sites.
-// Guests without a session get a temporary sesskey from Moodle.
+// Visitors without an account get a sesskey from their Moodle session as well.
 if (!confirm_sesskey()) {
     echo json_encode(['success' => false, 'error' => 'Invalid sesskey']);
     exit;
