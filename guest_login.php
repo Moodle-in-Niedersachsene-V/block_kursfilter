@@ -29,9 +29,8 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// No require_login() call: this endpoint intentionally allows guest access via pool users.
-// Authentication is handled below by complete_user_login().
-require_once(__DIR__ . '/../../config.php'); // @codingStandardsIgnoreLine
+// phpcs:ignore moodle.Files.RequireLogin.Missing -- Public endpoint: it is the login step itself, via a pool account.
+require_once(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/pool_manager.php');
 
 $courseid = required_param('courseid', PARAM_INT);

@@ -30,9 +30,9 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// No require_login() – ratings are open to all visitors including guests.
 define('AJAX_SCRIPT', true);
-require_once(__DIR__ . '/../../config.php'); // @codingStandardsIgnoreLine
+// phpcs:ignore moodle.Files.RequireLogin.Missing -- Public endpoint: visitors without an account may rate (sesskey-protected).
+require_once(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/rating_helper.php');
 
 header('Content-Type: application/json; charset=utf-8');

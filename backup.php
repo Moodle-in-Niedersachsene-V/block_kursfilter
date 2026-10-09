@@ -29,9 +29,8 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// No require_login() call: this endpoint intentionally serves public backup downloads.
-// Access is controlled by course visibility (visible = 1 check below).
-require_once(__DIR__ . '/../../config.php'); // @codingStandardsIgnoreLine
+// phpcs:ignore moodle.Files.RequireLogin.Missing -- Public endpoint: backups of public courses are downloadable without an account; access is limited to public courses below.
+require_once(__DIR__ . '/../../config.php');
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/backup_helper.php');
 
 // Read and validate the parameters.
