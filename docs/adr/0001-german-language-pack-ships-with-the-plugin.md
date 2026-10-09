@@ -1,6 +1,6 @@
 # Deutsches Sprachpaket wird mit dem Plugin ausgeliefert
 
-Kursfilter wird für Moodle-Instanzen in Niedersachsen entwickelt und derzeit nicht im Moodle-Marketplace veröffentlicht. Deshalb gibt es keine Übersetzung über AMOS, und ohne `lang/de/` sähen deutsche Instanzen nur englische Texte. Abweichend von Coding Standard N3 liefert das Plugin `lang/de/` mit aus. Englisch bleibt die Basis: Code, Kommentare, Docblocks, Testtitel und die Schnittstelle sind englisch, und jeder String entsteht zuerst in `lang/en/`.
+Kursfilter läuft vorerst nur im Aufgabenpool des Vereins Moodle in Niedersachsen e. V., nicht auf den NLQ-Instanzen der Schulen und nicht über den Moodle-Marketplace. Ohne Marketplace gibt es keine Übersetzung über AMOS, und ohne `lang/de/` sähe der deutschsprachige Aufgabenpool nur englische Texte. Abweichend von Coding Standard N3 liefert das Plugin `lang/de/` mit aus. Englisch bleibt die Basis: Code, Kommentare, Docblocks, Testtitel und die Schnittstelle sind englisch, und jeder String entsteht zuerst in `lang/en/`.
 
 ## Consequences
 
