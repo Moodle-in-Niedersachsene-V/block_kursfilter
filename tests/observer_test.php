@@ -44,24 +44,24 @@ final class observer_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $username = pool_manager::get_pool_usernames()[0];
-        pool_manager::mark_active($username);
-        $this->assertNull(pool_manager::get_free_pool_user());
+        pool_manager::mark_occupied($username);
+        $this->assertNull(pool_manager::get_free_pool_account());
 
         $this->logout((int)$DB->get_field('user', 'id', ['username' => $username]));
 
-        $this->assertSame($username, pool_manager::get_free_pool_user()->username);
+        $this->assertSame($username, pool_manager::get_free_pool_account()->username);
     }
 
     public function test_logout_of_other_user_keeps_pool_occupied(): void {
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_users();
-        pool_manager::mark_active(pool_manager::get_pool_usernames()[0]);
+        pool_manager::create_pool_accounts();
+        pool_manager::mark_occupied(pool_manager::get_pool_usernames()[0]);
 
         $this->logout($this->getDataGenerator()->create_user()->id);
 
-        $this->assertNull(pool_manager::get_free_pool_user());
+        $this->assertNull(pool_manager::get_free_pool_account());
     }
 }

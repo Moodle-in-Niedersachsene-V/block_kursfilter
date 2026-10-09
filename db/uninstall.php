@@ -17,9 +17,7 @@
 /**
  * Uninstall hook for block_kursfilter.
  *
- * Cleanly deletes all pool users (kursfilter_guest01 … kursfilter_guest10)
- * from Moodle user management so that no leftover data remains
- * after uninstallation.
+ * Deletes all pool accounts and the pool role, so that no leftover accounts remain.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -35,15 +33,12 @@ function xmldb_block_kursfilter_uninstall(): void {
 
     require_once($CFG->dirroot . '/user/lib.php');
 
-    $usernames = \block_kursfilter\pool_manager::get_pool_usernames();
-
-    foreach ($usernames as $username) {
-        $user = $DB->get_record('user', ['username' => $username, 'deleted' => 0], '*', IGNORE_MISSING);
-        if (!$user) {
-            continue;
+    // All pool accounts up to the maximum: the pool size may have been reduced since they were created.
+    $usernames = \block_kursfilter\pool_manager::get_pool_usernames(\block_kursfilter\pool_manager::POOL_SIZE_MAX);
+    foreach ($DB->get_records_list('user', 'username', $usernames) as $user) {
+        if (!$user->deleted) {
+            delete_user($user);
         }
-        // Delete_user() sets deleted = 1, removes enrolments and cleans up user data.
-        delete_user($user);
     }
 
     \block_kursfilter\pool_manager::remove_role();

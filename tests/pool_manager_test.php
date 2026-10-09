@@ -49,12 +49,12 @@ final class pool_manager_test extends \advanced_testcase {
         $this->assertCount(pool_manager::POOL_SIZE_MAX, pool_manager::get_pool_usernames());
     }
 
-    public function test_create_pool_users_creates_missing_accounts_only_once(): void {
+    public function test_create_pool_accounts_creates_missing_accounts_only_once(): void {
         $this->resetAfterTest();
         set_config('poolsize', 12, 'block_kursfilter');
 
-        $first = pool_manager::create_pool_users();
-        $second = pool_manager::create_pool_users();
+        $first = pool_manager::create_pool_accounts();
+        $second = pool_manager::create_pool_accounts();
 
         // New accounts must not trigger Moodle validation warnings (e.g. language not installed).
         $this->assertDebuggingNotCalled();
@@ -66,7 +66,7 @@ final class pool_manager_test extends \advanced_testcase {
 
     public function test_pool_accounts_cannot_be_logged_into_with_guessable_passwords(): void {
         $this->resetAfterTest();
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $username = pool_manager::get_pool_usernames()[0];
         $_SERVER['HTTP_USER_AGENT'] = 'phpunit';
 
@@ -79,7 +79,7 @@ final class pool_manager_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 3, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $course = $this->getDataGenerator()->create_course();
         $other = $this->getDataGenerator()->create_course();
         $context = \context_course::instance($course->id);
@@ -100,7 +100,7 @@ final class pool_manager_test extends \advanced_testcase {
     public function test_pool_role_has_no_write_rights_in_course(): void {
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $course = $this->getDataGenerator()->create_course();
         pool_manager::enrol_pool_into_course($course->id);
         $userid = $this->pool_userids()[0];
@@ -120,7 +120,7 @@ final class pool_manager_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 2, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $visible = $this->getDataGenerator()->create_course();
         $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
 
@@ -135,22 +135,22 @@ final class pool_manager_test extends \advanced_testcase {
     public function test_free_pool_user_changes_with_occupancy(): void {
         $this->resetAfterTest();
         set_config('poolsize', 2, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         [$first, $second] = pool_manager::get_pool_usernames();
 
-        $this->assertSame($first, pool_manager::get_free_pool_user()->username);
-        pool_manager::mark_active($first);
-        $this->assertSame($second, pool_manager::get_free_pool_user()->username);
-        pool_manager::mark_active($second);
-        $this->assertNull(pool_manager::get_free_pool_user());
+        $this->assertSame($first, pool_manager::get_free_pool_account()->username);
+        pool_manager::mark_occupied($first);
+        $this->assertSame($second, pool_manager::get_free_pool_account()->username);
+        pool_manager::mark_occupied($second);
+        $this->assertNull(pool_manager::get_free_pool_account());
         pool_manager::mark_free($first);
-        $this->assertSame($first, pool_manager::get_free_pool_user()->username);
+        $this->assertSame($first, pool_manager::get_free_pool_account()->username);
     }
 
     public function test_pool_role_cannot_see_participants_identity_or_grades(): void {
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $course = $this->getDataGenerator()->create_course();
         pool_manager::enrol_pool_into_course($course->id);
         $userid = $this->pool_userids()[0];
@@ -164,7 +164,7 @@ final class pool_manager_test extends \advanced_testcase {
     public function test_pool_role_still_sees_hidden_activities(): void {
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $course = $this->getDataGenerator()->create_course();
         $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'visible' => 0]);
         pool_manager::enrol_pool_into_course($course->id);
@@ -180,7 +180,7 @@ final class pool_manager_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         $course = $this->getDataGenerator()->create_course();
         $context = \context_course::instance($course->id);
         $teacherid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
@@ -215,7 +215,7 @@ final class pool_manager_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 2, 'block_kursfilter');
-        pool_manager::create_pool_users();
+        pool_manager::create_pool_accounts();
         [$first, $second] = $this->pool_userids();
         $usernames = pool_manager::get_pool_usernames();
         foreach ([[$first, 'sid-first'], [$second, 'sid-second']] as [$userid, $sid]) {
@@ -225,7 +225,7 @@ final class pool_manager_test extends \advanced_testcase {
             ]);
         }
 
-        pool_manager::mark_active($usernames[0]);
+        pool_manager::mark_occupied($usernames[0]);
 
         $this->assertSame(0, $DB->count_records('sessions', ['userid' => $first]));
         $this->assertSame(1, $DB->count_records('sessions', ['userid' => $second]));

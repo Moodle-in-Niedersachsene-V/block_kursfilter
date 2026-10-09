@@ -31,7 +31,7 @@
  */
 function xmldb_block_kursfilter_install(): void {
     // Create the pool users.
-    \block_kursfilter\pool_manager::create_pool_users();
+    \block_kursfilter\pool_manager::create_pool_accounts();
 
     // Enrol them in all existing visible courses.
     \block_kursfilter\pool_manager::enrol_pool_into_all_courses();

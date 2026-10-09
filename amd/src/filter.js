@@ -259,12 +259,14 @@ define(['core/ajax'], function(Ajax) {
                   + '<i class="fa fa-download"></i></a>'
                 : '';
 
-            // Vorschau-Button: Kurs als Trainer ohne Bearbeitungsrecht ansehen.
-            var previewUrl = M.cfg.wwwroot + '/blocks/kursfilter/guest_login.php?courseid=' + c.id;
-            var previewBtn = '<a href="' + escHtml(previewUrl) + '"'
-                  + ' class="btn btn-sm btn-outline-primary kf-preview-btn"'
+            // Preview: a POST form with sesskey, the preview logs in a pool account.
+            var previewBtn = '<form method="post" class="d-inline"'
+                  + ' action="' + escHtml(M.cfg.wwwroot + '/blocks/kursfilter/preview.php') + '">'
+                  + '<input type="hidden" name="courseid" value="' + c.id + '">'
+                  + '<input type="hidden" name="sesskey" value="' + escHtml(M.cfg.sesskey) + '">'
+                  + '<button type="submit" class="btn btn-sm btn-outline-primary kf-preview-btn"'
                   + ' title="Kurs als Trainer ohne Bearbeitungsrecht ansehen">'
-                  + '<i class="fa fa-eye me-1"></i>Kurs ansehen</a>';
+                  + '<i class="fa fa-eye me-1"></i>Kurs ansehen</button></form>';
 
             html += '<div class="kf-item p-2 mb-2 rounded" data-courseid="' + c.id + '">'
                   + '<div class="d-flex justify-content-between align-items-start gap-1">'

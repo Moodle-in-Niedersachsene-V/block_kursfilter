@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Scheduled task: ensure pool users exist and are enroled in all courses.
+ * Scheduled task: ensure the pool accounts exist and are enrolled in all public courses.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -26,11 +26,9 @@
 namespace block_kursfilter\task;
 
 /**
- * Nightly pool setup task.
+ * Nightly pool setup task (03:00, after the backup task).
  *
- * Runs daily after the backup task (03:00).
- * Creates missing pool users and enrols them in all visible
- * courses as teachers without editing rights.
+ * Creates missing pool accounts and enrols them with the pool role in all public courses.
  */
 class setup_pool extends \core\task\scheduled_task {
     /**
@@ -46,9 +44,9 @@ class setup_pool extends \core\task\scheduled_task {
      * Execute the task.
      */
     public function execute(): void {
-        $created  = \block_kursfilter\pool_manager::create_pool_users();
+        $created  = \block_kursfilter\pool_manager::create_pool_accounts();
         $enrolled = \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
 
-        mtrace("Kursfilter-Pool: {$created} Nutzer angelegt, {$enrolled} Einschreibungen hinzugefuegt.");
+        mtrace("Course Filter pool: {$created} pool accounts created, {$enrolled} enrolments added.");
     }
 }
