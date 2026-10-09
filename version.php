@@ -26,7 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'block_kursfilter';
-$plugin->version   = 2026100806;
+$plugin->version   = 2026100808;
 $plugin->requires  = 2025041400; // Moodle 5.1.
 $plugin->maturity  = MATURITY_STABLE;
 $plugin->release   = '1.4.0';

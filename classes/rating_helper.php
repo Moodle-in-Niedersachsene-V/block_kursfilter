@@ -66,7 +66,7 @@ class rating_helper {
             self::COOKIE_NAME,
             $hash,
             [
-                'expires'  => 0, // Session cookie – survives until browser data cleared.
+                'expires' => 0, // Session cookie - survives until browser data cleared.
                 'path'     => '/',
                 'secure'   => true,
                 'httponly' => true,
