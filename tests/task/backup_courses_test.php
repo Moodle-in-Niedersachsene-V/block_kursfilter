@@ -45,7 +45,7 @@ final class backup_courses_test extends \advanced_testcase {
         $this->resetAfterTest();
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
-        set_config('backup_adminid', $generator->create_user()->id, 'block_kursfilter');
+        set_config('backup_userid', $generator->create_user()->id, 'block_kursfilter');
 
         $this->expectOutputRegex('/Course ' . $course->id . ': backup failed: /');
         try {

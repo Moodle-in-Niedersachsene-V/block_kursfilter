@@ -1,0 +1,77 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template block_kursfilter/results
+
+    Result cards of the course search; the star widget is filled by block_kursfilter/filter.
+
+    Example context (json):
+    {
+        "courses": [{
+            "id": 42,
+            "fullname": "Bruchrechnung",
+            "summary": "Einstieg in die Bruchrechnung",
+            "categoryname": "Mathematik / Klasse 6",
+            "tags": ["Gymnasium", "Mathematik"],
+            "hastags": true,
+            "courseurl": "https://example.org/course/view.php?id=42",
+            "backupurl": "https://example.org/blocks/kursfilter/backup.php?courseid=42",
+            "hasbackup": true,
+            "userrating": 0,
+            "alreadyrated": false
+        }]
+    }
+}}
+{{#courses}}
+<div class="kf-item p-2 mb-2 rounded">
+  <div class="d-flex justify-content-between align-items-start gap-1">
+    <a href="{{courseurl}}" class="fw-semibold small text-decoration-none kf-course-link" target="_blank" rel="noopener noreferrer">{{fullname}}</a>
+    <div class="d-flex gap-1 flex-shrink-0">
+      <form method="post" class="d-inline" action="{{config.wwwroot}}/blocks/kursfilter/preview.php">
+        <input type="hidden" name="courseid" value="{{id}}">
+        <input type="hidden" name="sesskey" value="{{config.sesskey}}">
+        <button type="submit" class="btn btn-sm btn-outline-primary" title="{{#str}} preview_title, block_kursfilter {{/str}}">
+          <i class="fa fa-eye me-1" aria-hidden="true"></i>{{#str}} btn_preview, block_kursfilter {{/str}}
+        </button>
+      </form>
+      {{#hasbackup}}
+      <a href="{{backupurl}}" class="btn btn-sm btn-outline-secondary kf-backup-btn" download
+         title="{{#str}} btn_download_backup, block_kursfilter {{/str}}"
+         aria-label="{{#str}} btn_download_backup, block_kursfilter {{/str}}">
+        <i class="fa fa-download" aria-hidden="true"></i>
+      </a>
+      {{/hasbackup}}
+    </div>
+  </div>
+  {{#categoryname}}
+  <div class="text-muted small"><i class="fa fa-folder-o me-1" aria-hidden="true"></i>{{categoryname}}</div>
+  {{/categoryname}}
+  {{#summary}}
+  <p class="small mb-1 mt-1 kf-summary">{{summary}}</p>
+  {{/summary}}
+  {{#hastags}}
+  <div class="mt-1">
+    {{#tags}}<span class="badge bg-primary bg-opacity-10 text-primary me-1">{{.}}</span>{{/tags}}
+  </div>
+  {{/hastags}}
+  <div class="kf-stars mt-2" data-courseid="{{id}}" data-userrating="{{userrating}}"
+       data-alreadyrated="{{#alreadyrated}}1{{/alreadyrated}}{{^alreadyrated}}0{{/alreadyrated}}"></div>
+</div>
+{{/courses}}
+{{^courses}}
+<div class="text-center text-muted small py-3">{{#str}} results_none, block_kursfilter {{/str}}</div>
+{{/courses}}

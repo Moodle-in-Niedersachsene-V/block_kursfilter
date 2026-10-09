@@ -50,7 +50,7 @@ class backup_courses extends \core\task\scheduled_task {
     public function execute(): void {
         global $DB;
 
-        $userid = (int)get_config('block_kursfilter', 'backup_adminid');
+        $userid = (int)get_config('block_kursfilter', 'backup_userid');
         if ($userid < 1) {
             // Documented in the setting: an empty value means the first site admin.
             $userid = (int)get_admin()->id;

@@ -14,436 +14,198 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * AMD module for block_kursfilter.
- *
- * Tags werden als Rohwert gesendet (z. B. "Oberstufe") –
- * kein Prefix-Format, da Moodle Tags ohne Präfix speichert.
+ * Course search, result cards and star rating of the Course Filter block.
  *
  * @module     block_kursfilter/filter
  * @copyright  2026 Moodle in Niedersachsen e. V.
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['core/ajax'], function(Ajax) {
-    'use strict';
 
-    /**
-     * Block state constructor.
-     *
-     * @param {number} blockid  Block instance ID.
-     * @param {Object} config   Configuration object from PHP.
-     */
-    function BlockState(blockid, config) {
-        this.blockid = blockid;
-        this.config = config;
-        this.kursbereich = '';
-        this.schulform = '';
-        this.fach = '';
-        this.niveaustufe = '';
-        this.kursname = '';
-        this.debounce = null;
+import Ajax from 'core/ajax';
+import Notification from 'core/notification';
+import Templates from 'core/templates';
+import {getString} from 'core/str';
+import Config from 'core/config';
+
+/** Delay after the last input before the search runs, in milliseconds. */
+const SEARCH_DELAY = 350;
+
+/** Number of stars of a rating. */
+const MAX_STARS = 5;
+
+/**
+ * Initialise one block instance.
+ *
+ * @param {number} blockid Block instance ID.
+ */
+export const init = (blockid) => {
+    const root = document.getElementById(`kf-block-${blockid}`);
+    if (!root) {
+        return;
     }
+    const results = root.querySelector('[data-region="results"]');
+    const count = root.querySelector('[data-region="count"]');
+    const spinner = root.querySelector('[data-region="spinner"]');
+    const category = root.querySelector('[data-filter="category"]');
+    const searchterm = root.querySelector('[data-filter="searchterm"]');
+    const emptyResults = results.innerHTML;
+    const emptyCount = count.textContent;
+    const chosen = {schooltype: '', subject: '', level: ''};
+    let timer = null;
 
-    /**
-     * Get element by partial ID.
-     *
-     * @param {string} id
-     * @returns {HTMLElement|null}
-     */
-    BlockState.prototype.el = function(id) {
-        return document.getElementById('kf-' + id + '-' + this.blockid);
+    const filters = () => ({
+        category: parseInt(category.value, 10) || 0,
+        ...chosen,
+        searchterm: searchterm.value.trim(),
+    });
+
+    const showEmpty = () => {
+        results.innerHTML = emptyResults;
+        count.textContent = emptyCount;
     };
 
-    /**
-     * Get block root element.
-     *
-     * @returns {HTMLElement|null}
-     */
-    BlockState.prototype.block = function() {
-        return document.getElementById('kf-block-' + this.blockid);
-    };
-
-    /**
-     * Initialise event listeners.
-     */
-    BlockState.prototype.init = function() {
-        var self = this;
-
-        // Kursbereich-Select.
-        var selectEl = self.el('kursbereich');
-        if (selectEl) {
-            selectEl.addEventListener('change', function() {
-                self.kursbereich = this.value;
-                self.triggerSearch();
-            });
-        }
-
-        // Chip-Gruppen.
-        ['schulform', 'fach', 'niveaustufe'].forEach(function(filter) {
-            var wrap = document.getElementById('kf-' + filter + '-chips-' + self.blockid);
-            if (!wrap) {
-                return;
-            }
-            wrap.querySelectorAll('.kf-chip').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    var val = this.dataset.value;
-                    if (self[filter] === val) {
-                        self[filter] = '';
-                        this.classList.remove('kf-chip-active');
-                    } else {
-                        wrap.querySelectorAll('.kf-chip').forEach(function(b) {
-                            b.classList.remove('kf-chip-active');
-                        });
-                        self[filter] = val;
-                        this.classList.add('kf-chip-active');
-                    }
-                    self.triggerSearch();
-                });
-            });
-        });
-
-        // Suchbegriff-Freitext.
-        var searchEl = self.el('search');
-        if (searchEl) {
-            searchEl.addEventListener('input', function() {
-                self.kursname = this.value.trim();
-                self.triggerSearch();
-            });
-        }
-
-        // Reset.
-        var resetBtn = self.block().querySelector('.kf-reset');
-        if (resetBtn) {
-            resetBtn.addEventListener('click', function() {
-                self.kursbereich = '';
-                self.schulform = '';
-                self.fach = '';
-                self.niveaustufe = '';
-                self.kursname = '';
-                if (selectEl) {
-                    selectEl.value = '';
-                }
-                if (searchEl) {
-                    searchEl.value = '';
-                }
-                self.block().querySelectorAll('.kf-chip').forEach(function(b) {
-                    b.classList.remove('kf-chip-active');
-                });
-                var results = self.el('results');
-                if (results) {
-                    results.innerHTML = '<div class="text-center text-muted small py-3">'
-                        + 'Filter setzen, um Kurse zu suchen.</div>';
-                }
-                var count = self.el('count');
-                if (count) {
-                    count.textContent = '\u2013';
-                }
-            });
-        }
-    };
-
-    /**
-     * Check if at least one filter is active.
-     *
-     * @returns {boolean}
-     */
-    BlockState.prototype.hasActiveFilter = function() {
-        return this.kursbereich !== '' ||
-               this.schulform !== '' ||
-               this.fach !== '' ||
-               this.niveaustufe !== '' ||
-               this.kursname !== '';
-    };
-
-    /**
-     * Trigger search with debounce.
-     */
-    BlockState.prototype.triggerSearch = function() {
-        var self = this;
-        clearTimeout(self.debounce);
-        self.debounce = setTimeout(function() {
-            self.runSearch();
-        }, 350);
-    };
-
-    /**
-     * Execute AJAX search.
-     */
-    BlockState.prototype.runSearch = function() {
-        var self = this;
-        var spinner = self.el('spinner');
-        var results = self.el('results');
-        var count = self.el('count');
-
-        if (!self.hasActiveFilter()) {
-            if (results) {
-                results.innerHTML = '<div class="text-center text-muted small py-3">'
-                    + 'Filter setzen, um Kurse zu suchen.</div>';
-            }
-            if (count) {
-                count.textContent = '\u2013';
-            }
+    const search = () => {
+        const args = filters();
+        if (!args.category && !args.schooltype && !args.subject && !args.level && !args.searchterm) {
+            showEmpty();
             return;
         }
-
-        if (spinner) {
-            spinner.classList.remove('d-none');
-        }
-        if (results) {
-            results.innerHTML = '';
-        }
-
-        // Tags direkt als Rohwert senden – KEIN "schulform:"-Prefix.
-        Ajax.call([{
-            methodname: 'block_kursfilter_search_courses',
-            args: {
-                category:   parseInt(self.kursbereich, 10) || 0,
-                schooltype: self.schulform,
-                subject:    self.fach,
-                level:      self.niveaustufe,
-                searchterm: self.kursname,
-            },
-            done: function(result) {
-                if (spinner) {
-                    spinner.classList.add('d-none');
-                }
-                self.renderResults(result.courses || []);
-            },
-            fail: function(err) {
-                if (spinner) {
-                    spinner.classList.add('d-none');
-                }
-                if (results) {
-                    results.innerHTML = '<div class="alert alert-warning small p-2">'
-                        + escHtml(err.message || 'Suche fehlgeschlagen') + '</div>';
-                }
-            },
-        }]);
+        spinner.classList.remove('d-none');
+        Ajax.call([{methodname: 'block_kursfilter_search_courses', args}])[0]
+            .then((result) => renderResults(result.courses))
+            .catch((error) => {
+                results.innerHTML = '';
+                return Notification.exception(error);
+            })
+            .finally(() => spinner.classList.add('d-none'));
     };
 
-    /**
-     * Render course result cards.
-     *
-     * @param {Array} courses
-     */
-    BlockState.prototype.renderResults = function(courses) {
-        var self = this;
-        var results = self.el('results');
-        var count = self.el('count');
-
-        if (count) {
-            count.textContent = courses.length
-                + ' Kurs' + (courses.length !== 1 ? 'e' : '') + ' gefunden';
-        }
-
-        if (!courses.length) {
-            if (results) {
-                results.innerHTML = '<div class="text-center text-muted small py-3">'
-                    + 'Keine Kurse gefunden.</div>';
-            }
-            return;
-        }
-
-        var html = '';
-        courses.forEach(function(c) {
-            var tagPills = (c.tags || []).map(function(t) {
-                return '<span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:10px">'
-                     + escHtml(t) + '</span>';
-            }).join(' ');
-
-            // Download-Button: Kurssicherung (.mbz) fuer alle wenn Backup vorhanden.
-            var exportBtn = c.hasbackup
-                ? '<a href="' + escHtml(c.backupurl) + '"'
-                  + ' class="btn btn-sm btn-outline-secondary kf-export-btn"'
-                  + ' title="Kurssicherung herunterladen (.mbz)"'
-                  + ' download>'
-                  + '<i class="fa fa-download"></i></a>'
-                : '';
-
-            // Preview: a POST form with sesskey, the preview logs in a pool account.
-            var previewBtn = '<form method="post" class="d-inline"'
-                  + ' action="' + escHtml(M.cfg.wwwroot + '/blocks/kursfilter/preview.php') + '">'
-                  + '<input type="hidden" name="courseid" value="' + c.id + '">'
-                  + '<input type="hidden" name="sesskey" value="' + escHtml(M.cfg.sesskey) + '">'
-                  + '<button type="submit" class="btn btn-sm btn-outline-primary kf-preview-btn"'
-                  + ' title="Kurs als Trainer ohne Bearbeitungsrecht ansehen">'
-                  + '<i class="fa fa-eye me-1"></i>Kurs ansehen</button></form>';
-
-            html += '<div class="kf-item p-2 mb-2 rounded" data-courseid="' + c.id + '">'
-                  + '<div class="d-flex justify-content-between align-items-start gap-1">'
-                  + '<a href="' + escHtml(c.courseurl) + '"'
-                  + ' class="fw-semibold small text-decoration-none kf-course-link"'
-                  + ' target="_blank" rel="noopener noreferrer">'
-                  + escHtml(c.fullname) + '</a>'
-                  + '<div class="d-flex gap-1 flex-shrink-0">' + previewBtn + exportBtn + '</div>'
-                  + '</div>';
-
-            if (c.categoryname) {
-                html += '<div class="text-muted" style="font-size:11px">'
-                      + '<i class="fa fa-folder-o me-1"></i>'
-                      + escHtml(c.categoryname) + '</div>';
-            }
-            if (c.summary) {
-                html += '<p class="small mb-1 mt-1 kf-summary">' + escHtml(c.summary) + '</p>';
-            }
-            if (tagPills) {
-                html += '<div class="mt-1">' + tagPills + '</div>';
-            }
-            // Star rating widget.
-            html += '<div class="kf-stars mt-2" data-courseid="' + c.id + '"'
-                  + ' data-alreadyrated="' + (c.alreadyrated ? '1' : '0') + '"'
-                  + ' data-userrating="' + (c.userrating || 0) + '"></div>';
-            html += '</div>';
-        });
-
-        if (results) {
-            results.innerHTML = html;
-            // Initialise star widgets for each result card.
-            var rateUrl = M.cfg.wwwroot + '/blocks/kursfilter/rate.php';
-            var sesskey = M.cfg.sesskey;
-            results.querySelectorAll('.kf-stars').forEach(function(widget) {
-                var courseid = parseInt(widget.dataset.courseid, 10);
-                var alreadyrated = widget.dataset.alreadyrated === '1';
-                var userrating = parseInt(widget.dataset.userrating, 10) || 0;
-                if (alreadyrated) {
-                    renderStarsFixed(widget, userrating);
-                } else {
-                    renderStarsInteractive(widget, 0, rateUrl, sesskey, courseid);
-                }
-            });
-        }
+    const renderResults = async(courses) => {
+        const context = {courses: courses.map((course) => ({...course, hastags: course.tags.length > 0}))};
+        const {html, js} = await Templates.renderForPromise('block_kursfilter/results', context);
+        Templates.replaceNodeContents(results, html, js);
+        count.textContent = await getString('results_count', 'block_kursfilter', courses.length);
+        results.querySelectorAll('.kf-stars').forEach(initStars);
     };
 
-    /**
-     * Escape HTML special characters.
-     *
-     * @param {*} s
-     * @returns {string}
-     */
-    function escHtml(s) {
-        if (s === null || s === undefined) {
-            return '';
-        }
-        return String(s)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
-    }
-
-    /**
-     * Send a star rating via POST to rate.php.
-     *
-     * @param {string} rateUrl  URL of rate.php.
-     * @param {string} sesskey  Moodle session key.
-     * @param {number} courseid Course ID.
-     * @param {number} stars    Rating 1-5.
-     * @param {HTMLElement} widget Star widget element.
-     */
-    function submitRating(rateUrl, sesskey, courseid, stars, widget) {
-        var body = 'courseid=' + encodeURIComponent(courseid)
-            + '&stars=' + encodeURIComponent(stars)
-            + '&sesskey=' + encodeURIComponent(sesskey);
-
-        fetch(rateUrl, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-            body: body,
-        })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (data.success) {
-                renderStarsFixed(widget, stars);
-            }
-            return data;
-        })
-        .catch(function() {
-            // Silent fail – rating errors do not disrupt the user experience.
-        });
-    }
-
-    /**
-     * Render interactive star widget (not yet rated).
-     *
-     * @param {HTMLElement} widget   Container element.
-     * @param {number}      current  Pre-selected rating (0 = none).
-     * @param {string}      rateUrl  POST endpoint URL.
-     * @param {string}      sesskey  Moodle session key.
-     * @param {number}      courseid Course ID.
-     */
-    function renderStarsInteractive(widget, current, rateUrl, sesskey, courseid) {
-        widget.innerHTML = '';
-        var selected = current;
-        [1, 2, 3, 4, 5].forEach(function(val) {
-            var btn = document.createElement('button');
-            btn.className = 'kf-star' + (val <= selected ? ' kf-star-filled' : '');
-            btn.dataset.value = String(val);
-            btn.setAttribute('aria-label', val + ' Stern' + (val > 1 ? 'e' : ''));
-            btn.textContent = val <= selected ? '★' : '☆';
-            btn.addEventListener('mouseenter', function() {
-                highlightStars(widget, val);
-            });
-            btn.addEventListener('mouseleave', function() {
-                highlightStars(widget, selected);
-            });
-            btn.addEventListener('click', function() {
-                selected = val;
-                submitRating(rateUrl, sesskey, courseid, val, widget);
-            });
-            widget.appendChild(btn);
-        });
-    }
-
-    /**
-     * Render fixed star display (already rated – no interaction).
-     *
-     * @param {HTMLElement} widget Container element.
-     * @param {number}      stars  Rating 1-5.
-     */
-    function renderStarsFixed(widget, stars) {
-        widget.innerHTML = '';
-        for (var i = 1; i <= 5; i++) {
-            var span = document.createElement('span');
-            span.className = 'kf-star kf-star-fixed' + (i <= stars ? ' kf-star-filled' : '');
-            span.textContent = i <= stars ? '★' : '☆';
-            widget.appendChild(span);
-        }
-        var note = document.createElement('span');
-        note.className = 'kf-star-note';
-        note.textContent = ' Bewertet';
-        widget.appendChild(note);
-    }
-
-    /**
-     * Highlight stars up to a given value.
-     *
-     * @param {HTMLElement} widget Container element.
-     * @param {number}      val    Highlight up to this star.
-     */
-    function highlightStars(widget, val) {
-        widget.querySelectorAll('.kf-star').forEach(function(s, idx) {
-            var filled = (idx + 1) <= val;
-            s.classList.toggle('kf-star-filled', filled);
-            s.textContent = filled ? '★' : '☆';
-        });
-    }
-
-    return {
-        /**
-         * Initialise block.
-         *
-         * @param {Object} config
-         */
-        init: function(config) {
-            var state = new BlockState(config.blockid, config);
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function() {
-                state.init();
-            });
-            } else {
-                state.init();
-            }
-        },
+    const scheduleSearch = () => {
+        clearTimeout(timer);
+        timer = setTimeout(search, SEARCH_DELAY);
     };
-});
+
+    root.addEventListener('click', (e) => {
+        const chip = e.target.closest('.kf-chip');
+        if (chip) {
+            const filter = chip.dataset.filter;
+            const isActive = chosen[filter] === chip.dataset.value;
+            root.querySelectorAll(`.kf-chip[data-filter="${filter}"]`).forEach((other) => setChip(other, false));
+            setChip(chip, !isActive);
+            chosen[filter] = isActive ? '' : chip.dataset.value;
+            scheduleSearch();
+        } else if (e.target.closest('[data-action="reset"]')) {
+            clearTimeout(timer);
+            category.value = '';
+            searchterm.value = '';
+            Object.keys(chosen).forEach((filter) => {
+                chosen[filter] = '';
+            });
+            root.querySelectorAll('.kf-chip').forEach((other) => setChip(other, false));
+            showEmpty();
+        }
+    });
+    category.addEventListener('change', scheduleSearch);
+    searchterm.addEventListener('input', scheduleSearch);
+};
+
+/**
+ * Show a chip as chosen or not.
+ *
+ * @param {HTMLElement} chip Chip button.
+ * @param {boolean} isActive Whether the chip is chosen.
+ */
+const setChip = (chip, isActive) => {
+    chip.classList.toggle('kf-chip-active', isActive);
+    chip.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+};
+
+/**
+ * Fill a star widget: fixed if this visitor rated the course, otherwise clickable.
+ *
+ * @param {HTMLElement} widget Star widget of a result card.
+ */
+const initStars = async(widget) => {
+    if (widget.dataset.alreadyrated === '1') {
+        await showRated(widget, parseInt(widget.dataset.userrating, 10) || 0);
+        return;
+    }
+    const labels = await Promise.all(
+        Array.from({length: MAX_STARS}, (_, i) => getString('rating_star', 'block_kursfilter', i + 1))
+    );
+    widget.replaceChildren(...labels.map((label, i) => {
+        const star = document.createElement('button');
+        star.type = 'button';
+        star.className = 'kf-star';
+        star.textContent = '☆';
+        star.setAttribute('aria-label', label);
+        star.addEventListener('mouseenter', () => highlightStars(widget, i + 1));
+        star.addEventListener('mouseleave', () => highlightStars(widget, 0));
+        star.addEventListener('click', () => rate(widget, i + 1));
+        return star;
+    }));
+};
+
+/**
+ * Send a rating to rate.php and show the result.
+ *
+ * @param {HTMLElement} widget Star widget.
+ * @param {number} stars Rating 1 to 5.
+ */
+const rate = async(widget, stars) => {
+    const body = new URLSearchParams({courseid: widget.dataset.courseid, stars, sesskey: Config.sesskey});
+    try {
+        const response = await fetch(`${Config.wwwroot}/blocks/kursfilter/rate.php`, {method: 'POST', body});
+        const data = await response.json();
+        if (!data.success) {
+            throw new Error(data.error);
+        }
+        await showRated(widget, stars);
+    } catch {
+        Notification.addNotification({
+            message: await getString('error_rating_failed', 'block_kursfilter'),
+            type: 'error',
+        });
+    }
+};
+
+/**
+ * Show a fixed rating.
+ *
+ * @param {HTMLElement} widget Star widget.
+ * @param {number} stars Rating 1 to 5.
+ */
+const showRated = async(widget, stars) => {
+    const note = document.createElement('span');
+    note.className = 'kf-star-note';
+    note.textContent = await getString('rating_done', 'block_kursfilter');
+    const fixedStars = Array.from({length: MAX_STARS}, (_, i) => {
+        const star = document.createElement('span');
+        star.className = 'kf-star kf-star-fixed' + (i < stars ? ' kf-star-filled' : '');
+        star.textContent = i < stars ? '★' : '☆';
+        star.setAttribute('aria-hidden', 'true');
+        return star;
+    });
+    widget.replaceChildren(...fixedStars, note);
+};
+
+/**
+ * Highlight the stars up to a value while hovering.
+ *
+ * @param {HTMLElement} widget Star widget.
+ * @param {number} value Highlight up to this star (0 = none).
+ */
+const highlightStars = (widget, value) => {
+    widget.querySelectorAll('.kf-star').forEach((star, i) => {
+        star.classList.toggle('kf-star-filled', i < value);
+        star.textContent = i < value ? '★' : '☆';
+    });
+};

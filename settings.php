@@ -27,41 +27,28 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading(
-        'block_kursfilter/schulformen_heading',
-        get_string('settings_schulformen_heading', 'block_kursfilter'),
-        get_string('settings_schulformen_desc', 'block_kursfilter')
+        'block_kursfilter/filters_heading',
+        get_string('settings_filters_heading', 'block_kursfilter'),
+        get_string('settings_filters_desc', 'block_kursfilter')
     ));
     $settings->add(new admin_setting_configtextarea(
-        'block_kursfilter/schulformen',
-        get_string('settings_schulformen', 'block_kursfilter'),
-        get_string('settings_schulformen_help', 'block_kursfilter'),
+        'block_kursfilter/schooltypes',
+        get_string('settings_schooltypes', 'block_kursfilter'),
+        get_string('settings_schooltypes_help', 'block_kursfilter'),
         "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule"
     ));
-
-    $settings->add(new admin_setting_heading(
-        'block_kursfilter/faecher_heading',
-        get_string('settings_faecher_heading', 'block_kursfilter'),
-        ''
-    ));
     $settings->add(new admin_setting_configtextarea(
-        'block_kursfilter/faecher',
-        get_string('settings_faecher', 'block_kursfilter'),
-        get_string('settings_faecher_help', 'block_kursfilter'),
+        'block_kursfilter/subjects',
+        get_string('settings_subjects', 'block_kursfilter'),
+        get_string('settings_subjects_help', 'block_kursfilter'),
         "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte\nKunst\nMusik\nSport"
     ));
-
-    $settings->add(new admin_setting_heading(
-        'block_kursfilter/niveaustufen_heading',
-        get_string('settings_niveaustufen_heading', 'block_kursfilter'),
-        get_string('settings_niveaustufen_desc', 'block_kursfilter')
-    ));
     $settings->add(new admin_setting_configtextarea(
-        'block_kursfilter/niveaustufen',
-        get_string('settings_niveaustufen', 'block_kursfilter'),
-        get_string('settings_niveaustufen_help', 'block_kursfilter'),
+        'block_kursfilter/levels',
+        get_string('settings_levels', 'block_kursfilter'),
+        get_string('settings_levels_help', 'block_kursfilter'),
         "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe"
     ));
-
     $settings->add(new admin_setting_configtext(
         'block_kursfilter/resultlimit',
         get_string('settings_resultlimit', 'block_kursfilter'),
@@ -70,7 +57,6 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
-    // Pool users.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/pool_heading',
         get_string('settings_pool_heading', 'block_kursfilter'),
@@ -84,16 +70,15 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
-    // Backup settings.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/backup_heading',
         get_string('settings_backup_heading', 'block_kursfilter'),
         get_string('settings_backup_desc', 'block_kursfilter')
     ));
     $settings->add(new admin_setting_configtext(
-        'block_kursfilter/backup_adminid',
-        get_string('settings_backup_adminid', 'block_kursfilter'),
-        get_string('settings_backup_adminid_help', 'block_kursfilter'),
+        'block_kursfilter/backup_userid',
+        get_string('settings_backup_userid', 'block_kursfilter'),
+        get_string('settings_backup_userid_help', 'block_kursfilter'),
         '',
         PARAM_INT
     ));

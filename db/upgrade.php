@@ -36,5 +36,23 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026100600, 'kursfilter');
     }
 
+    if ($oldversion < 2026100901) {
+        // Settings got English names (coding standard N3); values move to the new names.
+        $renamed = [
+            'schulformen' => 'schooltypes',
+            'faecher' => 'subjects',
+            'niveaustufen' => 'levels',
+            'backup_adminid' => 'backup_userid',
+        ];
+        foreach ($renamed as $old => $new) {
+            $value = get_config('block_kursfilter', $old);
+            if ($value !== false) {
+                set_config($new, $value, 'block_kursfilter');
+                unset_config($old, 'block_kursfilter');
+            }
+        }
+        upgrade_block_savepoint(true, 2026100901, 'kursfilter');
+    }
+
     return true;
 }

@@ -25,12 +25,6 @@
     background-color: #111827;
     color: #fff;
 }
-.block_kursfilter .kf-chip-schulform.kf-chip-active,
-.block_kursfilter .kf-chip-fach.kf-chip-active,
-.block_kursfilter .kf-chip-niveaustufe.kf-chip-active {
-    background-color: #111827;
-    color: #fff;
-}
 
 /* ---- Result list ---- */
 .block_kursfilter .kf-results {
@@ -63,7 +57,7 @@
     white-space: nowrap;
 }
 
-.block_kursfilter .kf-export-btn {
+.block_kursfilter .kf-backup-btn {
     flex-shrink: 0;
     padding: 0 6px;
     line-height: 1.4;
