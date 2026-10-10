@@ -31,7 +31,7 @@
  */
 
 define('AJAX_SCRIPT', true);
-// phpcs:ignore moodle.Files.RequireLogin.Missing -- Public endpoint: visitors without an account may rate (sesskey-protected).
+// phpcs:ignore moodle.Files.RequireLogin.Missing,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar -- Public endpoint: visitors without an account may rate (sesskey-protected). The Semgrep marker has a fixed syntax.
 require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/rating_helper.php');
 

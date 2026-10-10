@@ -29,7 +29,7 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// phpcs:ignore moodle.Files.RequireLogin.Missing -- Public endpoint: backups of public courses are downloadable without an account; access is limited to public courses below.
+// phpcs:ignore moodle.Files.RequireLogin.Missing,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar -- Public endpoint: backups of public courses are downloadable without an account; access is limited to public courses below. The Semgrep marker has a fixed syntax.
 require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/backup_helper.php');
 

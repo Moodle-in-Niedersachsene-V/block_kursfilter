@@ -36,7 +36,6 @@ namespace block_kursfilter;
  * returns a list of suggested tags (schulform, fach, niveaustufe).
  */
 class ai_connector {
-
     /** @var string Active backend: 'ollama' or 'claude'. */
     private string $backend;
 
@@ -78,9 +77,9 @@ class ai_connector {
             $plaintext = mb_substr($plaintext, 0, 800) . ' …';
         }
 
-        $schulformen   = $this->get_configured_list('schulformen');
-        $faecher       = $this->get_configured_list('faecher');
-        $niveaustufen  = $this->get_configured_list('niveaustufen');
+        $schulformen   = $this->get_configured_list('schooltypes');
+        $faecher       = $this->get_configured_list('subjects');
+        $niveaustufen  = $this->get_configured_list('levels');
 
         $prompt = $this->build_prompt(
             $fullname,
@@ -132,7 +131,7 @@ class ai_connector {
         array $niveaustufen
     ): string {
         $sflist = !empty($schulformen) ? implode(', ', $schulformen) : '(keine Vorgabe)';
-        $falist = !empty($faecher)    ? implode(', ', $faecher)     : '(keine Vorgabe)';
+        $falist = !empty($faecher) ? implode(', ', $faecher) : '(keine Vorgabe)';
         $nvlist = !empty($niveaustufen) ? implode(', ', $niveaustufen) : '(keine Vorgabe)';
 
         return "Du bist ein Verschlagwortungs-Assistent fuer Moodle-Lernmaterialien an deutschen Schulen."
@@ -194,7 +193,7 @@ class ai_connector {
      */
     private function call_claude(string $prompt): string {
         $apikey = $this->config['ai_claude_apikey'] ?? '';
-        $model  = $this->config['ai_claude_model']  ?? 'claude-haiku-4-5-20251001';
+        $model  = $this->config['ai_claude_model'] ?? 'claude-haiku-4-5-20251001';
 
         if (empty($apikey)) {
             return '';
