@@ -45,8 +45,12 @@ class course_access {
      */
     public static function get_public_course(int $courseid): ?\stdClass {
         global $DB;
+        // Exclude site course before DB query to avoid fetching it at all.
+        if ($courseid === (int)SITEID || $courseid <= 0) {
+            return null;
+        }
         $course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], 'id, fullname, shortname', IGNORE_MISSING);
-        if (!$course || (int)$course->id === SITEID) {
+        if (!$course) {
             return null;
         }
         return $course;

@@ -61,18 +61,20 @@ class rating_helper {
         $token = bin2hex(random_bytes(32));
         $hash  = hash('sha256', $token);
 
-        // Permanent cookie (expires = 0 means session; use far-future date for permanent).
-        setcookie(
-            self::COOKIE_NAME,
-            $hash,
-            [
-                'expires' => 0, // Session cookie - survives until browser data cleared.
-                'path'     => '/',
-                'secure'   => true,
-                'httponly' => true,
-                'samesite' => 'Lax',
-            ]
-        );
+        // Only set the cookie when headers have not yet been sent (e.g. skip in PHPUnit).
+        if (!headers_sent()) {
+            setcookie(
+                self::COOKIE_NAME,
+                $hash,
+                [
+                    'expires' => 0, // Session cookie - survives until browser data cleared.
+                    'path'     => '/',
+                    'secure'   => true,
+                    'httponly' => true,
+                    'samesite' => 'Lax',
+                ]
+            );
+        }
 
         return $hash;
     }

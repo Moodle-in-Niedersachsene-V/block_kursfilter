@@ -113,11 +113,12 @@ class pool_manager_test extends advanced_testcase {
      */
     public function test_mark_active_and_mark_free(): void {
         pool_manager::create_pool_users();
-        $userid = pool_manager::get_free_pool_user();
-        $this->assertNotNull($userid);
+        $user = pool_manager::get_free_pool_user();
+        $this->assertNotNull($user);
 
-        pool_manager::mark_active($userid, 'testsession123');
-        pool_manager::mark_free($userid);
+        // mark_active / mark_free expect the username string, not the user object.
+        pool_manager::mark_active($user->username);
+        pool_manager::mark_free($user->username);
 
         // After mark_free, user should be available again.
         $freeuser = pool_manager::get_free_pool_user();

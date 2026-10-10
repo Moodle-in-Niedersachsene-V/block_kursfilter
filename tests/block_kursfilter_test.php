@@ -36,8 +36,12 @@ class block_kursfilter_test extends advanced_testcase {
      * Set up each test.
      */
     protected function setUp(): void {
+        global $CFG;
         parent::setUp();
         $this->resetAfterTest();
+
+        // Moodle block classes are not PSR-4 autoloaded; require manually.
+        require_once($CFG->dirroot . '/blocks/kursfilter/block_kursfilter.php');
     }
 
     /**
