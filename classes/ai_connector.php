@@ -302,7 +302,12 @@ class ai_connector {
         $result = $curl->post($url, $payload, $options);
 
         if ($curl->get_errno() !== 0) {
-            mtrace('block_kursfilter ai_connector: cURL error ' . $curl->get_errno() . ' – ' . $curl->error);
+            // debugging() statt mtrace(), damit PHPUnit keinen unerwarteten
+            // Stdout-Output erhaelt und mit --fail-on-warning fehlschlaegt.
+            debugging(
+                'block_kursfilter ai_connector: cURL error ' . $curl->get_errno() . ' – ' . $curl->error,
+                DEBUG_DEVELOPER
+            );
             return false;
         }
 
@@ -310,7 +315,11 @@ class ai_connector {
         $info = $curl->get_info();
         $httpcode = $info['http_code'] ?? 0;
         if ($httpcode >= 400) {
-            mtrace('block_kursfilter ai_connector: HTTP ' . $httpcode . ' von ' . $url . ' – ' . $result);
+            // debugging() statt mtrace() – kein Stdout-Output in Tests.
+            debugging(
+                'block_kursfilter ai_connector: HTTP ' . $httpcode . ' von ' . $url . ' – ' . $result,
+                DEBUG_DEVELOPER
+            );
             return false;
         }
 
