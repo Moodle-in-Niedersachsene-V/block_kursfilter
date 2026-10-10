@@ -36,7 +36,6 @@ use block_kursfilter\ai_connector;
  * applies tag suggestions directly or stores them for review.
  */
 class tag_courses extends \core\task\scheduled_task {
-
     /**
      * Returns the task display name.
      *
@@ -57,9 +56,9 @@ class tag_courses extends \core\task\scheduled_task {
     public function execute(): void {
         global $DB;
 
-        $batchsize   = (int)(get_config('block_kursfilter', 'ai_batch_size') ?: 20);
-        $autoapply   = (bool)get_config('block_kursfilter', 'ai_autoapply');
-        $enabled     = (bool)get_config('block_kursfilter', 'ai_enabled');
+        $batchsize = (int)(get_config('block_kursfilter', 'ai_batch_size') ?: 20);
+        $autoapply = (bool)get_config('block_kursfilter', 'ai_autoapply');
+        $enabled = (bool)get_config('block_kursfilter', 'ai_enabled');
 
         if (!$enabled) {
             mtrace('block_kursfilter tag_courses: KI-Verschlagwortung ist deaktiviert.');
@@ -152,8 +151,8 @@ class tag_courses extends \core\task\scheduled_task {
         $record = $DB->get_record('block_kursfilter_tag_pending', ['courseid' => $courseid]);
 
         if ($record) {
-            $record->tags         = implode(',', $tags);
-            $record->status       = 'pending';
+            $record->tags = implode(',', $tags);
+            $record->status = 'pending';
             $record->timemodified = $now;
             $DB->update_record('block_kursfilter_tag_pending', $record);
         } else {

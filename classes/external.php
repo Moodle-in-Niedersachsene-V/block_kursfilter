@@ -160,7 +160,7 @@ class block_kursfilter_external extends external_api {
         }
 
         $where = implode(' AND ', $conditions);
-        $sql   = "SELECT c.id, c.fullname, c.shortname, c.summary, c.category
+        $sql = "SELECT c.id, c.fullname, c.shortname, c.summary, c.category
                     FROM {course} c
                    WHERE $where
                 ORDER BY c.fullname ASC";
@@ -169,7 +169,7 @@ class block_kursfilter_external extends external_api {
 
         $courses = [];
         foreach ($records as $course) {
-            $cat     = core_course_category::get($course->category, IGNORE_MISSING);
+            $cat = core_course_category::get($course->category, IGNORE_MISSING);
             $catname = $cat ? $cat->get_nested_name(false) : '';
 
             $summary = html_to_text(
@@ -181,7 +181,7 @@ class block_kursfilter_external extends external_api {
                 $summary = core_text::substr($summary, 0, 250) . '…';
             }
 
-            $tags      = core_tag_tag::get_item_tags_array('core', 'course', $course->id);
+            $tags = core_tag_tag::get_item_tags_array('core', 'course', $course->id);
             $courseurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
 
             // Export-URL: oeffentlicher Download fuer alle Nutzer inkl. Gaeste.
@@ -262,10 +262,10 @@ class block_kursfilter_external extends external_api {
      * @throws moodle_exception
      */
     private static function check_rate_limit(int $userid): void {
-        $cache    = cache::make('block_kursfilter', 'ratelimit');
+        $cache = cache::make('block_kursfilter', 'ratelimit');
         $cachekey = 'rl_' . $userid;
-        $now      = time();
-        $data     = $cache->get($cachekey);
+        $now = time();
+        $data = $cache->get($cachekey);
 
         if ($data === false) {
             $cache->set($cachekey, ['count' => 1, 'window_start' => $now]);

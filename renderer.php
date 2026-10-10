@@ -35,7 +35,7 @@ class block_kursfilter_renderer extends plugin_renderer_base {
      */
     public function render_block(int $blockid): string {
         // Kursbereiche (Kategorien).
-        $categories   = core_course_category::make_categories_list('', 0, ' / ');
+        $categories = core_course_category::make_categories_list('', 0, ' / ');
         $kursbereiche = [['value' => '', 'label' => get_string('filter_all', 'block_kursfilter')]];
         foreach ($categories as $id => $name) {
             $kursbereiche[] = ['value' => (string)$id, 'label' => $name];
@@ -51,14 +51,14 @@ class block_kursfilter_renderer extends plugin_renderer_base {
         // Faecher aus Admin-Settings.
         $faecherraw = get_config('block_kursfilter', 'faecher')
             ?? "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte\nKunst\nMusik\nSport";
-        $faecher    = array_values(array_filter(array_map(function ($v) {
+        $faecher = array_values(array_filter(array_map(function ($v) {
             return clean_param(trim($v), PARAM_TEXT);
         }, explode("\n", $faecherraw))));
 
         // Niveaustufen aus Admin-Settings.
         $niveauraw  = get_config('block_kursfilter', 'niveaustufen')
             ?? "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe";
-        $niveaus    = array_values(array_filter(array_map(function ($v) {
+        $niveaus = array_values(array_filter(array_map(function ($v) {
             return clean_param(trim($v), PARAM_TEXT);
         }, explode("\n", $niveauraw))));
 

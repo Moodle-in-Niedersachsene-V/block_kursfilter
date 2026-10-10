@@ -89,20 +89,20 @@ class pool_manager {
                 continue;
             }
 
-            $user                   = new \stdClass();
-            $user->auth             = 'manual';
-            $user->confirmed        = 1;
-            $user->mnethostid       = $CFG->mnet_localhost_id;
-            $user->username         = $username;
-            $user->password         = hash_internal_user_password(self::generate_password());
-            $user->firstname        = 'Kursbesucher';
-            $user->lastname         = ltrim(substr($username, strlen(self::USERNAME_PREFIX)));
-            $user->email            = $username . '@kursfilter.invalid';
-            $user->emailstop        = 1;
-            $user->lang             = 'de';
-            $user->timecreated      = time();
-            $user->timemodified     = time();
-            $user->description      = 'Automatisch angelegter Gastnutzer fuer den Kursfilter-Block.';
+            $user = new \stdClass();
+            $user->auth = 'manual';
+            $user->confirmed = 1;
+            $user->mnethostid = $CFG->mnet_localhost_id;
+            $user->username = $username;
+            $user->password = hash_internal_user_password(self::generate_password());
+            $user->firstname = 'Kursbesucher';
+            $user->lastname = ltrim(substr($username, strlen(self::USERNAME_PREFIX)));
+            $user->email = $username . '@kursfilter.invalid';
+            $user->emailstop = 1;
+            $user->lang = 'de';
+            $user->timecreated = time();
+            $user->timemodified = time();
+            $user->description = 'Automatisch angelegter Gastnutzer fuer den Kursfilter-Block.';
 
             user_create_user($user, false, false);
             $created++;

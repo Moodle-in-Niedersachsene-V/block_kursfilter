@@ -60,8 +60,8 @@ class backup_helper {
         }
 
         // Context for file storage: system context, itemid = courseid.
-        $context  = \context_system::instance();
-        $itemid   = $courseid;
+        $context = \context_system::instance();
+        $itemid = $courseid;
         $filename = 'backup_course_' . $courseid . '_' . date('Ymd') . '.mbz';
 
         // Delete existing backup for this course (one file per course rule).
@@ -97,7 +97,7 @@ class backup_helper {
             }
 
             // Store the backup file in the Moodle file area.
-            $fs      = get_file_storage();
+            $fs = get_file_storage();
             $fileinfo = [
                 'contextid' => $context->id,
                 'component' => self::COMPONENT,
@@ -127,7 +127,7 @@ class backup_helper {
      * @param int      $itemid  Course ID used as itemid.
      */
     public static function delete_existing_backup(\context $context, int $itemid): void {
-        $fs    = get_file_storage();
+        $fs = get_file_storage();
         $files = $fs->get_area_files(
             $context->id,
             self::COMPONENT,
@@ -149,8 +149,8 @@ class backup_helper {
      */
     public static function get_backup_file(int $courseid): ?\stored_file {
         $context = \context_system::instance();
-        $fs      = get_file_storage();
-        $files   = $fs->get_area_files(
+        $fs = get_file_storage();
+        $files = $fs->get_area_files(
             $context->id,
             self::COMPONENT,
             self::FILEAREA,

@@ -100,10 +100,10 @@ class rating_helper {
             return false;
         }
 
-        $record              = new \stdClass();
-        $record->courseid    = $courseid;
-        $record->cookiehash  = $cookiehash;
-        $record->stars       = $stars;
+        $record = new \stdClass();
+        $record->courseid = $courseid;
+        $record->cookiehash = $cookiehash;
+        $record->stars = $stars;
         $record->timecreated = time();
 
         $DB->insert_record(self::TABLE, $record);

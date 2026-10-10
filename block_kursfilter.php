@@ -77,7 +77,7 @@ class block_kursfilter extends block_base {
         ]);
 
         $renderer = $this->page->get_renderer('block_kursfilter');
-        $this->content->text   = $renderer->render_block((int)$this->instance->id);
+        $this->content->text = $renderer->render_block((int)$this->instance->id);
         $this->content->footer = '';
 
         return $this->content;

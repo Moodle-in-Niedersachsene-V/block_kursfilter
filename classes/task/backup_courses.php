@@ -52,8 +52,8 @@ class backup_courses extends \core\task\scheduled_task {
         $adminid = (int)get_config('block_kursfilter', 'backup_adminid');
         if ($adminid < 1) {
             // Fall back to the first site admin.
-            $admins  = get_admins();
-            $admin   = reset($admins);
+            $admins = get_admins();
+            $admin = reset($admins);
             $adminid = (int)$admin->id;
         }
 
