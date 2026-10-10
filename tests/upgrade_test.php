@@ -49,7 +49,7 @@ final class upgrade_test extends \advanced_testcase {
         foreach (['schulformen', 'faecher', 'niveaustufen', 'backup_adminid', 'ai_claude_apikey'] as $old) {
             $this->assertFalse(get_config('block_kursfilter', $old), $old);
         }
-        $this->assertSame('2026101001', get_config('block_kursfilter', 'version'));
+        $this->assertSame('2026101100', get_config('block_kursfilter', 'version'));
     }
 
     public function test_upgrade_from_main_1_4_0_moves_pool_accounts_from_teacher_to_pool_role(): void {
@@ -75,5 +75,28 @@ final class upgrade_test extends \advanced_testcase {
             $this->assertFalse(user_has_role_assignment($userid, $teacherid, $context->id));
             $this->assertTrue(user_has_role_assignment($userid, $poolroleid, $context->id));
         }
+    }
+
+    public function test_upgrade_from_main_2026101006_still_migrates_pool_role_and_drops_ai_backend(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/upgradelib.php');
+        require_once($CFG->dirroot . '/blocks/kursfilter/db/upgrade.php');
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $teacherid = (int)$DB->get_field('role', 'id', ['shortname' => 'teacher']);
+        pool_manager::create_pool_accounts();
+        pool_manager::remove_role();
+        $userid = (int)$DB->get_field('user', 'id', ['username' => pool_manager::get_pool_usernames()[0]]);
+        role_assign($teacherid, $userid, $context->id);
+        set_config('ai_claude_apikey', 'secret-key', 'block_kursfilter');
+        set_config('version', 2026101006, 'block_kursfilter');
+
+        xmldb_block_kursfilter_upgrade(2026101006);
+
+        $poolroleid = (int)$DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
+        $this->assertTrue(user_has_role_assignment($userid, $poolroleid, $context->id));
+        $this->assertFalse(user_has_role_assignment($userid, $teacherid, $context->id));
+        $this->assertFalse(get_config('block_kursfilter', 'ai_claude_apikey'));
     }
 }
