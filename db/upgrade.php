@@ -88,5 +88,11 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101000, 'kursfilter');
     }
 
+    if ($oldversion < 2026101001) {
+        // Installations from the 1.4.0 line (2026100811) skipped the step 2026100600: repeat the idempotent migration.
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
+        upgrade_block_savepoint(true, 2026101001, 'kursfilter');
+    }
+
     return true;
 }
