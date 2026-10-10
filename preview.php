@@ -30,7 +30,7 @@
  */
 
 // phpcs:ignore moodle.Files.RequireLogin.Missing -- Public endpoint: it is the login step itself, via a pool account.
-require_once(__DIR__ . '/../../config.php');
+require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
 
 $courseid = required_param('courseid', PARAM_INT);
 if (!data_submitted()) {

@@ -44,7 +44,8 @@ class rating_helper {
      * @return string|null SHA-256 hash identifying this browser, or null.
      */
     public static function get_cookie_hash(): ?string {
-        $raw = $_COOKIE[self::COOKIE_NAME] ?? '';
+        // Moodle offers no *_param() for cookies; the value is accepted only as 64 hex characters.
+        $raw = $_COOKIE[self::COOKIE_NAME] ?? ''; // nosemgrep: moodle-superglobal-direkt
         return is_string($raw) && preg_match('/^[0-9a-f]{64}$/', $raw) ? $raw : null;
     }
 

@@ -30,7 +30,7 @@
  */
 
 // phpcs:ignore moodle.Files.RequireLogin.Missing -- Public endpoint: backups of public courses are downloadable without an account; access is limited to public courses below.
-require_once(__DIR__ . '/../../config.php');
+require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/backup_helper.php');
 
 // Read and validate the parameters.

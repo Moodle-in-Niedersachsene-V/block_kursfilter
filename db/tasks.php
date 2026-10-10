@@ -48,4 +48,15 @@ $tasks = [
         'dayofweek' => '*',
         'disabled'  => 0,
     ],
+    // KI-Verschlagwortung: Kurse ohne Tags taeglich um 04:00 Uhr bearbeiten.
+    [
+        'classname' => '\block_kursfilter\task\tag_courses',
+        'blocking'  => 0,
+        'minute'    => '0',
+        'hour'      => '4',
+        'day'       => '*',
+        'month'     => '*',
+        'dayofweek' => '*',
+        'disabled'  => 1,
+    ],
 ];
