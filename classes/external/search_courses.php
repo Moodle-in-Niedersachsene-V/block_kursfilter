@@ -59,14 +59,19 @@ class search_courses extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'category'   => new external_value(PARAM_INT,  'Kategorie-ID (0 = alle)',         VALUE_DEFAULT, 0),
-            'schooltype' => new external_value(PARAM_TEXT, 'Schulform-Tag (Rohwert)',          VALUE_DEFAULT, ''),
-            'subject'    => new external_value(PARAM_TEXT, 'Fach-Tag (Rohwert)',               VALUE_DEFAULT, ''),
-            'level'      => new external_value(PARAM_TEXT, 'Niveaustufe-Tag (Rohwert)',        VALUE_DEFAULT, ''),
-            'tag'        => new external_value(PARAM_TEXT, 'Freier Tag (Rohwert)',             VALUE_DEFAULT, ''),
-            'searchterm' => new external_value(PARAM_TEXT, 'Suchbegriff (Freitext)',           VALUE_DEFAULT, ''),
-            'contextid'  => new external_value(PARAM_INT,  'Aktueller Kontext',               VALUE_DEFAULT, 1),
-            'limit'      => new external_value(PARAM_INT,  'Max. Ergebnisse (server-gecappt)', VALUE_DEFAULT, self::DEFAULT_RESULT_LIMIT),
+            'category'   => new external_value(PARAM_INT, 'Kategorie-ID (0 = alle)', VALUE_DEFAULT, 0),
+            'schooltype' => new external_value(PARAM_TEXT, 'Schulform-Tag (Rohwert)', VALUE_DEFAULT, ''),
+            'subject'    => new external_value(PARAM_TEXT, 'Fach-Tag (Rohwert)', VALUE_DEFAULT, ''),
+            'level'      => new external_value(PARAM_TEXT, 'Niveaustufe-Tag (Rohwert)', VALUE_DEFAULT, ''),
+            'tag'        => new external_value(PARAM_TEXT, 'Freier Tag (Rohwert)', VALUE_DEFAULT, ''),
+            'searchterm' => new external_value(PARAM_TEXT, 'Suchbegriff (Freitext)', VALUE_DEFAULT, ''),
+            'contextid'  => new external_value(PARAM_INT, 'Aktueller Kontext', VALUE_DEFAULT, 1),
+            'limit'      => new external_value(
+                PARAM_INT,
+                'Max. Ergebnisse (server-gecappt)',
+                VALUE_DEFAULT,
+                self::DEFAULT_RESULT_LIMIT
+            ),
         ]);
     }
 

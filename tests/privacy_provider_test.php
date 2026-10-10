@@ -33,7 +33,7 @@ use core_privacy\local\metadata\null_provider;
 /**
  * Tests for the privacy provider.
  */
-class privacy_provider_test extends advanced_testcase {
+final class privacy_provider_test extends advanced_testcase {
     /**
      * Test provider implements null_provider.
      */

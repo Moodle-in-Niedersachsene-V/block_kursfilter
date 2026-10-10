@@ -32,7 +32,7 @@ use block_kursfilter\task\tag_courses;
 /**
  * Tests for the tag_courses scheduled task.
  */
-class task_tag_courses_test extends advanced_testcase {
+final class task_tag_courses_test extends advanced_testcase {
     /**
      * Set up each test.
      */

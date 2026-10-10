@@ -31,7 +31,7 @@ use advanced_testcase;
 /**
  * Tests for the course_access class.
  */
-class course_access_test extends advanced_testcase {
+final class course_access_test extends advanced_testcase {
     /**
      * Set up each test.
      */

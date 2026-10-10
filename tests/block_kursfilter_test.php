@@ -31,7 +31,7 @@ use advanced_testcase;
 /**
  * Tests for the main block class.
  */
-class block_kursfilter_test extends advanced_testcase {
+final class block_kursfilter_test extends advanced_testcase {
     /**
      * Set up each test.
      */

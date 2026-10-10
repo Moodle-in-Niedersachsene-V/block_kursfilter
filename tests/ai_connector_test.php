@@ -37,7 +37,7 @@ use ReflectionClass;
  * Because the actual API calls depend on external services, we test
  * only the internal parsing logic via reflection.
  */
-class ai_connector_test extends advanced_testcase {
+final class ai_connector_test extends advanced_testcase {
     /** @var ReflectionClass */
     private ReflectionClass $ref;
 
@@ -68,7 +68,7 @@ class ai_connector_test extends advanced_testcase {
      * @param array  $args   Arguments.
      * @return mixed
      */
-    private function callPrivate(string $name, array $args = []) {
+    private function call_private(string $name, array $args = []) {
         $method = $this->ref->getMethod($name);
         $method->setAccessible(true);
         return $method->invokeArgs($this->connector, $args);
@@ -78,7 +78,7 @@ class ai_connector_test extends advanced_testcase {
      * Test parse_tags accepts valid prefixed tags.
      */
     public function test_parse_tags_accepts_valid_tags(): void {
-        $result = $this->callPrivate('parse_tags', ['schulform:Gymnasium, fach:Mathematik, niveaustufe:Oberstufe']);
+        $result = $this->call_private('parse_tags', ['schulform:Gymnasium, fach:Mathematik, niveaustufe:Oberstufe']);
         $this->assertContains('schulform:Gymnasium', $result);
         $this->assertContains('fach:Mathematik', $result);
         $this->assertContains('niveaustufe:Oberstufe', $result);
@@ -88,7 +88,7 @@ class ai_connector_test extends advanced_testcase {
      * Test parse_tags rejects unknown prefixes.
      */
     public function test_parse_tags_rejects_unknown_prefix(): void {
-        $result = $this->callPrivate('parse_tags', ['unknown:Something, fach:Deutsch']);
+        $result = $this->call_private('parse_tags', ['unknown:Something, fach:Deutsch']);
         $this->assertNotContains('unknown:Something', $result);
         $this->assertContains('fach:Deutsch', $result);
     }
@@ -97,7 +97,7 @@ class ai_connector_test extends advanced_testcase {
      * Test parse_tags rejects values that are too short.
      */
     public function test_parse_tags_rejects_too_short_value(): void {
-        $result = $this->callPrivate('parse_tags', ['fach:A']);
+        $result = $this->call_private('parse_tags', ['fach:A']);
         $this->assertEmpty($result);
     }
 
@@ -105,7 +105,7 @@ class ai_connector_test extends advanced_testcase {
      * Test parse_tags handles empty input.
      */
     public function test_parse_tags_handles_empty_input(): void {
-        $result = $this->callPrivate('parse_tags', ['']);
+        $result = $this->call_private('parse_tags', ['']);
         $this->assertIsArray($result);
         $this->assertEmpty($result);
     }
@@ -114,7 +114,7 @@ class ai_connector_test extends advanced_testcase {
      * Test parse_tags deduplicates tags.
      */
     public function test_parse_tags_deduplicates(): void {
-        $result = $this->callPrivate('parse_tags', ['fach:Mathematik, fach:Mathematik']);
+        $result = $this->call_private('parse_tags', ['fach:Mathematik, fach:Mathematik']);
         $this->assertCount(1, $result);
     }
 
@@ -122,7 +122,7 @@ class ai_connector_test extends advanced_testcase {
      * Test build_prompt contains course data.
      */
     public function test_build_prompt_contains_course_data(): void {
-        $prompt = $this->callPrivate('build_prompt', [
+        $prompt = $this->call_private('build_prompt', [
             'Grundlagen der Mathematik',
             'MATH01',
             'Einführung in die Mengenlehre',

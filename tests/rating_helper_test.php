@@ -31,7 +31,7 @@ use advanced_testcase;
 /**
  * Tests for the rating_helper class.
  */
-class rating_helper_test extends advanced_testcase {
+final class rating_helper_test extends advanced_testcase {
     /**
      * Set up each test.
      */

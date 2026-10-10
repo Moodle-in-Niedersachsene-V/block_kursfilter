@@ -31,7 +31,7 @@ use advanced_testcase;
 /**
  * Tests for the pool_manager class.
  */
-class pool_manager_test extends advanced_testcase {
+final class pool_manager_test extends advanced_testcase {
     /**
      * Set up each test.
      */
@@ -116,7 +116,7 @@ class pool_manager_test extends advanced_testcase {
         $user = pool_manager::get_free_pool_user();
         $this->assertNotNull($user);
 
-        // mark_active / mark_free expect the username string, not the user object.
+        // Mark_active / mark_free expect the username string, not the user object.
         pool_manager::mark_active($user->username);
         pool_manager::mark_free($user->username);
 

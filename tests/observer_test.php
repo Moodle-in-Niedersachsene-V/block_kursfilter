@@ -31,7 +31,7 @@ use advanced_testcase;
 /**
  * Tests for the observer class.
  */
-class observer_test extends advanced_testcase {
+final class observer_test extends advanced_testcase {
     /**
      * Set up each test.
      */
@@ -42,6 +42,8 @@ class observer_test extends advanced_testcase {
 
     /**
      * Test that logout event for a non-pool user is silently ignored.
+     *
+     * @covers \block_kursfilter\observer::user_loggedout
      */
     public function test_logout_of_non_pool_user_does_not_error(): void {
         $user = $this->getDataGenerator()->create_user();
@@ -62,6 +64,8 @@ class observer_test extends advanced_testcase {
      *
      * We verify indirectly that no exception is thrown and the cache
      * entry is handled gracefully (pool user without an active cache entry).
+     *
+     * @covers \block_kursfilter\observer::user_loggedout
      */
     public function test_logout_of_pool_user_does_not_error(): void {
         $pooluser = $this->getDataGenerator()->create_user([

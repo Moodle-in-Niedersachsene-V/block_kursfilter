@@ -32,7 +32,7 @@ use block_kursfilter\external\search_courses;
 /**
  * Tests for the search_courses external function.
  */
-class search_courses_test extends advanced_testcase {
+final class search_courses_test extends advanced_testcase {
     /**
      * Set up each test.
      */
@@ -123,9 +123,11 @@ class search_courses_test extends advanced_testcase {
         $this->assertNotEmpty($result['courses']);
         $course = $result['courses'][0];
 
-        foreach (['id', 'fullname', 'shortname', 'summary', 'categoryname', 'tags',
+        foreach (
+            ['id', 'fullname', 'shortname', 'summary', 'categoryname', 'tags',
                   'courseurl', 'exporturl', 'hasexport', 'ratingavg', 'ratingcount',
-                  'userrating', 'alreadyrated'] as $field) {
+                  'userrating', 'alreadyrated'] as $field
+        ) {
             $this->assertArrayHasKey($field, $course, "Missing field: $field");
         }
     }

@@ -61,7 +61,7 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         // schulformen  → schooltypes
         // faecher      → subjects
         // niveaustufen → levels
-        // backup_adminid → backup_userid
+        // backup_adminid => backup_userid.
         $renames = [
             'schulformen'  => 'schooltypes',
             'faecher'      => 'subjects',
