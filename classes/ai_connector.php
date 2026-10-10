@@ -267,6 +267,9 @@ class ai_connector {
      * Uses \curl instead of raw cURL so that Moodle's proxy settings
      * and SSRF-protection are respected.
      *
+     * Note: \curl::setHeader() requires 'Name: value' strings, not an
+     * associative array — the latter silently drops headers.
+     *
      * @param string   $url     Target URL.
      * @param string   $payload JSON payload.
      * @param string[] $headers HTTP headers as 'Name: value' strings.
@@ -282,15 +285,9 @@ class ai_connector {
         global $CFG;
         require_once($CFG->libdir . '/filelib.php');
 
-        // Convert 'Name: value' header list to associative array for \curl::setHeader().
-        $headermap = [];
-        foreach ($headers as $h) {
-            [$name, $value] = explode(': ', $h, 2);
-            $headermap[trim($name)] = trim($value);
-        }
-
+        // Moodle's \curl::setHeader() expects 'Name: value' strings, not an associative array.
         $curl = new \curl();
-        $curl->setHeader($headermap);
+        $curl->setHeader($headers);
 
         $options = [
             'CURLOPT_TIMEOUT'        => $timeout,
