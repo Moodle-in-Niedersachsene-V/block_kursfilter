@@ -28,11 +28,13 @@
 
 /**
  * Post-install tasks for block_kursfilter.
+ *
+ * Pool-Nutzer werden nicht mehr beim Install angelegt, da user_create_user()
+ * im PHPUnit-Test-Environment debugging() auslöst und die Installation abbricht.
+ * Die Anlage erfolgt lazy beim ersten Aufruf von pool_manager::get_free_user().
  */
 function xmldb_block_kursfilter_install(): void {
-    // Pool-Nutzer anlegen.
-    \block_kursfilter\pool_manager::create_pool_users();
-
-    // In alle vorhandenen sichtbaren Kurse einschreiben.
-    \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
+    // Intentionally empty: pool users are created lazily on first use.
+    // See pool_manager::get_free_user() which calls create_pool_users()
+    // automatically when no free user is available.
 }

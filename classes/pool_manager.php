@@ -183,12 +183,19 @@ class pool_manager {
 
     /**
      * Find a free pool user (one without an active session marker).
-     * Returns the first available user object, or null if all are busy.
+     *
+     * Pool users are created lazily here if they do not exist yet.
+     * This avoids calling user_create_user() during plugin installation
+     * (db/install.php), which triggers debugging() in the PHPUnit
+     * test environment and causes the installation to abort.
      *
      * @return \stdClass|null Moodle user record or null.
      */
     public static function get_free_pool_user(): ?\stdClass {
         global $DB;
+
+        // Lazy creation: ensure pool users exist before looking for a free one.
+        self::create_pool_users();
 
         $cache = \cache::make('block_kursfilter', 'poolsessions');
 
