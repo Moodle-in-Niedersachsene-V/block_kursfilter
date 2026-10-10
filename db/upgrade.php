@@ -56,5 +56,28 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026100801, 'kursfilter');
     }
 
+    if ($oldversion < 2026101001) {
+        // Einstellungsschluessel umbenennen:
+        // schulformen  → schooltypes
+        // faecher      → subjects
+        // niveaustufen → levels
+        // backup_adminid → backup_userid
+        $renames = [
+            'schulformen'  => 'schooltypes',
+            'faecher'      => 'subjects',
+            'niveaustufen' => 'levels',
+            'backup_adminid' => 'backup_userid',
+        ];
+        foreach ($renames as $old => $new) {
+            $value = get_config('block_kursfilter', $old);
+            if ($value !== false) {
+                set_config($new, $value, 'block_kursfilter');
+                unset_config($old, 'block_kursfilter');
+            }
+        }
+
+        upgrade_block_savepoint(true, 2026101001, 'kursfilter');
+    }
+
     return true;
 }

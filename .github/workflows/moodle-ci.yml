@@ -6,7 +6,7 @@
 # Ablage: .github/workflows/moodle-ci.yml
 #
 # Angepasst: templates/ vorhanden (Mustache-Lint aktiv),
-# kein tests/ vorhanden (phpunit und behat entfallen),
+# tests/ vorhanden (phpunit aktiv),
 # amd/ vorhanden (grunt bleibt).
 ##############################################################################
 
@@ -123,6 +123,10 @@ jobs:
       - name: Grunt (JS/CSS-Lint, AMD-Build-Abgleich)
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci grunt --max-lint-warnings 0
+
+      - name: PHPUnit (Unit-Tests)
+        if: ${{ !cancelled() }}
+        run: moodle-plugin-ci phpunit --fail-on-warning
 
       - name: Erzeugte AMD-Build-Dateien bereitstellen
         if: ${{ !cancelled() }}

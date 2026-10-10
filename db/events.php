@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version definition for block_kursfilter.
+ * Event observers for block_kursfilter.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -25,8 +25,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->component = 'block_kursfilter';
-$plugin->version = 2026101001;
-$plugin->requires  = 2025041400; // Moodle 5.1.
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release = '1.5.0';
+$observers = [
+    [
+        'eventname' => '\core\event\user_loggedout',
+        'callback'  => '\block_kursfilter\observer::user_loggedout',
+    ],
+];

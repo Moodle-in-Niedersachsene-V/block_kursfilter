@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * External API (AJAX) for block_kursfilter.
+ * External function search_courses for block_kursfilter.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -23,16 +23,25 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+namespace block_kursfilter\external;
 
-require_once($CFG->libdir . '/externallib.php');
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 
 /**
- * External functions for the kursfilter block.
+ * External function: search courses by filter criteria.
+ *
+ * Moodle 5.x external API style (execute / execute_parameters / execute_returns).
  */
-class block_kursfilter_external extends external_api {
+class search_courses extends external_api {
     /** Absolutes serverseitiges Maximum fuer Suchergebnisse (F-02). */
     const MAX_RESULT_LIMIT = 200;
+
+    /** Standard-Limit wenn kein Konfig-Wert gesetzt. */
+    const DEFAULT_RESULT_LIMIT = 100;
 
     /** Rate-Limit: maximale Anfragen pro Zeitfenster je Nutzer (F-01). */
     const RATE_LIMIT_REQUESTS = 30;
@@ -40,63 +49,64 @@ class block_kursfilter_external extends external_api {
     /** Rate-Limit: Zeitfenster in Sekunden (F-01). */
     const RATE_LIMIT_WINDOW = 60;
 
-    // Search_courses.
+    /** Maximale Laenge der Kurzbeschreibung in Zeichen. */
+    const SUMMARY_LENGTH = 250;
 
     /**
      * Parameter definition for search_courses.
      *
      * @return external_function_parameters
      */
-    public static function search_courses_parameters(): external_function_parameters {
+    public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'kursbereich'  => new external_value(PARAM_INT, 'Kategorie-ID (0 = alle)', VALUE_DEFAULT, 0),
-            'schulform'    => new external_value(PARAM_TEXT, 'Schulform-Tag (Rohwert)', VALUE_DEFAULT, ''),
-            'fach'         => new external_value(PARAM_TEXT, 'Fach-Tag (Rohwert)', VALUE_DEFAULT, ''),
-            'niveaustufe'  => new external_value(PARAM_TEXT, 'Niveaustufe-Tag (Rohwert)', VALUE_DEFAULT, ''),
-            'tag'          => new external_value(PARAM_TEXT, 'Freier Tag (Rohwert)', VALUE_DEFAULT, ''),
-            'kursname'     => new external_value(PARAM_TEXT, 'Suchbegriff (Freitext)', VALUE_DEFAULT, ''),
-            'contextid'    => new external_value(PARAM_INT, 'Aktueller Kontext', VALUE_DEFAULT, 1),
-            'limit'        => new external_value(PARAM_INT, 'Max. Ergebnisse', VALUE_DEFAULT, 100),
+            'category'   => new external_value(PARAM_INT,  'Kategorie-ID (0 = alle)',         VALUE_DEFAULT, 0),
+            'schooltype' => new external_value(PARAM_TEXT, 'Schulform-Tag (Rohwert)',          VALUE_DEFAULT, ''),
+            'subject'    => new external_value(PARAM_TEXT, 'Fach-Tag (Rohwert)',               VALUE_DEFAULT, ''),
+            'level'      => new external_value(PARAM_TEXT, 'Niveaustufe-Tag (Rohwert)',        VALUE_DEFAULT, ''),
+            'tag'        => new external_value(PARAM_TEXT, 'Freier Tag (Rohwert)',             VALUE_DEFAULT, ''),
+            'searchterm' => new external_value(PARAM_TEXT, 'Suchbegriff (Freitext)',           VALUE_DEFAULT, ''),
+            'contextid'  => new external_value(PARAM_INT,  'Aktueller Kontext',               VALUE_DEFAULT, 1),
+            'limit'      => new external_value(PARAM_INT,  'Max. Ergebnisse (server-gecappt)', VALUE_DEFAULT, self::DEFAULT_RESULT_LIMIT),
         ]);
     }
 
     /**
      * Search courses by filter criteria.
      *
-     * @param int    $kursbereich Category ID.
-     * @param string $schulform   Schulform tag rawname.
-     * @param string $fach        Fach tag rawname.
-     * @param string $niveaustufe Niveaustufe tag rawname.
-     * @param string $tag         Free tag rawname.
-     * @param string $kursname    Free text search term.
-     * @param int    $contextid   Current context ID.
-     * @param int    $limit       Max results (server-capped).
+     * @param int    $category   Category ID (0 = all).
+     * @param string $schooltype Schulform tag rawname.
+     * @param string $subject    Fach tag rawname.
+     * @param string $level      Niveaustufe tag rawname.
+     * @param string $tag        Free tag rawname.
+     * @param string $searchterm Free text search term.
+     * @param int    $contextid  Current context ID.
+     * @param int    $limit      Max results (server-capped).
      * @return array
      */
-    public static function search_courses(
-        int $kursbereich = 0,
-        string $schulform = '',
-        string $fach = '',
-        string $niveaustufe = '',
+    public static function execute(
+        int $category = 0,
+        string $schooltype = '',
+        string $subject = '',
+        string $level = '',
         string $tag = '',
-        string $kursname = '',
+        string $searchterm = '',
         int $contextid = 1,
-        int $limit = 100
+        int $limit = self::DEFAULT_RESULT_LIMIT
     ): array {
         global $DB, $USER;
 
-        $params = self::validate_parameters(self::search_courses_parameters(), [
-            'kursbereich'  => $kursbereich,
-            'schulform'    => $schulform,
-            'fach'         => $fach,
-            'niveaustufe'  => $niveaustufe,
-            'tag'          => $tag,
-            'kursname'     => $kursname,
-            'contextid'    => $contextid,
-            'limit'        => $limit,
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'category'   => $category,
+            'schooltype' => $schooltype,
+            'subject'    => $subject,
+            'level'      => $level,
+            'tag'        => $tag,
+            'searchterm' => $searchterm,
+            'contextid'  => $contextid,
+            'limit'      => $limit,
         ]);
 
-        $context = context::instance_by_id($params['contextid']);
+        $context = \context::instance_by_id($params['contextid']);
         self::validate_context($context);
 
         // F-01: Rate-Limiting.
@@ -105,7 +115,7 @@ class block_kursfilter_external extends external_api {
         // F-02: Serverseitiges Limit erzwingen.
         $configlimit = (int)get_config('block_kursfilter', 'resultlimit');
         if ($configlimit < 1 || $configlimit > self::MAX_RESULT_LIMIT) {
-            $configlimit = 100;
+            $configlimit = self::DEFAULT_RESULT_LIMIT;
         }
         $effectivelimit = min((int)$params['limit'], $configlimit, self::MAX_RESULT_LIMIT);
         if ($effectivelimit < 1) {
@@ -114,11 +124,11 @@ class block_kursfilter_external extends external_api {
 
         // Basis-Bedingungen.
         $conditions = ['c.visible = 1', 'c.id != :siteid'];
-        $args       = ['siteid' => SITEID];
+        $args = ['siteid' => SITEID];
 
         // Kursbereich (inkl. Unterkategorien).
-        if (!empty($params['kursbereich'])) {
-            $catids = self::get_category_ids_recursive((int)$params['kursbereich']);
+        if (!empty($params['category'])) {
+            $catids = self::get_category_ids_recursive((int)$params['category']);
             if ($catids) {
                 [$catsql, $catargs] = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED, 'cat');
                 $conditions[] = "c.category $catsql";
@@ -127,22 +137,21 @@ class block_kursfilter_external extends external_api {
         }
 
         // Freitextsuche: Beschreibung (primaer), Kursname, Kurzname.
-        if (!empty($params['kursname'])) {
+        if (!empty($params['searchterm'])) {
             $conditions[] = '(' .
                 $DB->sql_like('c.summary', ':kn1', false) . ' OR ' .
                 $DB->sql_like('c.fullname', ':kn2', false) . ' OR ' .
                 $DB->sql_like('c.shortname', ':kn3', false) .
             ')';
-            $term = '%' . $DB->sql_like_escape($params['kursname']) . '%';
+            $term = '%' . $DB->sql_like_escape($params['searchterm']) . '%';
             $args['kn1'] = $term;
             $args['kn2'] = $term;
             $args['kn3'] = $term;
         }
 
-        // Tag-Filter: Rohwerte direkt suchen – kein Prefix-Format.
-        // Moodle speichert Tags als Rohwert (z. B. "Oberstufe")..
+        // Tag-Filter: Rohwerte direkt suchen.
         $tagfilters = [];
-        foreach (['schulform', 'fach', 'niveaustufe', 'tag'] as $key) {
+        foreach (['schooltype', 'subject', 'level', 'tag'] as $key) {
             if (!empty($params[$key])) {
                 $tagfilters[] = $params[$key];
             }
@@ -161,15 +170,15 @@ class block_kursfilter_external extends external_api {
 
         $where = implode(' AND ', $conditions);
         $sql = "SELECT c.id, c.fullname, c.shortname, c.summary, c.category
-                    FROM {course} c
-                   WHERE $where
-                ORDER BY c.fullname ASC";
+                  FROM {course} c
+                 WHERE $where
+              ORDER BY c.fullname ASC";
 
         $records = $DB->get_records_sql($sql, $args, 0, $effectivelimit);
 
         $courses = [];
         foreach ($records as $course) {
-            $cat = core_course_category::get($course->category, IGNORE_MISSING);
+            $cat = \core_course_category::get($course->category, IGNORE_MISSING);
             $catname = $cat ? $cat->get_nested_name(false) : '';
 
             $summary = html_to_text(
@@ -177,25 +186,22 @@ class block_kursfilter_external extends external_api {
                 0,
                 false
             );
-            if (core_text::strlen($summary) > 250) {
-                $summary = core_text::substr($summary, 0, 250) . '…';
+            if (\core_text::strlen($summary) > self::SUMMARY_LENGTH) {
+                $summary = \core_text::substr($summary, 0, self::SUMMARY_LENGTH) . '…';
             }
 
-            $tags = core_tag_tag::get_item_tags_array('core', 'course', $course->id);
-            $courseurl = (new moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
+            $tags = \core_tag_tag::get_item_tags_array('core', 'course', $course->id);
+            $courseurl = (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false);
 
-            // Export-URL: oeffentlicher Download fuer alle Nutzer inkl. Gaeste.
-            // Die mbz-Datei wird nachts durch den Scheduled Task erzeugt.
-            // Kein Capability-Check – Datei ist fuer alle sichtbaren Kurse verfuegbar..
             $exporturl = '';
             if (\block_kursfilter\backup_helper::has_backup($course->id)) {
-                $exporturl = (new moodle_url(
+                $exporturl = (new \moodle_url(
                     '/blocks/kursfilter/backup.php',
                     ['courseid' => $course->id]
                 ))->out(false);
             }
 
-            // Rating data.
+            // Rating-Daten.
             $ratingdata = \block_kursfilter\rating_helper::get_course_rating($course->id);
             $cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
             $existingrating = \block_kursfilter\rating_helper::get_existing_rating(
@@ -204,19 +210,19 @@ class block_kursfilter_external extends external_api {
             );
 
             $courses[] = [
-                'id'            => (int)$course->id,
-                'fullname'      => format_string($course->fullname),
-                'shortname'     => format_string($course->shortname),
-                'summary'       => $summary,
-                'categoryname'  => $catname,
-                'tags'          => array_values($tags),
-                'courseurl'     => $courseurl,
-                'exporturl'     => $exporturl,
-                'hasexport'     => ($exporturl !== ''),
-                'ratingavg'     => $ratingdata['avg'],
-                'ratingcount'   => $ratingdata['count'],
-                'userrating'    => $existingrating ?? 0,
-                'alreadyrated'  => ($existingrating !== null),
+                'id'           => (int)$course->id,
+                'fullname'     => format_string($course->fullname),
+                'shortname'    => format_string($course->shortname),
+                'summary'      => $summary,
+                'categoryname' => $catname,
+                'tags'         => array_values($tags),
+                'courseurl'    => $courseurl,
+                'exporturl'    => $exporturl,
+                'hasexport'    => ($exporturl !== ''),
+                'ratingavg'    => $ratingdata['avg'],
+                'ratingcount'  => $ratingdata['count'],
+                'userrating'   => $existingrating ?? 0,
+                'alreadyrated' => ($existingrating !== null),
             ];
         }
 
@@ -228,7 +234,7 @@ class block_kursfilter_external extends external_api {
      *
      * @return external_single_structure
      */
-    public static function search_courses_returns(): external_single_structure {
+    public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'courses' => new external_multiple_structure(
                 new external_single_structure([
@@ -253,16 +259,14 @@ class block_kursfilter_external extends external_api {
         ]);
     }
 
-    // F-01: Rate-limiting via Moodle MUC.
-
     /**
      * Check rate limit for the given user.
      *
      * @param int $userid
-     * @throws moodle_exception
+     * @throws \moodle_exception
      */
     private static function check_rate_limit(int $userid): void {
-        $cache = cache::make('block_kursfilter', 'ratelimit');
+        $cache = \cache::make('block_kursfilter', 'ratelimit');
         $cachekey = 'rl_' . $userid;
         $now = time();
         $data = $cache->get($cachekey);
@@ -282,7 +286,7 @@ class block_kursfilter_external extends external_api {
 
         if ($data['count'] > self::RATE_LIMIT_REQUESTS) {
             $remaining = self::RATE_LIMIT_WINDOW - ($now - $data['window_start']);
-            throw new moodle_exception(
+            throw new \moodle_exception(
                 'ratelimitexceeded',
                 'block_kursfilter',
                 '',
@@ -290,8 +294,6 @@ class block_kursfilter_external extends external_api {
             );
         }
     }
-
-    // Hilfsmethoden.
 
     /**
      * Recursively collect all child category IDs.
@@ -301,7 +303,7 @@ class block_kursfilter_external extends external_api {
      */
     private static function get_category_ids_recursive(int $catid): array {
         $ids = [$catid];
-        $cat = core_course_category::get($catid, IGNORE_MISSING);
+        $cat = \core_course_category::get($catid, IGNORE_MISSING);
         if ($cat) {
             foreach ($cat->get_children() as $child) {
                 $ids = array_merge($ids, self::get_category_ids_recursive($child->id));

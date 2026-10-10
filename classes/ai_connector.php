@@ -77,9 +77,9 @@ class ai_connector {
             $plaintext = mb_substr($plaintext, 0, 800) . ' …';
         }
 
-        $schulformen = $this->get_configured_list('schulformen');
-        $faecher = $this->get_configured_list('faecher');
-        $niveaustufen = $this->get_configured_list('niveaustufen');
+        $schulformen = $this->get_configured_list('schooltypes');
+        $faecher = $this->get_configured_list('subjects');
+        $niveaustufen = $this->get_configured_list('levels');
 
         $prompt = $this->build_prompt(
             $fullname,

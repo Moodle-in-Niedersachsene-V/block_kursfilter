@@ -49,7 +49,7 @@ class backup_courses extends \core\task\scheduled_task {
         global $DB, $CFG;
 
         // Find an admin user to run backups as.
-        $adminid = (int)get_config('block_kursfilter', 'backup_adminid');
+        $adminid = (int)get_config('block_kursfilter', 'backup_userid');
         if ($adminid < 1) {
             // Fall back to the first site admin.
             $admins = get_admins();

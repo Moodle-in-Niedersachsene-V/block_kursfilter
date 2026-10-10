@@ -15,7 +15,11 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Plugin version definition for block_kursfilter.
+ * Privacy provider for block_kursfilter.
+ *
+ * Dieses Plugin speichert keine personenbezogenen Daten.
+ * Bewertungen werden nur per anonymem Cookie-Hash gespeichert.
+ * Pool-Nutzer sind keine echten Personen.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -23,10 +27,18 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
+namespace block_kursfilter\privacy;
 
-$plugin->component = 'block_kursfilter';
-$plugin->version = 2026101001;
-$plugin->requires  = 2025041400; // Moodle 5.1.
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release = '1.5.0';
+/**
+ * Privacy provider: no personal data stored.
+ */
+class provider implements \core_privacy\local\metadata\null_provider {
+    /**
+     * Returns the reason why this plugin stores no personal data.
+     *
+     * @return string Language string key.
+     */
+    public static function get_reason(): string {
+        return 'privacy:metadata';
+    }
+}

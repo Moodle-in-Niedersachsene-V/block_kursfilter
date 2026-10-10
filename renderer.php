@@ -42,25 +42,25 @@ class block_kursfilter_renderer extends plugin_renderer_base {
         }
 
         // Schulformen aus Admin-Settings.
-        $schulformraw = get_config('block_kursfilter', 'schulformen')
+        $schooltyperaw = get_config('block_kursfilter', 'schooltypes')
             ?? "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule";
-        $schulformen  = array_values(array_filter(array_map(function ($v) {
+        $schulformen = array_values(array_filter(array_map(function ($v) {
             return clean_param(trim($v), PARAM_TEXT);
-        }, explode("\n", $schulformraw))));
+        }, explode("\n", $schooltyperaw))));
 
         // Faecher aus Admin-Settings.
-        $faecherraw = get_config('block_kursfilter', 'faecher')
+        $subjectraw = get_config('block_kursfilter', 'subjects')
             ?? "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte\nKunst\nMusik\nSport";
         $faecher = array_values(array_filter(array_map(function ($v) {
             return clean_param(trim($v), PARAM_TEXT);
-        }, explode("\n", $faecherraw))));
+        }, explode("\n", $subjectraw))));
 
         // Niveaustufen aus Admin-Settings.
-        $niveauraw  = get_config('block_kursfilter', 'niveaustufen')
+        $levelraw = get_config('block_kursfilter', 'levels')
             ?? "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe";
         $niveaus = array_values(array_filter(array_map(function ($v) {
             return clean_param(trim($v), PARAM_TEXT);
-        }, explode("\n", $niveauraw))));
+        }, explode("\n", $levelraw))));
 
         $templatedata = [
             'blockid'      => $blockid,
