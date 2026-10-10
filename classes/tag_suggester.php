@@ -87,7 +87,7 @@ class tag_suggester {
      *
      * @param \stdClass $course Course record.
      * @param string $categoryname Category name.
-     * @param array<string, string[]> $lists Allowed values per filter setting.
+     * @param array $lists Allowed values per filter setting (setting name => string[]).
      * @return string Prompt.
      */
     private static function build_prompt(\stdClass $course, string $categoryname, array $lists): string {
@@ -116,7 +116,7 @@ class tag_suggester {
      * Keep only answer values that occur in the allowed lists.
      *
      * @param string $answer Model answer.
-     * @param array<string, string[]> $lists Allowed values per filter setting.
+     * @param array $lists Allowed values per filter setting (setting name => string[]).
      * @return string[] Allowed values in their configured spelling, without duplicates.
      * @throws \moodle_exception If the answer contains no JSON object.
      */
