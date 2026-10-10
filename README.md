@@ -23,6 +23,7 @@ Filterwerte (Schulformen, Fächer, Niveaustufen) je eine Zeile; ein Kurs passt, 
 
 - 02:00 `backup_courses`: eine Kurssicherung ohne Nutzerdaten je öffentlichem Kurs; scheitert eine, schlägt die Aufgabe mit Ursache im Protokoll fehl.
 - 03:00 `setup_pool`: legt fehlende Pool-Konten an und schreibt sie in öffentliche Kurse ein.
+- 04:00 `tag_courses` (standardmäßig aus): KI-Verschlagwortung über den in Moodle eingerichteten KI-Anbieter (Aktion „Text generieren“). Übernommen werden nur Werte aus den Filterlisten, je Kurs einmal; ohne „Tags automatisch übernehmen“ bleiben sie als Tag-Vorschläge stehen (Prüfseite: Issue #3).
 
 ## Entwicklung
 

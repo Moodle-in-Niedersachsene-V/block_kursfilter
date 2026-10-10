@@ -8,7 +8,7 @@ Reviews zitieren die Regel mit Nummer (`S2`, `N3`, `E4`).
 
 ## Geltungsbereich
 
-- **Scopes:** `all` und `Moodle`. `AI` (K-Regeln) entfällt: das Plugin hat keine KI-Schnittstelle.
+- **Scopes:** `all`, `Moodle` und `AI`: die KI-Verschlagwortung schickt Kursinhalte an den KI-Anbieter von Moodle (`core_ai`). K-Regeln gelten für Prompt und Auswertung der Antwort (`classes/tag_suggester.php`).
 - **Glossar für N1:** [`GLOSSARY.md`](GLOSSARY.md); jeder Begriff im Code trägt eine `Code:`-Zeile.
 - **Gate:** Kursfilter hat kein Coverage-/CRAP-/Mutations-Gate. Die CI (`.github/workflows/moodle-ci.yml`) prüft phpcs, phpdoc, savepoints, mustache, grunt und PHPUnit. Regeln, die laut Standard „vom Gate erzwungen“ werden, aber hier von keinem Werkzeug geprüft werden, gelten im Review.
 

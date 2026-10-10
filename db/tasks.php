@@ -48,7 +48,7 @@ $tasks = [
         'dayofweek' => '*',
         'disabled'  => 0,
     ],
-    // KI-Verschlagwortung: Kurse ohne Tags taeglich um 04:00 Uhr bearbeiten.
+    // AI tagging of public courses without tag suggestion, daily at 04:00; disabled until an admin enables it.
     [
         'classname' => '\block_kursfilter\task\tag_courses',
         'blocking'  => 0,

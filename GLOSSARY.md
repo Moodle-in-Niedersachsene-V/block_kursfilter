@@ -92,6 +92,18 @@ Die nächtlich erzeugte Sicherungsdatei (.mbz) eines öffentlichen Kurses ohne N
 _Avoid_: Export, Backup-Datei, Kursexport
 Code: `backup`
 
+## KI-Verschlagwortung
+
+**KI-Verschlagwortung**:
+Das automatische Ermitteln passender Filterwerte (Schulform, Fach, Niveaustufe) für einen öffentlichen Kurs durch den in Moodle eingerichteten KI-Anbieter.
+_Avoid_: KI-Tagging, Auto-Tagging
+Code: `ai tagging`
+
+**Tag-Vorschlag**:
+Die von der KI-Verschlagwortung ermittelten Filterwerte eines Kurses, die vor dem Übernehmen als Kurs-Tags auf Prüfung warten.
+_Avoid_: KI-Vorschlag, pending tags
+Code: `tag suggestion`
+
 **Sicherungskonto**:
 Das Administratorkonto, unter dem die Kurssicherungen erzeugt werden.
 _Avoid_: Backup-Admin

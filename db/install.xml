@@ -20,7 +20,7 @@
         <INDEX NAME="cookiehash_courseid"  UNIQUE="true"  FIELDS="cookiehash, courseid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="block_kursfilter_tag_pending" COMMENT="Pending AI tag suggestions for courses">
+    <TABLE NAME="block_kursfilter_tag_pending" COMMENT="AI tag suggestion and its outcome (pending, applied, empty) per course">
       <FIELDS>
         <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="courseid"     TYPE="int"  LENGTH="10" NOTNULL="true"/>

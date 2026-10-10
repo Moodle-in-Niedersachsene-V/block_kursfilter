@@ -80,5 +80,13 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026100901, 'kursfilter');
     }
 
+    if ($oldversion < 2026101000) {
+        // AI tagging uses Moodle's AI subsystem; the own backend settings, including the API key, go away.
+        foreach (['ai_backend', 'ai_claude_apikey', 'ai_claude_model', 'ai_ollama_url', 'ai_ollama_model'] as $name) {
+            unset_config($name, 'block_kursfilter');
+        }
+        upgrade_block_savepoint(true, 2026101000, 'kursfilter');
+    }
+
     return true;
 }
