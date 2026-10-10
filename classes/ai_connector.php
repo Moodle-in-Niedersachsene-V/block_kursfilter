@@ -296,11 +296,22 @@ class ai_connector {
             'CURLOPT_TIMEOUT'        => $timeout,
             'CURLOPT_SSL_VERIFYPEER' => true,
             'CURLOPT_RETURNTRANSFER' => true,
+            'CURLOPT_POST'           => true,
+            'CURLOPT_POSTFIELDS'     => $payload,
         ];
 
         $result = $curl->post($url, $payload, $options);
 
         if ($curl->get_errno() !== 0) {
+            mtrace('block_kursfilter ai_connector: cURL error ' . $curl->get_errno() . ' – ' . $curl->error);
+            return false;
+        }
+
+        // HTTP-Fehler erkennen (z. B. 401 Unauthorized, 400 Bad Request).
+        $info = $curl->get_info();
+        $httpcode = $info['http_code'] ?? 0;
+        if ($httpcode >= 400) {
+            mtrace('block_kursfilter ai_connector: HTTP ' . $httpcode . ' von ' . $url . ' – ' . $result);
             return false;
         }
 

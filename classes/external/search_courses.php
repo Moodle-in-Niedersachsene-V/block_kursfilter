@@ -66,12 +66,8 @@ class search_courses extends external_api {
             'tag'        => new external_value(PARAM_TEXT, 'Freier Tag (Rohwert)', VALUE_DEFAULT, ''),
             'searchterm' => new external_value(PARAM_TEXT, 'Suchbegriff (Freitext)', VALUE_DEFAULT, ''),
             'contextid'  => new external_value(PARAM_INT, 'Aktueller Kontext', VALUE_DEFAULT, 1),
-            'limit'      => new external_value(
-                PARAM_INT,
-                'Max. Ergebnisse (server-gecappt)',
-                VALUE_DEFAULT,
-                self::DEFAULT_RESULT_LIMIT
-            ),
+            'limit'      => new external_value(PARAM_INT, 'Max. Ergebnisse (server-gecappt)',
+                VALUE_DEFAULT, self::DEFAULT_RESULT_LIMIT),
         ]);
     }
 
