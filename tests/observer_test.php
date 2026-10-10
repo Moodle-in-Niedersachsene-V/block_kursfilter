@@ -14,72 +14,54 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Unit tests for block_kursfilter\observer.
- *
- * @package   block_kursfilter
- * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers    \block_kursfilter\observer
- */
-
 namespace block_kursfilter;
 
-use advanced_testcase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Tests for the observer class.
+ * Tests for the logout observer that releases pool accounts.
+ *
+ * @package    block_kursfilter
+ * @copyright  2026 Moodle in Niedersachsen e. V.
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class observer_test extends advanced_testcase {
+#[CoversClass(observer::class)]
+final class observer_test extends \advanced_testcase {
     /**
-     * Set up each test.
+     * Triggers a logout event for the given user.
+     *
+     * @param int $userid User ID.
      */
-    protected function setUp(): void {
-        parent::setUp();
+    private function logout(int $userid): void {
+        \core\event\user_loggedout::create([
+            'userid' => $userid,
+            'objectid' => $userid,
+            'other' => ['sessionid' => 'phpunit'],
+        ])->trigger();
+    }
+
+    public function test_logout_of_pool_account_frees_it(): void {
+        global $DB;
         $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        $username = pool_manager::get_pool_usernames()[0];
+        pool_manager::mark_occupied($username);
+        $this->assertNull(pool_manager::get_free_pool_account());
+
+        $this->logout((int)$DB->get_field('user', 'id', ['username' => $username]));
+
+        $this->assertSame($username, pool_manager::get_free_pool_account()->username);
     }
 
-    /**
-     * Test that logout event for a non-pool user is silently ignored.
-     *
-     * @covers \block_kursfilter\observer::user_loggedout
-     */
-    public function test_logout_of_non_pool_user_does_not_error(): void {
-        $user = $this->getDataGenerator()->create_user();
+    public function test_logout_of_other_user_keeps_pool_occupied(): void {
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        pool_manager::mark_occupied(pool_manager::get_pool_usernames()[0]);
 
-        $event = \core\event\user_loggedout::create([
-            'objectid' => $user->id,
-            'context'  => \context_system::instance(),
-            'other'    => ['sessionid' => 'testsession'],
-        ]);
+        $this->logout($this->getDataGenerator()->create_user()->id);
 
-        // Should not throw.
-        observer::user_loggedout($event);
-        $this->assertTrue(true);
-    }
-
-    /**
-     * Test that logout event for a pool user calls mark_free.
-     *
-     * We verify indirectly that no exception is thrown and the cache
-     * entry is handled gracefully (pool user without an active cache entry).
-     *
-     * @covers \block_kursfilter\observer::user_loggedout
-     */
-    public function test_logout_of_pool_user_does_not_error(): void {
-        $pooluser = $this->getDataGenerator()->create_user([
-            'username' => pool_manager::USERNAME_PREFIX . '01',
-        ]);
-
-        $event = \core\event\user_loggedout::create([
-            'objectid' => $pooluser->id,
-            'context'  => \context_system::instance(),
-            'other'    => ['sessionid' => 'testsession'],
-        ]);
-
-        // Should not throw even when no active session is in the cache.
-        observer::user_loggedout($event);
-        $this->assertTrue(true);
+        $this->assertNull(pool_manager::get_free_pool_account());
     }
 }

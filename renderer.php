@@ -34,42 +34,28 @@ class block_kursfilter_renderer extends plugin_renderer_base {
      * @return string HTML output.
      */
     public function render_block(int $blockid): string {
-        // Kursbereiche (Kategorien).
-        $categories = core_course_category::make_categories_list('', 0, ' / ');
-        $kursbereiche = [['value' => '', 'label' => get_string('filter_all', 'block_kursfilter')]];
-        foreach ($categories as $id => $name) {
-            $kursbereiche[] = ['value' => (string)$id, 'label' => $name];
+        $categories = [['value' => '', 'label' => get_string('filter_all', 'block_kursfilter')]];
+        foreach (core_course_category::make_categories_list('', 0, ' / ') as $id => $name) {
+            $categories[] = ['value' => (string)$id, 'label' => $name];
         }
 
-        // Schulformen aus Admin-Settings.
-        $schooltyperaw = get_config('block_kursfilter', 'schooltypes')
-            ?? "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule";
-        $schulformen = array_values(array_filter(array_map(function ($v) {
-            return clean_param(trim($v), PARAM_TEXT);
-        }, explode("\n", $schooltyperaw))));
+        return $this->render_from_template('block_kursfilter/block', [
+            'blockid'     => $blockid,
+            'categories'  => $categories,
+            'schooltypes' => self::filter_values('schooltypes'),
+            'subjects'    => self::filter_values('subjects'),
+            'levels'      => self::filter_values('levels'),
+        ]);
+    }
 
-        // Faecher aus Admin-Settings.
-        $subjectraw = get_config('block_kursfilter', 'subjects')
-            ?? "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte\nKunst\nMusik\nSport";
-        $faecher = array_values(array_filter(array_map(function ($v) {
-            return clean_param(trim($v), PARAM_TEXT);
-        }, explode("\n", $subjectraw))));
-
-        // Niveaustufen aus Admin-Settings.
-        $levelraw = get_config('block_kursfilter', 'levels')
-            ?? "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe";
-        $niveaus = array_values(array_filter(array_map(function ($v) {
-            return clean_param(trim($v), PARAM_TEXT);
-        }, explode("\n", $levelraw))));
-
-        $templatedata = [
-            'blockid'      => $blockid,
-            'kursbereiche' => $kursbereiche,
-            'schulformen'  => $schulformen,
-            'faecher'      => $faecher,
-            'niveaustufen' => $niveaus,
-        ];
-
-        return $this->render_from_template('block_kursfilter/block', $templatedata);
+    /**
+     * Read the filter values of a setting, one per line.
+     *
+     * @param string $setting Setting name.
+     * @return string[] Non-empty values.
+     */
+    private static function filter_values(string $setting): array {
+        $lines = explode("\n", (string)get_config('block_kursfilter', $setting));
+        return array_values(array_filter(array_map(fn($line) => clean_param(trim($line), PARAM_TEXT), $lines), 'strlen'));
     }
 }

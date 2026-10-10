@@ -17,12 +17,12 @@
 /**
  * Public rating endpoint for block_kursfilter.
  *
- * Nimmt eine Sternebewertung entgegen, setzt den Cookie
- * und speichert die Bewertung in der Datenbank.
- * Antwortet mit JSON.
+ * Accepts a star rating, sets the cookie
+ * and stores the rating in the database.
+ * Responds with JSON.
  *
- * Aufruf: POST /blocks/kursfilter/rate.php
- *         Body: courseid=42&stars=4&sesskey=...
+ * Usage: POST /blocks/kursfilter/rate.php
+ *        Body: courseid=42&stars=4&sesskey=...
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -30,11 +30,9 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// Intentional public endpoint: anonymous ratings; CSRF via confirm_sesskey(); POST + PARAM_INT only.
 define('AJAX_SCRIPT', true);
-// phpcs:disable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+// phpcs:ignore moodle.Files.RequireLogin.Missing,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar -- Public endpoint: visitors without an account may rate (sesskey-protected). The Semgrep marker has a fixed syntax.
 require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
-// phpcs:enable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/rating_helper.php');
 
 header('Content-Type: application/json; charset=utf-8');
@@ -46,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Validate sesskey to prevent CSRF from external sites.
-// Guests without a session get a temporary sesskey from Moodle.
+// Visitors without an account get a sesskey from their Moodle session as well.
 if (!confirm_sesskey()) {
     echo json_encode(['success' => false, 'error' => 'Invalid sesskey']);
     exit;
@@ -62,14 +60,14 @@ if ($stars < 1 || $stars > 5) {
 }
 
 // Course must exist and be visible.
-$course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], 'id', IGNORE_MISSING);
-if (!$course || $course->id === SITEID) {
+$course = \block_kursfilter\course_access::get_public_course($courseid);
+if (!$course) {
     echo json_encode(['success' => false, 'error' => 'Course not found']);
     exit;
 }
 
-// Get or create visitor cookie hash.
-$cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
+$cookiehash = \block_kursfilter\rating_helper::get_cookie_hash()
+    ?? \block_kursfilter\rating_helper::create_cookie_hash();
 
 // Save rating (returns false if already rated).
 $saved = \block_kursfilter\rating_helper::save_rating($courseid, $cookiehash, $stars);

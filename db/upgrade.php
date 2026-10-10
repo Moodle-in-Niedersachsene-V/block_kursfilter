@@ -34,8 +34,14 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
 
     $dbman = $DB->get_manager();
 
+    if ($oldversion < 2026100600) {
+        // Pool accounts get a role without access to participants, user identity and grades.
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
+        upgrade_block_savepoint(true, 2026100600, 'kursfilter');
+    }
+
     if ($oldversion < 2026100801) {
-        // Tabelle fuer ausstehende KI-Tag-Vorschlaege anlegen.
+        // Table for pending AI tag suggestions.
         $table = new \xmldb_table('block_kursfilter_tag_pending');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -56,27 +62,59 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026100801, 'kursfilter');
     }
 
-    if ($oldversion < 2026101001) {
-        // Einstellungsschluessel umbenennen:
-        // schulformen  → schooltypes
-        // faecher      → subjects
-        // niveaustufen → levels
-        // backup_adminid => backup_userid.
-        $renames = [
-            'schulformen'  => 'schooltypes',
-            'faecher'      => 'subjects',
+    if ($oldversion < 2026100901) {
+        // Settings got English names (coding standard N3); values move to the new names.
+        $renamed = [
+            'schulformen' => 'schooltypes',
+            'faecher' => 'subjects',
             'niveaustufen' => 'levels',
             'backup_adminid' => 'backup_userid',
         ];
-        foreach ($renames as $old => $new) {
+        foreach ($renamed as $old => $new) {
             $value = get_config('block_kursfilter', $old);
             if ($value !== false) {
                 set_config($new, $value, 'block_kursfilter');
                 unset_config($old, 'block_kursfilter');
             }
         }
+        upgrade_block_savepoint(true, 2026100901, 'kursfilter');
+    }
 
+    if ($oldversion < 2026101000) {
+        // AI tagging uses Moodle's AI subsystem; the own backend settings, including the API key, go away.
+        foreach (['ai_backend', 'ai_claude_apikey', 'ai_claude_model', 'ai_ollama_url', 'ai_ollama_model'] as $name) {
+            unset_config($name, 'block_kursfilter');
+        }
+        upgrade_block_savepoint(true, 2026101000, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101001) {
+        // Installations from the 1.4.0 line (2026100811) skipped the step 2026100600: repeat the idempotent migration.
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
         upgrade_block_savepoint(true, 2026101001, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101100) {
+        // The 1.5.0 line on main (up to 2026101006) passed 2026101000/2026101001 with other steps under the same numbers.
+        // All three migrations are idempotent and run again.
+        $renamed = [
+            'schulformen' => 'schooltypes',
+            'faecher' => 'subjects',
+            'niveaustufen' => 'levels',
+            'backup_adminid' => 'backup_userid',
+        ];
+        foreach ($renamed as $old => $new) {
+            $value = get_config('block_kursfilter', $old);
+            if ($value !== false) {
+                set_config($new, $value, 'block_kursfilter');
+                unset_config($old, 'block_kursfilter');
+            }
+        }
+        foreach (['ai_backend', 'ai_claude_apikey', 'ai_claude_model', 'ai_ollama_url', 'ai_ollama_model'] as $name) {
+            unset_config($name, 'block_kursfilter');
+        }
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
+        upgrade_block_savepoint(true, 2026101100, 'kursfilter');
     }
 
     return true;

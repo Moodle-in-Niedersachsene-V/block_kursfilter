@@ -14,30 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_kursfilter\task;
+
+use block_kursfilter\tag_suggester;
+
 /**
- * Scheduled task: generate AI tag suggestions for untagged courses.
+ * Scheduled task: AI tagging of public courses that have no tag suggestion yet.
  *
- * Only anonymised course data is sent to the AI (fullname, shortname,
- * category name, truncated plain-text summary). No user IDs, teacher names,
- * enrolment data or Moodle-internal identifiers leave the server.
+ * Each course is processed once; the outcome is kept in block_kursfilter_tag_pending:
+ * 'applied' (tags added), 'pending' (waiting for review) or 'empty' (no value fits).
+ * A failed request leaves no record, so the course is retried on the next run.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-namespace block_kursfilter\task;
-
-use block_kursfilter\ai_connector;
-
-/**
- * Processes a batch of courses without AI-generated tags and
- * applies tag suggestions directly or stores them for review.
- */
 class tag_courses extends \core\task\scheduled_task {
+    /** Courses per run when the setting is missing (documented in the setting). */
+    const DEFAULT_BATCH_SIZE = 20;
+
     /**
-     * Returns the task display name.
+     * Return the task name shown in the admin interface.
      *
      * @return string
      */
@@ -46,127 +43,92 @@ class tag_courses extends \core\task\scheduled_task {
     }
 
     /**
-     * Finds courses without AI-generated tags and sends anonymised
-     * course data to the configured AI backend.
+     * Tag the next batch of courses; a failed course does not stop the others, but fails the task.
      *
-     * Transmitted data: fullname, shortname, category name and the first
-     * 800 characters of the plain-text summary only.
-     * Not transmitted: user IDs, teacher names, enrolment data, timestamps.
+     * @throws \moodle_exception If AI tagging is enabled without an AI provider, or a course failed.
      */
     public function execute(): void {
-        global $DB;
+        if (!get_config('block_kursfilter', 'ai_enabled')) {
+            mtrace('AI tagging is disabled in the Course Filter settings.');
+            return;
+        }
+        if (!tag_suggester::is_available()) {
+            throw new \moodle_exception('error_ai_unavailable', 'block_kursfilter');
+        }
 
-        $batchsize = (int)(get_config('block_kursfilter', 'ai_batch_size') ?: 20);
         $autoapply = (bool)get_config('block_kursfilter', 'ai_autoapply');
-        $enabled = (bool)get_config('block_kursfilter', 'ai_enabled');
+        $userid = (int)get_admin()->id;
+        $courses = self::next_courses((int)get_config('block_kursfilter', 'ai_batch_size') ?: self::DEFAULT_BATCH_SIZE);
 
-        if (!$enabled) {
-            mtrace('block_kursfilter tag_courses: KI-Verschlagwortung ist deaktiviert.');
-            return;
-        }
-
-        $connector = new ai_connector();
-
-        // Kurse laden, die noch keine KI-Tags haben.
-        // Nur oeffentlich sichtbare Kurse; keine Nutzerdaten abgefragt.
-        $sql = "SELECT c.id, c.fullname, c.shortname, c.summary,
-                       cc.name AS categoryname
-                  FROM {course} c
-                  JOIN {course_categories} cc ON cc.id = c.category
-                 WHERE c.id != :siteid
-                   AND c.visible = 1
-                   AND NOT EXISTS (
-                       SELECT 1
-                         FROM {tag_instance} ti
-                         JOIN {tag} t ON t.id = ti.tagid
-                        WHERE ti.itemtype = 'course'
-                          AND ti.itemid   = c.id
-                          AND ti.component = 'block_kursfilter'
-                   )
-              ORDER BY c.id ASC";
-
-        $courses = $DB->get_records_sql($sql, ['siteid' => SITEID], 0, $batchsize);
-
-        if (empty($courses)) {
-            mtrace('block_kursfilter tag_courses: Keine unverschlagworteten Kurse gefunden.');
-            return;
-        }
-
-        $processed = 0;
-
+        $failed = 0;
         foreach ($courses as $course) {
-            $tags = $connector->suggest_tags(
-                $course->fullname,
-                $course->shortname,
-                $course->summary,
-                $course->categoryname
-            );
-
-            if (empty($tags)) {
-                mtrace("block_kursfilter tag_courses: Kurs {$course->id} ({$course->shortname}) – keine Tags vorgeschlagen.");
-                // Platzhalter-Tag setzen damit der Kurs nicht endlos neu versucht wird.
-                // Platzhalter ueber block_kursfilter-Komponente setzen,
-                // damit der Kurs nicht endlos erneut versucht wird.
-                \core_tag_tag::set_item_tags(
-                    'block_kursfilter',
-                    'course',
-                    (int)$course->id,
-                    \context_course::instance((int)$course->id),
-                    ['kursfilter:processed']
-                );
-                continue;
+            try {
+                $tags = tag_suggester::suggest($course, $course->categoryname, $userid);
+                $status = self::record_outcome($course, $tags, $autoapply);
+                mtrace("Course {$course->id}: {$status} (" . implode(', ', $tags) . ')');
+            } catch (\Throwable $e) {
+                mtrace("Course {$course->id}: AI tagging failed: " . $e->getMessage());
+                $failed++;
             }
-
-            if ($autoapply) {
-                // Tags ueber core-Komponente setzen, damit sie im Kurs sichtbar
-                // sind und von der Suche gefunden werden (wie manuell gesetzte Tags).
-                \core_tag_tag::set_item_tags(
-                    'core',
-                    'course',
-                    (int)$course->id,
-                    \context_course::instance((int)$course->id),
-                    $tags
-                );
-                mtrace('block_kursfilter tag_courses: Kurs ' . $course->id .
-                    ' (' . $course->shortname . ') -> ' . implode(', ', $tags));
-            } else {
-                // Vorschlag in der mdl_block_kursfilter_tag_pending Tabelle speichern.
-                $this->store_pending($course->id, $tags);
-                mtrace('block_kursfilter tag_courses: Kurs ' . $course->id .
-                    ' (' . $course->shortname . ') - Vorschlag: ' . implode(', ', $tags));
-            }
-
-            $processed++;
         }
 
-        mtrace("block_kursfilter tag_courses: {$processed} Kurse verarbeitet.");
+        if ($failed > 0) {
+            throw new \moodle_exception('error_ai_tagging_failed', 'block_kursfilter', '', (object)[
+                'failed' => $failed,
+                'total' => count($courses),
+            ]);
+        }
     }
 
     /**
-     * Stores tag suggestions in the pending review table.
+     * Public courses without a tag suggestion yet.
      *
-     * @param int      $courseid Course ID.
-     * @param string[] $tags     List of suggested tags.
+     * @param int $limit Maximum number of courses.
+     * @return \stdClass[] Course records with categoryname.
      */
-    private function store_pending(int $courseid, array $tags): void {
+    private static function next_courses(int $limit): array {
         global $DB;
 
-        $now = time();
-        $record = $DB->get_record('block_kursfilter_tag_pending', ['courseid' => $courseid]);
+        $sql = "SELECT c.id, c.fullname, c.shortname, c.summary, cc.name AS categoryname
+                  FROM {course} c
+                  JOIN {course_categories} cc ON cc.id = c.category
+             LEFT JOIN {block_kursfilter_tag_pending} tp ON tp.courseid = c.id
+                 WHERE c.id != :siteid AND c.visible = 1 AND tp.id IS NULL
+              ORDER BY c.id ASC";
+        return $DB->get_records_sql($sql, ['siteid' => SITEID], 0, $limit);
+    }
 
-        if ($record) {
-            $record->tags = implode(',', $tags);
-            $record->status = 'pending';
-            $record->timemodified = $now;
-            $DB->update_record('block_kursfilter_tag_pending', $record);
+    /**
+     * Apply or keep the suggestion and record the outcome for the course.
+     *
+     * @param \stdClass $course Course record.
+     * @param string[] $tags Suggested filter values.
+     * @param bool $autoapply Whether suggestions become course tags at once.
+     * @return string Recorded status.
+     */
+    private static function record_outcome(\stdClass $course, array $tags, bool $autoapply): string {
+        global $DB;
+
+        if (!$tags) {
+            $status = 'empty';
+        } else if ($autoapply) {
+            $context = \context_course::instance($course->id);
+            foreach ($tags as $tag) {
+                \core_tag_tag::add_item_tag('core', 'course', $course->id, $context, $tag);
+            }
+            $status = 'applied';
         } else {
-            $DB->insert_record('block_kursfilter_tag_pending', (object)[
-                'courseid'     => $courseid,
-                'tags'         => implode(',', $tags),
-                'status'       => 'pending',
-                'timecreated'  => $now,
-                'timemodified' => $now,
-            ]);
+            $status = 'pending';
         }
+
+        $now = time();
+        $DB->insert_record('block_kursfilter_tag_pending', [
+            'courseid' => $course->id,
+            'tags' => implode(',', $tags),
+            'status' => $status,
+            'timecreated' => $now,
+            'timemodified' => $now,
+        ]);
+        return $status;
     }
 }

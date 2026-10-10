@@ -26,7 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
-    // Kurssicherungen taeglich um 02:00 Uhr erzeugen.
+    // Generate course backups daily at 02:00.
     [
         'classname' => '\block_kursfilter\task\backup_courses',
         'blocking'  => 0,
@@ -37,7 +37,7 @@ $tasks = [
         'dayofweek' => '*',
         'disabled'  => 0,
     ],
-    // Pool-Nutzer pruefen und in neue Kurse einschreiben (nach dem Backup).
+    // Create missing pool accounts and enrol them into new public courses (after the backup).
     [
         'classname' => '\block_kursfilter\task\setup_pool',
         'blocking'  => 0,
@@ -48,7 +48,7 @@ $tasks = [
         'dayofweek' => '*',
         'disabled'  => 0,
     ],
-    // KI-Verschlagwortung: Kurse ohne Tags taeglich um 04:00 Uhr bearbeiten.
+    // AI tagging of public courses without tag suggestion, daily at 04:00; disabled until an admin enables it.
     [
         'classname' => '\block_kursfilter\task\tag_courses',
         'blocking'  => 0,

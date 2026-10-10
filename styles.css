@@ -1,11 +1,11 @@
 /* block_kursfilter/styles.css */
 
-.kf-block {
+.block_kursfilter .kf-block {
     font-size: 0.875rem;
 }
 
-/* ---- Chips – erhöhte Spezifizität statt !important ---- */
-.kf-block .kf-chip {
+/* ---- Chips: higher specificity instead of !important ---- */
+.block_kursfilter .kf-chip {
     cursor: pointer;
     font-weight: 400;
     border: 1px solid transparent;
@@ -17,37 +17,31 @@
     white-space: normal;
     box-shadow: none;
 }
-.kf-block .kf-chip:hover {
+.block_kursfilter .kf-chip:hover {
     background-color: #1f2937;
     color: #fff;
 }
-.kf-block .kf-chip-active {
-    background-color: #111827;
-    color: #fff;
-}
-.kf-block .kf-chip-schulform.kf-chip-active,
-.kf-block .kf-chip-fach.kf-chip-active,
-.kf-block .kf-chip-niveaustufe.kf-chip-active {
+.block_kursfilter .kf-chip-active {
     background-color: #111827;
     color: #fff;
 }
 
-/* ---- Ergebnisliste ---- */
-.kf-results {
+/* ---- Result list ---- */
+.block_kursfilter .kf-results {
     max-height: 380px;
     overflow-y: auto;
 }
 
-.kf-item {
+.block_kursfilter .kf-item {
     border: 1px solid #dee2e6;
     transition: border-color .1s;
 }
 
-.kf-item:hover {
+.block_kursfilter .kf-item:hover {
     border-color: #0d6efd;
 }
 
-.kf-summary {
+.block_kursfilter .kf-summary {
     color: #6c757d;
     display: -webkit-box;
     -webkit-line-clamp: 3;
@@ -55,7 +49,7 @@
     overflow: hidden;
 }
 
-.kf-course-link {
+.block_kursfilter .kf-course-link {
     flex: 1;
     min-width: 0;
     overflow: hidden;
@@ -63,25 +57,25 @@
     white-space: nowrap;
 }
 
-.kf-export-btn {
+.block_kursfilter .kf-backup-btn {
     flex-shrink: 0;
     padding: 0 6px;
     line-height: 1.4;
     font-size: 11px;
 }
 
-.kf-spinner {
+.block_kursfilter .kf-spinner {
     min-height: 32px;
 }
 
-/* ---- Sternebewertung ---- */
-.kf-stars {
+/* ---- Star rating ---- */
+.block_kursfilter .kf-stars {
     display: flex;
     align-items: center;
     gap: 2px;
 }
 
-.kf-block .kf-star {
+.block_kursfilter .kf-star {
     background: none;
     border: none;
     padding: 0;
@@ -95,23 +89,23 @@
     white-space: nowrap;
 }
 
-.kf-block .kf-star.kf-star-filled {
+.block_kursfilter .kf-star.kf-star-filled {
     color: #f59e0b;
 }
 
-.kf-block .kf-star.kf-star-fixed {
+.block_kursfilter .kf-star.kf-star-fixed {
     cursor: default;
 }
 
-.kf-block .kf-star:hover,
-.kf-block .kf-star:focus {
+.block_kursfilter .kf-star:hover,
+.block_kursfilter .kf-star:focus {
     background: none;
     color: #f59e0b;
     box-shadow: none;
     outline: none;
 }
 
-.kf-star-note {
+.block_kursfilter .kf-star-note {
     font-size: 0.75rem;
     color: #6b7280;
     margin-left: 4px;

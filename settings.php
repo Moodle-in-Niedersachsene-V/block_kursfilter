@@ -27,9 +27,9 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
     $settings->add(new admin_setting_heading(
-        'block_kursfilter/schooltypes_heading',
-        get_string('settings_schooltypes_heading', 'block_kursfilter'),
-        get_string('settings_schooltypes_desc', 'block_kursfilter')
+        'block_kursfilter/filters_heading',
+        get_string('settings_filters_heading', 'block_kursfilter'),
+        get_string('settings_filters_desc', 'block_kursfilter')
     ));
     $settings->add(new admin_setting_configtextarea(
         'block_kursfilter/schooltypes',
@@ -37,23 +37,11 @@ if ($ADMIN->fulltree) {
         get_string('settings_schooltypes_help', 'block_kursfilter'),
         "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule"
     ));
-
-    $settings->add(new admin_setting_heading(
-        'block_kursfilter/subjects_heading',
-        get_string('settings_subjects_heading', 'block_kursfilter'),
-        ''
-    ));
     $settings->add(new admin_setting_configtextarea(
         'block_kursfilter/subjects',
         get_string('settings_subjects', 'block_kursfilter'),
         get_string('settings_subjects_help', 'block_kursfilter'),
         "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte\nKunst\nMusik\nSport"
-    ));
-
-    $settings->add(new admin_setting_heading(
-        'block_kursfilter/levels_heading',
-        get_string('settings_levels_heading', 'block_kursfilter'),
-        get_string('settings_levels_desc', 'block_kursfilter')
     ));
     $settings->add(new admin_setting_configtextarea(
         'block_kursfilter/levels',
@@ -61,7 +49,6 @@ if ($ADMIN->fulltree) {
         get_string('settings_levels_help', 'block_kursfilter'),
         "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe"
     ));
-
     $settings->add(new admin_setting_configtext(
         'block_kursfilter/resultlimit',
         get_string('settings_resultlimit', 'block_kursfilter'),
@@ -70,7 +57,6 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
-    // Pool-Nutzer.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/pool_heading',
         get_string('settings_pool_heading', 'block_kursfilter'),
@@ -84,7 +70,6 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
-    // KI-Verschlagwortung.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/ai_heading',
         get_string('settings_ai_heading', 'block_kursfilter'),
@@ -95,16 +80,6 @@ if ($ADMIN->fulltree) {
         get_string('settings_ai_enabled', 'block_kursfilter'),
         get_string('settings_ai_enabled_help', 'block_kursfilter'),
         0
-    ));
-    $settings->add(new admin_setting_configselect(
-        'block_kursfilter/ai_backend',
-        get_string('settings_ai_backend', 'block_kursfilter'),
-        get_string('settings_ai_backend_help', 'block_kursfilter'),
-        'claude',
-        [
-            'claude' => get_string('settings_ai_backend_claude', 'block_kursfilter'),
-            'ollama' => get_string('settings_ai_backend_ollama', 'block_kursfilter'),
-        ]
     ));
     $settings->add(new admin_setting_configcheckbox(
         'block_kursfilter/ai_autoapply',
@@ -120,47 +95,6 @@ if ($ADMIN->fulltree) {
         PARAM_INT
     ));
 
-    // Claude API settings.
-    $settings->add(new admin_setting_heading(
-        'block_kursfilter/ai_claude_heading',
-        get_string('settings_ai_claude_heading', 'block_kursfilter'),
-        get_string('settings_ai_claude_desc', 'block_kursfilter')
-    ));
-    $settings->add(new admin_setting_configtext(
-        'block_kursfilter/ai_claude_apikey',
-        get_string('settings_ai_claude_apikey', 'block_kursfilter'),
-        get_string('settings_ai_claude_apikey_help', 'block_kursfilter'),
-        '',
-        PARAM_RAW
-    ));
-    $settings->add(new admin_setting_configtext(
-        'block_kursfilter/ai_claude_model',
-        get_string('settings_ai_claude_model', 'block_kursfilter'),
-        get_string('settings_ai_claude_model_help', 'block_kursfilter'),
-        'claude-haiku-4-5-20251001',
-        PARAM_TEXT
-    ));
-
-    // Ollama settings.
-    $settings->add(new admin_setting_heading(
-        'block_kursfilter/ai_ollama_heading',
-        get_string('settings_ai_ollama_heading', 'block_kursfilter'),
-        ''
-    ));
-    $settings->add(new admin_setting_configtext(
-        'block_kursfilter/ai_ollama_url',
-        get_string('settings_ai_ollama_url', 'block_kursfilter'),
-        get_string('settings_ai_ollama_url_help', 'block_kursfilter'),
-        'http://localhost:11434'
-    ));
-    $settings->add(new admin_setting_configtext(
-        'block_kursfilter/ai_ollama_model',
-        get_string('settings_ai_ollama_model', 'block_kursfilter'),
-        get_string('settings_ai_ollama_model_help', 'block_kursfilter'),
-        'gemma3:4b'
-    ));
-
-    // Backup-Einstellungen.
     $settings->add(new admin_setting_heading(
         'block_kursfilter/backup_heading',
         get_string('settings_backup_heading', 'block_kursfilter'),

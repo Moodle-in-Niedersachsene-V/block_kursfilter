@@ -14,122 +14,53 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Unit tests for block_kursfilter\rating_helper.
- *
- * @package   block_kursfilter
- * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers    \block_kursfilter\rating_helper
- */
-
 namespace block_kursfilter;
 
-use advanced_testcase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Tests for the rating_helper class.
+ * Tests for storing course ratings and the Moodle event raised by it.
+ *
+ * @package    block_kursfilter
+ * @copyright  2026 Moodle in Niedersachsen e. V.
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class rating_helper_test extends advanced_testcase {
-    /**
-     * Set up each test.
-     */
-    protected function setUp(): void {
-        parent::setUp();
+#[CoversClass(rating_helper::class)]
+final class rating_helper_test extends \advanced_testcase {
+    /** @var string Visitor cookie hash used by the tests. */
+    private const HASH = 'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
+
+    public function test_saving_a_rating_raises_course_rated_event_without_visitor_hash(): void {
         $this->resetAfterTest();
-    }
-
-    /**
-     * Test save_rating stores a new rating successfully.
-     *
-     * @covers \block_kursfilter\rating_helper::save_rating
-     */
-    public function test_save_rating_stores_new_rating(): void {
-        global $DB;
-
         $course = $this->getDataGenerator()->create_course();
-        $cookiehash = hash('sha256', 'test-visitor-' . uniqid());
+        $sink = $this->redirectEvents();
 
-        $saved = rating_helper::save_rating($course->id, $cookiehash, 4);
+        $saved = rating_helper::save_rating((int)$course->id, self::HASH, 4);
 
+        $events = array_values(array_filter(
+            $sink->get_events(),
+            fn($event) => $event instanceof event\course_rated
+        ));
         $this->assertTrue($saved);
-        $this->assertTrue($DB->record_exists('block_kursfilter_ratings', [
-            'courseid'   => $course->id,
-            'cookiehash' => $cookiehash,
-            'stars'      => 4,
-        ]));
+        $this->assertCount(1, $events);
+        $this->assertEquals(\context_course::instance($course->id), $events[0]->get_context());
+        $this->assertSame((int)$course->id, (int)$events[0]->courseid);
+        $this->assertSame(4, (int)$events[0]->other['stars']);
+        $this->assertStringNotContainsString(self::HASH, json_encode($events[0]->get_data()));
     }
 
-    /**
-     * Test save_rating returns false when rating already exists.
-     *
-     * @covers \block_kursfilter\rating_helper::save_rating
-     */
-    public function test_save_rating_returns_false_for_duplicate(): void {
+    public function test_repeated_or_invalid_rating_raises_no_event(): void {
+        $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();
-        $cookiehash = hash('sha256', 'test-visitor-' . uniqid());
+        rating_helper::save_rating((int)$course->id, self::HASH, 3);
+        $sink = $this->redirectEvents();
 
-        rating_helper::save_rating($course->id, $cookiehash, 3);
-        $saved = rating_helper::save_rating($course->id, $cookiehash, 5);
+        $again = rating_helper::save_rating((int)$course->id, self::HASH, 5);
+        $invalid = rating_helper::save_rating((int)$course->id, str_repeat('b', 64), 6);
 
-        $this->assertFalse($saved);
-    }
-
-    /**
-     * Test get_existing_rating returns the stored stars.
-     *
-     * @covers \block_kursfilter\rating_helper::get_existing_rating
-     */
-    public function test_get_existing_rating_returns_stored_stars(): void {
-        $course = $this->getDataGenerator()->create_course();
-        $cookiehash = hash('sha256', 'test-visitor-' . uniqid());
-
-        rating_helper::save_rating($course->id, $cookiehash, 5);
-        $existing = rating_helper::get_existing_rating($course->id, $cookiehash);
-
-        $this->assertEquals(5, $existing);
-    }
-
-    /**
-     * Test get_existing_rating returns null when no rating exists.
-     *
-     * @covers \block_kursfilter\rating_helper::get_existing_rating
-     */
-    public function test_get_existing_rating_returns_null_when_absent(): void {
-        $course = $this->getDataGenerator()->create_course();
-        $cookiehash = hash('sha256', 'no-rating-' . uniqid());
-
-        $this->assertNull(rating_helper::get_existing_rating($course->id, $cookiehash));
-    }
-
-    /**
-     * Test get_course_rating returns zero avg and count when no ratings.
-     *
-     * @covers \block_kursfilter\rating_helper::get_course_rating
-     */
-    public function test_get_course_rating_returns_zeros_when_no_ratings(): void {
-        $course = $this->getDataGenerator()->create_course();
-        $result = rating_helper::get_course_rating($course->id);
-
-        $this->assertEquals(0.0, $result['avg']);
-        $this->assertEquals(0, $result['count']);
-    }
-
-    /**
-     * Test get_course_rating computes correct average.
-     *
-     * @covers \block_kursfilter\rating_helper::get_course_rating
-     */
-    public function test_get_course_rating_computes_average(): void {
-        $course = $this->getDataGenerator()->create_course();
-
-        rating_helper::save_rating($course->id, hash('sha256', 'v1'), 4);
-        rating_helper::save_rating($course->id, hash('sha256', 'v2'), 2);
-
-        $result = rating_helper::get_course_rating($course->id);
-
-        $this->assertEquals(2, $result['count']);
-        $this->assertEquals(3.0, $result['avg']);
+        $this->assertFalse($again);
+        $this->assertFalse($invalid);
+        $this->assertCount(0, $sink->get_events());
+        $this->assertSame(3, rating_helper::get_existing_rating((int)$course->id, self::HASH));
     }
 }

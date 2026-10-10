@@ -15,10 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Pool manager for block_kursfilter guest access.
+ * Pool manager for the course preview of block_kursfilter.
  *
- * Verwaltet einen Pool aus festen Testnutzern, die Gaesten
- * den Kursbesuch als Trainer ohne Bearbeitungsrecht ermoeglichen.
+ * Manages the pool accounts that let visitors preview a public course
+ * with the pool role.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -29,22 +29,29 @@
 namespace block_kursfilter;
 
 /**
- * Manages the guest pool user accounts.
+ * Manages the pool accounts, their pool role and their occupancy.
  */
 class pool_manager {
-    /** Default number of pool users (used if no config value is set). */
+    /** Default number of pool accounts (documented in the setting). */
     const POOL_SIZE_DEFAULT = 10;
 
     /** Maximum allowed pool size (hard cap). */
     const POOL_SIZE_MAX = 50;
 
-    /** Username prefix for pool users. */
+    /** Username prefix for pool accounts. */
     const USERNAME_PREFIX = 'kursfilter_guest';
 
-    /** Role shortname for course access. */
-    const ROLE_SHORTNAME = 'teacher';
+    /** Role shortname for course access (non-editing teacher without access to personal data). */
+    const ROLE_SHORTNAME = 'kursfilter_pool';
 
-    /** Cache key for tracking active sessions per pool user. */
+    /** Capabilities prohibited for the pool role: they would expose participants of real courses. */
+    const PROHIBITED_CAPABILITIES = [
+        'moodle/course:viewparticipants',
+        'moodle/site:viewuseridentity',
+        'moodle/grade:viewall',
+    ];
+
+    /** Cache key prefix marking a pool account as occupied. */
     const CACHE_PREFIX = 'pool_active_';
 
     /**
@@ -61,25 +68,25 @@ class pool_manager {
     }
 
     /**
-     * Return all pool usernames based on the current configured pool size.
+     * Return the usernames of the pool accounts.
      *
+     * @param int|null $size Number of accounts, the configured pool size if null.
      * @return string[]
      */
-    public static function get_pool_usernames(): array {
+    public static function get_pool_usernames(?int $size = null): array {
         $names = [];
-        for ($i = 1; $i <= self::get_pool_size(); $i++) {
+        for ($i = 1; $i <= ($size ?? self::get_pool_size()); $i++) {
             $names[] = self::USERNAME_PREFIX . str_pad((string)$i, 2, '0', STR_PAD_LEFT);
         }
         return $names;
     }
 
     /**
-     * Create all pool users if they do not exist yet.
-     * Existing users are left unchanged.
+     * Create the missing pool accounts; existing ones stay unchanged.
      *
-     * @return int Number of newly created users.
+     * @return int Number of newly created accounts.
      */
-    public static function create_pool_users(): int {
+    public static function create_pool_accounts(): int {
         global $DB, $CFG;
         require_once($CFG->dirroot . '/user/lib.php');
 
@@ -89,20 +96,20 @@ class pool_manager {
                 continue;
             }
 
-            $user = new \stdClass();
-            $user->auth = 'manual';
-            $user->confirmed = 1;
-            $user->mnethostid = $CFG->mnet_localhost_id;
-            $user->username = $username;
-            $user->password = hash_internal_user_password(self::generate_password());
-            $user->firstname = 'Kursbesucher';
-            $user->lastname = ltrim(substr($username, strlen(self::USERNAME_PREFIX)));
-            $user->email = $username . '@kursfilter.invalid';
-            $user->emailstop = 1;
-            $user->lang = 'de';
-            $user->timecreated = time();
-            $user->timemodified = time();
-            $user->description = 'Automatisch angelegter Gastnutzer fuer den Kursfilter-Block.';
+            $user                   = new \stdClass();
+            $user->auth             = 'manual';
+            $user->confirmed        = 1;
+            $user->mnethostid       = $CFG->mnet_localhost_id;
+            $user->username         = $username;
+            $user->password         = hash_internal_user_password(self::generate_password());
+            $user->firstname        = get_string('pool_account_firstname', 'block_kursfilter');
+            $user->lastname         = ltrim(substr($username, strlen(self::USERNAME_PREFIX)));
+            $user->email            = $username . '@kursfilter.invalid';
+            $user->emailstop        = 1;
+            $user->lang             = get_string_manager()->translation_exists('de') ? 'de' : $CFG->lang;
+            $user->timecreated      = time();
+            $user->timemodified     = time();
+            $user->description      = get_string('pool_account_description', 'block_kursfilter');
 
             user_create_user($user, false, false);
             $created++;
@@ -111,20 +118,76 @@ class pool_manager {
     }
 
     /**
-     * Enrol all pool users into a course with the teacher role (no editing).
-     * Skips users already enroled.
+     * Create the pool role if missing: a non-editing teacher that may not see participants, user identity or grades.
+     *
+     * @return int Role ID.
+     */
+    public static function ensure_role(): int {
+        global $DB;
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
+        if ($roleid) {
+            return (int)$roleid;
+        }
+        $roleid = create_role(
+            get_string('role_pool_name', 'block_kursfilter'),
+            self::ROLE_SHORTNAME,
+            get_string('role_pool_description', 'block_kursfilter'),
+            'teacher'
+        );
+        set_role_contextlevels($roleid, get_default_contextlevels('teacher'));
+        // Take over the default capabilities of the archetype (create_role() does not).
+        reset_role_capabilities($roleid);
+        foreach (self::PROHIBITED_CAPABILITIES as $capability) {
+            assign_capability($capability, CAP_PROHIBIT, $roleid, \context_system::instance()->id, true);
+        }
+        return (int)$roleid;
+    }
+
+    /**
+     * Delete the pool role together with its assignments.
+     */
+    public static function remove_role(): void {
+        global $DB;
+
+        $roleid = $DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
+        if ($roleid) {
+            delete_role($roleid);
+        }
+    }
+
+    /**
+     * Replace the former teacher role of pool accounts by the pool role. Safe to run repeatedly.
+     */
+    public static function migrate_to_pool_role(): void {
+        global $DB;
+
+        $teacherid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
+        $poolroleid = self::ensure_role();
+        [$insql, $params] = $DB->get_in_or_equal(self::get_pool_usernames(), SQL_PARAMS_NAMED);
+        $assignments = $DB->get_records_sql(
+            "SELECT ra.id, ra.userid, ra.contextid
+               FROM {role_assignments} ra
+               JOIN {user} u ON u.id = ra.userid
+              WHERE ra.roleid = :roleid AND ra.component = '' AND u.username $insql",
+            ['roleid' => $teacherid] + $params
+        );
+        foreach ($assignments as $assignment) {
+            role_unassign($teacherid, $assignment->userid, $assignment->contextid);
+            role_assign($poolroleid, $assignment->userid, $assignment->contextid);
+        }
+    }
+
+    /**
+     * Enrol all pool accounts into a course with the pool role; enrolled accounts are skipped.
      *
      * @param int $courseid Target course ID.
-     * @return int Number of newly enroled users.
+     * @return int Number of new enrolments.
      */
     public static function enrol_pool_into_course(int $courseid): int {
         global $DB;
 
-        $role = $DB->get_record('role', ['shortname' => self::ROLE_SHORTNAME], '*', IGNORE_MISSING);
-        if (!$role) {
-            debugging('block_kursfilter pool_manager: role "' . self::ROLE_SHORTNAME . '" not found.', DEBUG_DEVELOPER);
-            return 0;
-        }
+        $roleid = self::ensure_role();
 
         // Use manual enrolment plugin.
         $enrol  = enrol_get_plugin('manual');
@@ -152,14 +215,14 @@ class pool_manager {
             if (is_enrolled($context, $user->id, '', true)) {
                 continue;
             }
-            $enrol->enrol_user($instance, $user->id, $role->id);
+            $enrol->enrol_user($instance, $user->id, $roleid);
             $enrolled++;
         }
         return $enrolled;
     }
 
     /**
-     * Enrol pool users into all visible non-site courses.
+     * Enrol the pool accounts into all public courses.
      *
      * @return int Total number of new enrolments.
      */
@@ -182,31 +245,20 @@ class pool_manager {
     }
 
     /**
-     * Find a free pool user (one without an active session marker).
+     * Find the first free pool account.
      *
-     * Pool users are created lazily here if they do not exist yet.
-     * This avoids calling user_create_user() during plugin installation
-     * (db/install.php), which triggers debugging() in the PHPUnit
-     * test environment and causes the installation to abort.
-     *
-     * @return \stdClass|null Moodle user record or null.
+     * @return \stdClass|null User record, or null if all pool accounts are occupied.
      */
-    public static function get_free_pool_user(): ?\stdClass {
+    public static function get_free_pool_account(): ?\stdClass {
         global $DB;
 
-        // Lazy creation: ensure pool users exist before looking for a free one.
-        self::create_pool_users();
-
         $cache = \cache::make('block_kursfilter', 'poolsessions');
-
         foreach (self::get_pool_usernames() as $username) {
-            $user = $DB->get_record('user', ['username' => $username, 'deleted' => 0], '*', IGNORE_MISSING);
-            if (!$user) {
+            if ($cache->get(self::CACHE_PREFIX . $username) !== false) {
                 continue;
             }
-            // Check if this pool user has an active session marker.
-            $active = $cache->get(self::CACHE_PREFIX . $username);
-            if ($active === false) {
+            $user = $DB->get_record('user', ['username' => $username, 'deleted' => 0], '*', IGNORE_MISSING);
+            if ($user) {
                 return $user;
             }
         }
@@ -214,28 +266,48 @@ class pool_manager {
     }
 
     /**
-     * Mark a pool user as active (session started).
+     * Hand a free pool account to a visitor for a preview of the course: enrol and occupy it.
      *
-     * @param string $username Pool username.
-     * @param int    $ttl      Seconds until the session marker expires.
+     * @param int $courseid Public course to preview.
+     * @return \stdClass|null The occupied pool account, or null if all are occupied.
      */
-    public static function mark_active(string $username, int $ttl = 3600): void {
-        $cache = \cache::make('block_kursfilter', 'poolsessions');
-        $cache->set(self::CACHE_PREFIX . $username, time());
+    public static function occupy_free_account(int $courseid): ?\stdClass {
+        $account = self::get_free_pool_account();
+        if (!$account) {
+            return null;
+        }
+        self::enrol_pool_into_course($courseid);
+        self::mark_occupied($account->username);
+        return $account;
     }
 
     /**
-     * Release a pool user (session ended or expired).
+     * Mark a pool account as occupied and end its earlier sessions, so that two visitors never share it.
+     * The marker expires with the cache definition (db/caches.php).
      *
-     * @param string $username Pool username.
+     * @param string $username Pool account username.
+     */
+    public static function mark_occupied(string $username): void {
+        global $DB;
+
+        $userid = $DB->get_field('user', 'id', ['username' => $username, 'deleted' => 0]);
+        if ($userid) {
+            \core\session\manager::destroy_user_sessions($userid);
+        }
+        \cache::make('block_kursfilter', 'poolsessions')->set(self::CACHE_PREFIX . $username, time());
+    }
+
+    /**
+     * Release a pool account (logout).
+     *
+     * @param string $username Pool account username.
      */
     public static function mark_free(string $username): void {
-        $cache = \cache::make('block_kursfilter', 'poolsessions');
-        $cache->delete(self::CACHE_PREFIX . $username);
+        \cache::make('block_kursfilter', 'poolsessions')->delete(self::CACHE_PREFIX . $username);
     }
 
     /**
-     * Generate a secure random password for pool users.
+     * Generate a random password nobody knows; pool accounts log in only through the preview.
      *
      * @return string
      */

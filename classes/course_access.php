@@ -14,43 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Course access helper for block_kursfilter.
- *
- * @package   block_kursfilter
- * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace block_kursfilter;
 
 /**
- * Provides safe access to public course records.
+ * Visibility rule for the public endpoints (rating, backup download, preview).
  *
- * Centralises the visibility and site-course checks so callers
- * do not have to repeat the guard logic.
+ * @package   block_kursfilter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class course_access {
     /**
-     * Returns the course record for a given ID if it is publicly visible.
+     * Look up a course that public visitors may use: it exists, is visible and is not the site course.
      *
-     * A course is considered public when:
-     * - it exists in the database,
-     * - it is visible (visible = 1),
-     * - it is not the site course (id != SITEID).
-     *
-     * @param int $courseid The course ID to look up.
-     * @return \stdClass|null The course record, or null if not publicly available.
+     * @param int $courseid Course ID.
+     * @return \stdClass|null The course record, or null if the course is not publicly usable.
      */
     public static function get_public_course(int $courseid): ?\stdClass {
         global $DB;
-        // Exclude site course before DB query to avoid fetching it at all.
-        if ($courseid === (int)SITEID || $courseid <= 0) {
-            return null;
-        }
-        $course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], 'id, fullname, shortname', IGNORE_MISSING);
-        if (!$course) {
+
+        $course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], '*', IGNORE_MISSING);
+        if (!$course || $course->id === SITEID) {
             return null;
         }
         return $course;

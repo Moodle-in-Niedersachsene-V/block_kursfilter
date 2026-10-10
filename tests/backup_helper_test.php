@@ -14,71 +14,103 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Unit tests for block_kursfilter\backup_helper.
- *
- * @package   block_kursfilter
- * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers    \block_kursfilter\backup_helper
- */
-
 namespace block_kursfilter;
 
-use advanced_testcase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Tests for the backup_helper class.
+ * Tests for the publicly distributed course backups (file management, archive content).
+ *
+ * @package    block_kursfilter
+ * @copyright  2026 Moodle in Niedersachsen e. V.
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class backup_helper_test extends advanced_testcase {
+#[CoversClass(backup_helper::class)]
+final class backup_helper_test extends \advanced_testcase {
+    /** @var string Unique part of the student email address. */
+    private const STUDENT_EMAIL = 'privat.kind@schule-geheim.example';
+
     /**
-     * Set up each test.
+     * Extracts a backup and returns the content of all files as one string.
+     *
+     * @param \stored_file $file Backup file.
+     * @return string Concatenated file content.
      */
-    protected function setUp(): void {
-        parent::setUp();
+    private function extracted_content(\stored_file $file): string {
+        global $CFG;
+        $dir = make_request_directory();
+        $packer = get_file_packer('application/vnd.moodle.backup');
+        $this->assertNotFalse($file->extract_to_pathname($packer, $dir));
+        $content = '';
+        $iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($dir, \FilesystemIterator::SKIP_DOTS));
+        foreach ($iterator as $path) {
+            if ($path->isFile() && $path->getExtension() === 'xml') {
+                $content .= file_get_contents($path->getPathname());
+            }
+        }
+        return $content;
+    }
+
+    public function test_backup_contains_course_but_no_participant_data(): void {
+        global $CFG;
         $this->resetAfterTest();
+        $this->setAdminUser();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['fullname' => 'Materialkurs Demo']);
+        $student = $generator->create_user([
+            'username' => 'schueler.geheim', 'email' => self::STUDENT_EMAIL,
+            'firstname' => 'Geheimvorname', 'lastname' => 'Geheimnachname',
+        ]);
+        $generator->enrol_user($student->id, $course->id, 'student');
+        $forum = $generator->create_module('forum', ['course' => $course->id, 'name' => 'Austausch']);
+        $generator->get_plugin_generator('mod_forum')->create_discussion([
+            'course' => $course->id, 'forum' => $forum->id, 'userid' => $student->id,
+            'name' => 'Beitrag des Kindes', 'message' => 'Text des Kindes',
+        ]);
+
+        $file = backup_helper::backup_course($course->id, get_admin()->id);
+
+        $this->assertNotNull($file);
+        $content = $this->extracted_content($file);
+        $this->assertStringContainsString('Materialkurs Demo', $content);
+        $this->assertStringContainsString('Austausch', $content);
+        $secrets = [
+            self::STUDENT_EMAIL, get_admin()->email, 'schueler.geheim', 'Geheimvorname', 'Geheimnachname', 'Text des Kindes',
+        ];
+        foreach ($secrets as $secret) {
+            $this->assertStringNotContainsString($secret, $content, "Archive contains '$secret'");
+        }
     }
 
-    /**
-     * Test has_backup returns false when no backup exists.
-     *
-     * @covers \block_kursfilter\backup_helper::has_backup
-     */
-    public function test_has_backup_returns_false_when_no_backup(): void {
+    public function test_backup_keeps_one_file_per_course_and_replaces_older_one(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
+        $other = $this->getDataGenerator()->create_course();
+
+        $first = backup_helper::backup_course($course->id, get_admin()->id);
+        backup_helper::backup_course($other->id, get_admin()->id);
+        $second = backup_helper::backup_course($course->id, get_admin()->id);
+
+        $this->assertNotNull($first);
+        $this->assertEquals($second->get_id(), backup_helper::get_backup_file($course->id)->get_id());
+        $this->assertTrue(backup_helper::has_backup($other->id));
+        $files = get_file_storage()->get_area_files(
+            \context_system::instance()->id,
+            'block_kursfilter',
+            'course_backups',
+            $course->id,
+            'id',
+            false
+        );
+        $this->assertCount(1, $files);
+    }
+
+    public function test_has_backup_is_false_for_course_without_backup(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+
         $this->assertFalse(backup_helper::has_backup($course->id));
-    }
-
-    /**
-     * Test get_backup_file returns null when no backup exists.
-     *
-     * @covers \block_kursfilter\backup_helper::get_backup_file
-     */
-    public function test_get_backup_file_returns_null_when_no_backup(): void {
-        $course = $this->getDataGenerator()->create_course();
         $this->assertNull(backup_helper::get_backup_file($course->id));
-    }
-
-    /**
-     * Test delete_existing_backup does not error when no file exists.
-     *
-     * @covers \block_kursfilter\backup_helper::delete_existing_backup
-     */
-    public function test_delete_existing_backup_no_error_when_empty(): void {
-        $context = \context_system::instance();
-        // Should not throw.
-        backup_helper::delete_existing_backup($context, 99999);
-        $this->assertTrue(true);
-    }
-
-    /**
-     * Test FILEAREA and COMPONENT constants are defined correctly.
-     *
-     * @covers \block_kursfilter\backup_helper
-     */
-    public function test_constants(): void {
-        $this->assertEquals('course_backups', backup_helper::FILEAREA);
-        $this->assertEquals('block_kursfilter', backup_helper::COMPONENT);
     }
 }

@@ -17,8 +17,8 @@
 /**
  * Post-install hook for block_kursfilter.
  *
- * Legt die Pool-Nutzer bei der ersten Installation an
- * und schreibt sie in alle vorhandenen Kurse ein.
+ * Creates the pool accounts on first installation
+ * and enrols them in all existing courses.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -28,13 +28,11 @@
 
 /**
  * Post-install tasks for block_kursfilter.
- *
- * Pool-Nutzer werden nicht mehr beim Install angelegt, da user_create_user()
- * im PHPUnit-Test-Environment debugging() auslöst und die Installation abbricht.
- * Die Anlage erfolgt lazy beim ersten Aufruf von pool_manager::get_free_user().
  */
 function xmldb_block_kursfilter_install(): void {
-    // Intentionally empty: pool users are created lazily on first use.
-    // See pool_manager::get_free_user() which calls create_pool_users()
-    // automatically when no free user is available.
+    // Create the pool accounts.
+    \block_kursfilter\pool_manager::create_pool_accounts();
+
+    // Enrol them in all existing visible courses.
+    \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
 }

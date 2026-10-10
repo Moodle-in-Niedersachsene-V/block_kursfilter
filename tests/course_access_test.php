@@ -14,76 +14,35 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Unit tests for block_kursfilter\course_access.
- *
- * @package   block_kursfilter
- * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers    \block_kursfilter\course_access
- */
-
 namespace block_kursfilter;
 
-use advanced_testcase;
+use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Tests for the course_access class.
+ * Tests for the public course visibility check shared by the public endpoints.
+ *
+ * @package    block_kursfilter
+ * @copyright  2026 Moodle in Niedersachsen e. V.
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class course_access_test extends advanced_testcase {
-    /**
-     * Set up each test.
-     */
-    protected function setUp(): void {
-        parent::setUp();
+#[CoversClass(course_access::class)]
+final class course_access_test extends \advanced_testcase {
+    public function test_visible_course_is_returned(): void {
         $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course(['shortname' => 'OPEN1']);
+
+        $found = course_access::get_public_course((int)$course->id);
+
+        $this->assertNotNull($found);
+        $this->assertSame('OPEN1', $found->shortname);
     }
 
-    /**
-     * Test get_public_course returns a visible course.
-     *
-     * @covers \block_kursfilter\course_access::get_public_course
-     */
-    public function test_get_public_course_returns_visible_course(): void {
-        $course = $this->getDataGenerator()->create_course(['visible' => 1]);
-        $result = course_access::get_public_course($course->id);
+    public function test_hidden_unknown_and_site_course_are_not_returned(): void {
+        $this->resetAfterTest();
+        $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
 
-        $this->assertNotNull($result);
-        $this->assertEquals($course->id, $result->id);
-    }
-
-    /**
-     * Test get_public_course returns null for hidden course.
-     *
-     * @covers \block_kursfilter\course_access::get_public_course
-     */
-    public function test_get_public_course_returns_null_for_hidden_course(): void {
-        global $DB;
-        $course = $this->getDataGenerator()->create_course(['visible' => 1]);
-        $DB->set_field('course', 'visible', 0, ['id' => $course->id]);
-
-        $result = course_access::get_public_course($course->id);
-        $this->assertNull($result);
-    }
-
-    /**
-     * Test get_public_course returns null for non-existent course.
-     *
-     * @covers \block_kursfilter\course_access::get_public_course
-     */
-    public function test_get_public_course_returns_null_for_nonexistent(): void {
-        $result = course_access::get_public_course(999999);
-        $this->assertNull($result);
-    }
-
-    /**
-     * Test get_public_course returns null for site course.
-     *
-     * @covers \block_kursfilter\course_access::get_public_course
-     */
-    public function test_get_public_course_returns_null_for_site_course(): void {
-        $result = course_access::get_public_course(SITEID);
-        $this->assertNull($result);
+        $this->assertNull(course_access::get_public_course((int)$hidden->id));
+        $this->assertNull(course_access::get_public_course(99999));
+        $this->assertNull(course_access::get_public_course(SITEID));
     }
 }
