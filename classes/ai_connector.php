@@ -255,7 +255,9 @@ class ai_connector {
             if (mb_strlen($value) < 2 || mb_strlen($value) > 50) {
                 continue;
             }
-            $tags[] = $tag;
+            // Nur den Wert speichern (ohne Prefix), damit Tags mit manuell
+            // gesetzten Moodle-Tags uebereinstimmen und die Suche greift.
+            $tags[] = $value;
         }
 
         return array_values(array_unique($tags));

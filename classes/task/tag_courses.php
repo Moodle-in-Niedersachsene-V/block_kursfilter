@@ -105,6 +105,8 @@ class tag_courses extends \core\task\scheduled_task {
             if (empty($tags)) {
                 mtrace("block_kursfilter tag_courses: Kurs {$course->id} ({$course->shortname}) – keine Tags vorgeschlagen.");
                 // Platzhalter-Tag setzen damit der Kurs nicht endlos neu versucht wird.
+                // Platzhalter ueber block_kursfilter-Komponente setzen,
+                // damit der Kurs nicht endlos erneut versucht wird.
                 \core_tag_tag::set_item_tags(
                     'block_kursfilter',
                     'course',
@@ -116,8 +118,10 @@ class tag_courses extends \core\task\scheduled_task {
             }
 
             if ($autoapply) {
+                // Tags ueber core-Komponente setzen, damit sie im Kurs sichtbar
+                // sind und von der Suche gefunden werden (wie manuell gesetzte Tags).
                 \core_tag_tag::set_item_tags(
-                    'block_kursfilter',
+                    'core',
                     'course',
                     (int)$course->id,
                     \context_course::instance((int)$course->id),

@@ -196,14 +196,14 @@ define(['core/ajax'], function(Ajax) {
         Ajax.call([{
             methodname: 'block_kursfilter_search_courses',
             args: {
-                kursbereich:  parseInt(self.kursbereich, 10) || 0,
-                schulform:    self.schulform,
-                fach:         self.fach,
-                niveaustufe:  self.niveaustufe,
-                tag:          '',
-                kursname:     self.kursname,
-                contextid:    self.config.contextid || 1,
-                limit:        100,
+                category:   parseInt(self.kursbereich, 10) || 0,
+                schooltype: self.schulform,
+                subject:    self.fach,
+                level:      self.niveaustufe,
+                tag:        '',
+                searchterm: self.kursname,
+                contextid:  self.config.contextid || 1,
+                limit:      100,
             },
             done: function(result) {
                 if (spinner) {

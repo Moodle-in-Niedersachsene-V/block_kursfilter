@@ -48,6 +48,6 @@ class observer {
         if (strpos($user->username, pool_manager::USERNAME_PREFIX) !== 0) {
             return;
         }
-        pool_manager::mark_free($userid);
+        pool_manager::mark_free($user->username);
     }
 }
