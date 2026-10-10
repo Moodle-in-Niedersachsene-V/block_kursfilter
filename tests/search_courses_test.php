@@ -44,6 +44,8 @@ final class search_courses_test extends advanced_testcase {
 
     /**
      * Test that search_courses returns all visible courses without filters.
+     *
+     * @covers \block_kursfilter\external\search_courses::execute
      */
     public function test_search_returns_visible_courses(): void {
         $this->setAdminUser();
@@ -66,6 +68,8 @@ final class search_courses_test extends advanced_testcase {
 
     /**
      * Test that searchterm filters by fullname.
+     *
+     * @covers \block_kursfilter\external\search_courses::execute
      */
     public function test_search_filters_by_searchterm(): void {
         $this->setAdminUser();
@@ -81,6 +85,8 @@ final class search_courses_test extends advanced_testcase {
 
     /**
      * Test that server enforces the result limit.
+     *
+     * @covers \block_kursfilter\external\search_courses::execute
      */
     public function test_server_enforces_result_limit(): void {
         $this->setAdminUser();
@@ -98,6 +104,8 @@ final class search_courses_test extends advanced_testcase {
 
     /**
      * Test total matches courses count.
+     *
+     * @covers \block_kursfilter\external\search_courses::execute
      */
     public function test_total_matches_courses_count(): void {
         $this->setAdminUser();
@@ -112,6 +120,8 @@ final class search_courses_test extends advanced_testcase {
 
     /**
      * Test result structure contains required fields.
+     *
+     * @covers \block_kursfilter\external\search_courses::execute
      */
     public function test_result_structure_has_required_fields(): void {
         $this->setAdminUser();
@@ -134,6 +144,8 @@ final class search_courses_test extends advanced_testcase {
 
     /**
      * Test site course is never returned.
+     *
+     * @covers \block_kursfilter\external\search_courses::execute
      */
     public function test_site_course_excluded(): void {
         $this->setAdminUser();

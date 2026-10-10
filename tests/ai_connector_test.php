@@ -76,6 +76,8 @@ final class ai_connector_test extends advanced_testcase {
 
     /**
      * Test parse_tags accepts valid prefixed tags.
+     *
+     * @covers \block_kursfilter\ai_connector
      */
     public function test_parse_tags_accepts_valid_tags(): void {
         $result = $this->call_private('parse_tags', ['schulform:Gymnasium, fach:Mathematik, niveaustufe:Oberstufe']);
@@ -86,6 +88,8 @@ final class ai_connector_test extends advanced_testcase {
 
     /**
      * Test parse_tags rejects unknown prefixes.
+     *
+     * @covers \block_kursfilter\ai_connector
      */
     public function test_parse_tags_rejects_unknown_prefix(): void {
         $result = $this->call_private('parse_tags', ['unknown:Something, fach:Deutsch']);
@@ -95,6 +99,8 @@ final class ai_connector_test extends advanced_testcase {
 
     /**
      * Test parse_tags rejects values that are too short.
+     *
+     * @covers \block_kursfilter\ai_connector
      */
     public function test_parse_tags_rejects_too_short_value(): void {
         $result = $this->call_private('parse_tags', ['fach:A']);
@@ -103,6 +109,8 @@ final class ai_connector_test extends advanced_testcase {
 
     /**
      * Test parse_tags handles empty input.
+     *
+     * @covers \block_kursfilter\ai_connector
      */
     public function test_parse_tags_handles_empty_input(): void {
         $result = $this->call_private('parse_tags', ['']);
@@ -112,6 +120,8 @@ final class ai_connector_test extends advanced_testcase {
 
     /**
      * Test parse_tags deduplicates tags.
+     *
+     * @covers \block_kursfilter\ai_connector
      */
     public function test_parse_tags_deduplicates(): void {
         $result = $this->call_private('parse_tags', ['fach:Mathematik, fach:Mathematik']);
@@ -120,6 +130,8 @@ final class ai_connector_test extends advanced_testcase {
 
     /**
      * Test build_prompt contains course data.
+     *
+     * @covers \block_kursfilter\ai_connector
      */
     public function test_build_prompt_contains_course_data(): void {
         $prompt = $this->call_private('build_prompt', [
@@ -144,6 +156,8 @@ final class ai_connector_test extends advanced_testcase {
      * Test suggest_tags returns empty array when backend is unreachable.
      *
      * Ollama is not running in CI; we expect an empty (but not error) result.
+     *
+     * @covers \block_kursfilter\ai_connector::suggest_tags
      */
     public function test_suggest_tags_returns_array_on_backend_failure(): void {
         $result = $this->connector->suggest_tags(

@@ -42,6 +42,8 @@ final class rating_helper_test extends advanced_testcase {
 
     /**
      * Test save_rating stores a new rating successfully.
+     *
+     * @covers \block_kursfilter\rating_helper::save_rating
      */
     public function test_save_rating_stores_new_rating(): void {
         global $DB;
@@ -61,6 +63,8 @@ final class rating_helper_test extends advanced_testcase {
 
     /**
      * Test save_rating returns false when rating already exists.
+     *
+     * @covers \block_kursfilter\rating_helper::save_rating
      */
     public function test_save_rating_returns_false_for_duplicate(): void {
         $course = $this->getDataGenerator()->create_course();
@@ -74,6 +78,8 @@ final class rating_helper_test extends advanced_testcase {
 
     /**
      * Test get_existing_rating returns the stored stars.
+     *
+     * @covers \block_kursfilter\rating_helper::get_existing_rating
      */
     public function test_get_existing_rating_returns_stored_stars(): void {
         $course = $this->getDataGenerator()->create_course();
@@ -87,6 +93,8 @@ final class rating_helper_test extends advanced_testcase {
 
     /**
      * Test get_existing_rating returns null when no rating exists.
+     *
+     * @covers \block_kursfilter\rating_helper::get_existing_rating
      */
     public function test_get_existing_rating_returns_null_when_absent(): void {
         $course = $this->getDataGenerator()->create_course();
@@ -97,6 +105,8 @@ final class rating_helper_test extends advanced_testcase {
 
     /**
      * Test get_course_rating returns zero avg and count when no ratings.
+     *
+     * @covers \block_kursfilter\rating_helper::get_course_rating
      */
     public function test_get_course_rating_returns_zeros_when_no_ratings(): void {
         $course = $this->getDataGenerator()->create_course();
@@ -108,6 +118,8 @@ final class rating_helper_test extends advanced_testcase {
 
     /**
      * Test get_course_rating computes correct average.
+     *
+     * @covers \block_kursfilter\rating_helper::get_course_rating
      */
     public function test_get_course_rating_computes_average(): void {
         $course = $this->getDataGenerator()->create_course();

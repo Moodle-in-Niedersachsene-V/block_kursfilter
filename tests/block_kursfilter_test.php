@@ -46,6 +46,8 @@ final class block_kursfilter_test extends advanced_testcase {
 
     /**
      * Test applicable_formats returns expected pages.
+     *
+     * @covers \block_kursfilter::applicable_formats
      */
     public function test_applicable_formats(): void {
         $block = new \block_kursfilter();
@@ -59,6 +61,8 @@ final class block_kursfilter_test extends advanced_testcase {
 
     /**
      * Test has_config returns true.
+     *
+     * @covers \block_kursfilter::has_config
      */
     public function test_has_config(): void {
         $block = new \block_kursfilter();
@@ -67,6 +71,8 @@ final class block_kursfilter_test extends advanced_testcase {
 
     /**
      * Test instance_allow_multiple returns false.
+     *
+     * @covers \block_kursfilter::instance_allow_multiple
      */
     public function test_instance_allow_multiple(): void {
         $block = new \block_kursfilter();

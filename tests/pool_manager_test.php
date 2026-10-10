@@ -43,6 +43,8 @@ final class pool_manager_test extends advanced_testcase {
 
     /**
      * Test get_pool_size respects configuration.
+     *
+     * @covers \block_kursfilter\pool_manager::get_pool_size
      */
     public function test_get_pool_size_reads_config(): void {
         $this->assertEquals(3, pool_manager::get_pool_size());
@@ -50,6 +52,8 @@ final class pool_manager_test extends advanced_testcase {
 
     /**
      * Test get_pool_size uses default when no config is set.
+     *
+     * @covers \block_kursfilter\pool_manager::get_pool_size
      */
     public function test_get_pool_size_uses_default(): void {
         unset_config('poolsize', 'block_kursfilter');
@@ -58,6 +62,8 @@ final class pool_manager_test extends advanced_testcase {
 
     /**
      * Test get_pool_size caps at maximum.
+     *
+     * @covers \block_kursfilter\pool_manager::get_pool_size
      */
     public function test_get_pool_size_capped_at_maximum(): void {
         set_config('poolsize', 999, 'block_kursfilter');
@@ -66,6 +72,8 @@ final class pool_manager_test extends advanced_testcase {
 
     /**
      * Test get_pool_usernames returns correct usernames.
+     *
+     * @covers \block_kursfilter\pool_manager::get_pool_usernames
      */
     public function test_get_pool_usernames(): void {
         $names = pool_manager::get_pool_usernames();
@@ -77,6 +85,8 @@ final class pool_manager_test extends advanced_testcase {
 
     /**
      * Test create_pool_users creates the configured number of users.
+     *
+     * @covers \block_kursfilter\pool_manager::create_pool_users
      */
     public function test_create_pool_users_creates_users(): void {
         global $DB;
@@ -93,6 +103,8 @@ final class pool_manager_test extends advanced_testcase {
 
     /**
      * Test create_pool_users is idempotent (running twice creates no duplicates).
+     *
+     * @covers \block_kursfilter\pool_manager::create_pool_users
      */
     public function test_create_pool_users_is_idempotent(): void {
         global $DB;
@@ -110,6 +122,10 @@ final class pool_manager_test extends advanced_testcase {
 
     /**
      * Test mark_active and mark_free cycle.
+     *
+     * @covers \block_kursfilter\pool_manager::mark_active
+     * @covers \block_kursfilter\pool_manager::mark_free
+     * @covers \block_kursfilter\pool_manager::get_free_pool_user
      */
     public function test_mark_active_and_mark_free(): void {
         pool_manager::create_pool_users();

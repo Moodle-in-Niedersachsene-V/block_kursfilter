@@ -42,6 +42,8 @@ final class backup_helper_test extends advanced_testcase {
 
     /**
      * Test has_backup returns false when no backup exists.
+     *
+     * @covers \block_kursfilter\backup_helper::has_backup
      */
     public function test_has_backup_returns_false_when_no_backup(): void {
         $course = $this->getDataGenerator()->create_course();
@@ -50,6 +52,8 @@ final class backup_helper_test extends advanced_testcase {
 
     /**
      * Test get_backup_file returns null when no backup exists.
+     *
+     * @covers \block_kursfilter\backup_helper::get_backup_file
      */
     public function test_get_backup_file_returns_null_when_no_backup(): void {
         $course = $this->getDataGenerator()->create_course();
@@ -58,6 +62,8 @@ final class backup_helper_test extends advanced_testcase {
 
     /**
      * Test delete_existing_backup does not error when no file exists.
+     *
+     * @covers \block_kursfilter\backup_helper::delete_existing_backup
      */
     public function test_delete_existing_backup_no_error_when_empty(): void {
         $context = \context_system::instance();
@@ -68,6 +74,8 @@ final class backup_helper_test extends advanced_testcase {
 
     /**
      * Test FILEAREA and COMPONENT constants are defined correctly.
+     *
+     * @covers \block_kursfilter\backup_helper
      */
     public function test_constants(): void {
         $this->assertEquals('course_backups', backup_helper::FILEAREA);

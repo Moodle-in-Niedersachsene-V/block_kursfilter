@@ -45,6 +45,8 @@ final class task_tag_courses_test extends advanced_testcase {
 
     /**
      * Test get_name returns a non-empty string.
+     *
+     * @covers \block_kursfilter\task\tag_courses::get_name
      */
     public function test_get_name(): void {
         $task = new tag_courses();
@@ -57,6 +59,8 @@ final class task_tag_courses_test extends advanced_testcase {
      * Test execute does not run when AI is disabled.
      *
      * When ai_enabled = 0, execute() should return early without errors.
+     *
+     * @covers \block_kursfilter\task\tag_courses::execute
      */
     public function test_execute_does_nothing_when_disabled(): void {
         set_config('ai_enabled', 0, 'block_kursfilter');

@@ -36,6 +36,8 @@ use core_privacy\local\metadata\null_provider;
 final class privacy_provider_test extends advanced_testcase {
     /**
      * Test provider implements null_provider.
+     *
+     * @covers \block_kursfilter\privacy\provider
      */
     public function test_provider_implements_null_provider(): void {
         $this->assertInstanceOf(null_provider::class, new provider());
@@ -43,6 +45,8 @@ final class privacy_provider_test extends advanced_testcase {
 
     /**
      * Test get_reason returns a non-empty string.
+     *
+     * @covers \block_kursfilter\privacy\provider::get_reason
      */
     public function test_get_reason_returns_string(): void {
         $reason = provider::get_reason();
@@ -52,6 +56,8 @@ final class privacy_provider_test extends advanced_testcase {
 
     /**
      * Test get_reason returns the expected language string key.
+     *
+     * @covers \block_kursfilter\privacy\provider::get_reason
      */
     public function test_get_reason_key(): void {
         $this->assertEquals('privacy:metadata', provider::get_reason());

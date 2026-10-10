@@ -42,6 +42,8 @@ final class course_access_test extends advanced_testcase {
 
     /**
      * Test get_public_course returns a visible course.
+     *
+     * @covers \block_kursfilter\course_access::get_public_course
      */
     public function test_get_public_course_returns_visible_course(): void {
         $course = $this->getDataGenerator()->create_course(['visible' => 1]);
@@ -53,6 +55,8 @@ final class course_access_test extends advanced_testcase {
 
     /**
      * Test get_public_course returns null for hidden course.
+     *
+     * @covers \block_kursfilter\course_access::get_public_course
      */
     public function test_get_public_course_returns_null_for_hidden_course(): void {
         global $DB;
@@ -65,6 +69,8 @@ final class course_access_test extends advanced_testcase {
 
     /**
      * Test get_public_course returns null for non-existent course.
+     *
+     * @covers \block_kursfilter\course_access::get_public_course
      */
     public function test_get_public_course_returns_null_for_nonexistent(): void {
         $result = course_access::get_public_course(999999);
@@ -73,6 +79,8 @@ final class course_access_test extends advanced_testcase {
 
     /**
      * Test get_public_course returns null for site course.
+     *
+     * @covers \block_kursfilter\course_access::get_public_course
      */
     public function test_get_public_course_returns_null_for_site_course(): void {
         $result = course_access::get_public_course(SITEID);
