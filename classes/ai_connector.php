@@ -192,7 +192,7 @@ class ai_connector {
      * @return string Raw model response.
      */
     private function call_claude(string $prompt): string {
-        $apikey = $this->config['ai_claude_apikey'] ?? '';
+        $apikey = get_config('block_kursfilter', 'ai_claude_apikey') ?: '';
         $model = $this->config['ai_claude_model'] ?? 'claude-haiku-4-5-20251001';
 
         if (empty($apikey)) {

@@ -126,11 +126,12 @@ if ($ADMIN->fulltree) {
         get_string('settings_ai_claude_heading', 'block_kursfilter'),
         get_string('settings_ai_claude_desc', 'block_kursfilter')
     ));
-    $settings->add(new admin_setting_configpasswordunmask(
+    $settings->add(new admin_setting_configtext(
         'block_kursfilter/ai_claude_apikey',
         get_string('settings_ai_claude_apikey', 'block_kursfilter'),
         get_string('settings_ai_claude_apikey_help', 'block_kursfilter'),
-        ''
+        '',
+        PARAM_RAW
     ));
     $settings->add(new admin_setting_configtext(
         'block_kursfilter/ai_claude_model',
