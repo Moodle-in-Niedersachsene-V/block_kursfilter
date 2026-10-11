@@ -56,10 +56,11 @@ class backup_courses extends \core\task\scheduled_task {
             $userid = (int)get_admin()->id;
         }
 
+        [$publicsql, $params] = \block_kursfilter\course_access::public_course_sql();
         $courses = $DB->get_records_select(
             'course',
-            'visible = 1 AND id != :siteid',
-            ['siteid' => SITEID],
+            $publicsql,
+            $params,
             'fullname ASC',
             'id, fullname'
         );

@@ -72,14 +72,15 @@ class tag_suggester {
     }
 
     /**
-     * Read the values of a filter setting, one per line.
+     * Read the values of a filter setting, one per line; the single reader for block, tasks and AI.
      *
      * @param string $setting Setting name.
-     * @return string[] Non-empty values.
+     * @return string[] Non-empty, cleaned values.
      */
-    private static function filter_values(string $setting): array {
+    public static function filter_values(string $setting): array {
         $lines = explode("\n", (string)get_config('block_kursfilter', $setting));
-        return array_values(array_filter(array_map('trim', $lines), 'strlen'));
+        $values = array_map(fn($line) => clean_param(trim($line), PARAM_TEXT), $lines);
+        return array_values(array_filter($values, 'strlen'));
     }
 
     /**

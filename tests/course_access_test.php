@@ -45,4 +45,18 @@ final class course_access_test extends \advanced_testcase {
         $this->assertNull(course_access::get_public_course(99999));
         $this->assertNull(course_access::get_public_course(SITEID));
     }
+
+    public function test_public_course_sql_selects_exactly_the_public_courses(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $open = $this->getDataGenerator()->create_course();
+        $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
+
+        [$sql, $params] = course_access::public_course_sql('c');
+        $ids = $DB->get_fieldset_sql("SELECT c.id FROM {course} c WHERE $sql", $params);
+
+        $this->assertContains((string)$open->id, $ids);
+        $this->assertNotContains((string)$hidden->id, $ids);
+        $this->assertNotContains((string)SITEID, $ids);
+    }
 }

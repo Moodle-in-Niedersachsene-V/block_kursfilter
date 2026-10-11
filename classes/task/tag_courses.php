@@ -89,13 +89,14 @@ class tag_courses extends \core\task\scheduled_task {
     private static function next_courses(int $limit): array {
         global $DB;
 
+        [$publicsql, $params] = \block_kursfilter\course_access::public_course_sql('c');
         $sql = "SELECT c.id, c.fullname, c.shortname, c.summary, cc.name AS categoryname
                   FROM {course} c
                   JOIN {course_categories} cc ON cc.id = c.category
              LEFT JOIN {block_kursfilter_tag_pending} tp ON tp.courseid = c.id
-                 WHERE c.id != :siteid AND c.visible = 1 AND tp.id IS NULL
+                 WHERE " . implode(' AND ', [$publicsql, 'tp.id IS NULL']) . "
               ORDER BY c.id ASC";
-        return $DB->get_records_sql($sql, ['siteid' => SITEID], 0, $limit);
+        return $DB->get_records_sql($sql, $params, 0, $limit);
     }
 
     /**

@@ -229,10 +229,11 @@ class pool_manager {
     public static function enrol_pool_into_all_courses(): int {
         global $DB;
 
+        [$publicsql, $params] = course_access::public_course_sql();
         $courses = $DB->get_records_select(
             'course',
-            'visible = 1 AND id != :siteid',
-            ['siteid' => SITEID],
+            $publicsql,
+            $params,
             '',
             'id'
         );

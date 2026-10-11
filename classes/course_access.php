@@ -33,10 +33,19 @@ class course_access {
     public static function get_public_course(int $courseid): ?\stdClass {
         global $DB;
 
-        $course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], '*', IGNORE_MISSING);
-        if (!$course || $course->id === SITEID) {
-            return null;
-        }
-        return $course;
+        [$rule, $params] = self::public_course_sql();
+        $course = $DB->get_record_select('course', "id = :courseid AND $rule", ['courseid' => $courseid] + $params);
+        return $course ?: null;
+    }
+
+    /**
+     * The rule "public course" (visible, not the site course) as SQL fragment; the single source for all queries.
+     *
+     * @param string $alias Table alias of the course table, empty if none.
+     * @return array [SQL condition, named parameters].
+     */
+    public static function public_course_sql(string $alias = ''): array {
+        $prefix = $alias === '' ? '' : $alias . '.';
+        return ["{$prefix}visible = 1 AND {$prefix}id <> :kfsiteid", ['kfsiteid' => SITEID]];
     }
 }

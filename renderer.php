@@ -42,20 +42,9 @@ class block_kursfilter_renderer extends plugin_renderer_base {
         return $this->render_from_template('block_kursfilter/block', [
             'blockid'     => $blockid,
             'categories'  => $categories,
-            'schooltypes' => self::filter_values('schooltypes'),
-            'subjects'    => self::filter_values('subjects'),
-            'levels'      => self::filter_values('levels'),
+            'schooltypes' => \block_kursfilter\tag_suggester::filter_values('schooltypes'),
+            'subjects'    => \block_kursfilter\tag_suggester::filter_values('subjects'),
+            'levels'      => \block_kursfilter\tag_suggester::filter_values('levels'),
         ]);
-    }
-
-    /**
-     * Read the filter values of a setting, one per line.
-     *
-     * @param string $setting Setting name.
-     * @return string[] Non-empty values.
-     */
-    private static function filter_values(string $setting): array {
-        $lines = explode("\n", (string)get_config('block_kursfilter', $setting));
-        return array_values(array_filter(array_map(fn($line) => clean_param(trim($line), PARAM_TEXT), $lines), 'strlen'));
     }
 }

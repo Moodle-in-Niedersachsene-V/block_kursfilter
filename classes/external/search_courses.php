@@ -168,8 +168,8 @@ class search_courses extends external_api {
     private static function find_courses(int $categoryid, array $tags, string $searchterm, int $limit): array {
         global $DB;
 
-        $conditions = ['c.visible = 1', 'c.id != :siteid'];
-        $args = ['siteid' => SITEID];
+        [$publicsql, $args] = \block_kursfilter\course_access::public_course_sql('c');
+        $conditions = [$publicsql];
 
         if ($categoryid) {
             $category = \core_course_category::get($categoryid, IGNORE_MISSING);

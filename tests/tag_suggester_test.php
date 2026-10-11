@@ -111,4 +111,10 @@ final class tag_suggester_test extends \advanced_testcase {
         $this->expectExceptionMessageMatches('/AI request failed/');
         tag_suggester::suggest($course, 'X', (int)get_admin()->id);
     }
+
+    public function test_filter_values_are_trimmed_cleaned_and_without_empty_lines(): void {
+        set_config('subjects', "  Mathematik \r\n\n<b>Deutsch</b>\n   \n", 'block_kursfilter');
+
+        $this->assertSame(['Mathematik', 'Deutsch'], tag_suggester::filter_values('subjects'));
+    }
 }
