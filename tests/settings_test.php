@@ -19,10 +19,13 @@ namespace block_kursfilter;
 /**
  * Tests for the default values declared in settings.php.
  *
+ * Covers nothing: settings.php is a script, not a class or function coverage could point at.
+ *
  * @package    block_kursfilter
  * @category   test
  * @copyright  2026 Moodle in Niedersachsen e. V.
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @coversNothing
  */
 final class settings_test extends \advanced_testcase {
     /**
