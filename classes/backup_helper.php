@@ -63,11 +63,14 @@ class backup_helper {
             $userid
         );
         try {
-            // No user data and no logs: the backup is public.
-            $bc->get_plan()->get_setting('users')->set_value(0);
-            $bc->get_plan()->get_setting('role_assignments')->set_value(0);
-            $bc->get_plan()->get_setting('logs')->set_value(0);
-            $bc->get_plan()->get_setting('grade_histories')->set_value(0);
+            // No user data and no logs: the backup is public. A locked setting that already
+            // holds 0 is fine; a locked setting holding 1 makes set_value() throw (fail loudly).
+            foreach (['users', 'role_assignments', 'logs', 'grade_histories'] as $name) {
+                $setting = $bc->get_plan()->get_setting($name);
+                if ((int)$setting->get_value() !== 0) {
+                    $setting->set_value(0);
+                }
+            }
             $bc->execute_plan();
             $backupfile = $bc->get_results()['backup_destination'] ?? null;
         } finally {
@@ -78,39 +81,44 @@ class backup_helper {
         }
 
         $context = \context_system::instance();
-        self::delete_existing_backup($context, $courseid);
-        $storedfile = get_file_storage()->create_file_from_storedfile([
-            'contextid' => $context->id,
-            'component' => self::COMPONENT,
-            'filearea'  => self::FILEAREA,
-            'itemid'    => $courseid,
-            'filepath'  => '/',
-            'filename'  => 'backup_course_' . $courseid . '_' . date('Ymd') . '.mbz',
-        ], $backupfile);
-        $backupfile->delete();
+        try {
+            // Store under a temporary name first: the old backup stays available until the new one is saved.
+            $storedfile = get_file_storage()->create_file_from_storedfile([
+                'contextid' => $context->id,
+                'component' => self::COMPONENT,
+                'filearea'  => self::FILEAREA,
+                'itemid'    => $courseid,
+                'filepath'  => '/',
+                'filename'  => 'new_' . $courseid . '_' . uniqid() . '.mbz',
+            ], $backupfile);
+        } finally {
+            $backupfile->delete();
+        }
+        foreach (self::get_area_files($courseid) as $file) {
+            if ($file->get_id() != $storedfile->get_id()) {
+                $file->delete();
+            }
+        }
+        $storedfile->rename('/', 'backup_course_' . $courseid . '_' . date('Ymd') . '.mbz');
 
         return $storedfile;
     }
 
     /**
-     * Delete any existing backup file for a given course.
+     * All stored backup files of a course, newest first.
      *
-     * @param \context $context System context.
-     * @param int      $itemid  Course ID used as itemid.
+     * @param int $courseid Course ID used as itemid.
+     * @return \stored_file[]
      */
-    public static function delete_existing_backup(\context $context, int $itemid): void {
-        $fs    = get_file_storage();
-        $files = $fs->get_area_files(
-            $context->id,
+    private static function get_area_files(int $courseid): array {
+        return get_file_storage()->get_area_files(
+            \context_system::instance()->id,
             self::COMPONENT,
             self::FILEAREA,
-            $itemid,
+            $courseid,
             'timemodified DESC',
             false
         );
-        foreach ($files as $file) {
-            $file->delete();
-        }
     }
 
     /**
@@ -120,16 +128,7 @@ class backup_helper {
      * @return \stored_file|null
      */
     public static function get_backup_file(int $courseid): ?\stored_file {
-        $context = \context_system::instance();
-        $fs      = get_file_storage();
-        $files   = $fs->get_area_files(
-            $context->id,
-            self::COMPONENT,
-            self::FILEAREA,
-            $courseid,
-            'timemodified DESC',
-            false
-        );
+        $files = self::get_area_files($courseid);
         return !empty($files) ? reset($files) : null;
     }
 

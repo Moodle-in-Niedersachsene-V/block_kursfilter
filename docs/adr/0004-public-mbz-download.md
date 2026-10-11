@@ -6,7 +6,9 @@ Damit ein öffentlicher Download unbedenklich ist:
 
 - Die Sicherung enthält keine Nutzerdaten, Rollenzuweisungen, Logs oder Notenhistorie.
 - `backup.php` liefert nur Sicherungen **öffentlicher Kurse** (sichtbar, nicht die Startseite); sonst „nicht gefunden“.
-- Eine neue Sicherung ersetzt die alte erst, wenn sie vollständig vorliegt.
+- Eine neue Sicherung ersetzt die alte erst, wenn sie vollständig vorliegt; scheitert die neue, bleibt die alte abrufbar.
+- Ist `backup_userid` leer, läuft die Sicherung unter dem ersten Site-Admin (Rückfall der geplanten Aufgabe).
+- Gesperrte Backup-Einstellungen (Berechtigung oder Backup-Defaults) mit Wert 0 sind unkritisch; ist eine gesperrt und auf 1, scheitert die Sicherung laut.
 - Der Download löst keine Sicherung aus und belastet den Server daher nicht je Aufruf.
 
 ## Consequences

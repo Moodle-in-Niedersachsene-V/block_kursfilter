@@ -106,6 +106,34 @@ final class backup_helper_test extends \advanced_testcase {
         $this->assertCount(1, $files);
     }
 
+    public function test_locked_backup_setting_with_wanted_value_does_not_abort(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        set_config('backup_general_users', 0, 'backup');
+        set_config('backup_general_users_locked', 1, 'backup');
+
+        $file = backup_helper::backup_course($course->id, get_admin()->id);
+
+        $this->assertEquals($file->get_id(), backup_helper::get_backup_file($course->id)->get_id());
+    }
+
+    public function test_locked_backup_setting_with_wrong_value_fails_and_keeps_previous_backup(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $previous = backup_helper::backup_course($course->id, get_admin()->id);
+        set_config('backup_general_users', 1, 'backup');
+        set_config('backup_general_users_locked', 1, 'backup');
+
+        try {
+            backup_helper::backup_course($course->id, get_admin()->id);
+            $this->fail('A locked setting with value 1 must abort the backup.');
+        } catch (\base_setting_exception $e) {
+            $this->assertEquals($previous->get_id(), backup_helper::get_backup_file($course->id)->get_id());
+        }
+    }
+
     public function test_has_backup_is_false_for_course_without_backup(): void {
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();
