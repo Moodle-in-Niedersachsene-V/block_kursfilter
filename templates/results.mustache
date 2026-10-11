@@ -43,7 +43,7 @@
     <div class="d-flex gap-1 flex-shrink-0">
       <form method="post" class="d-inline" action="{{config.wwwroot}}/blocks/kursfilter/preview.php">
         <input type="hidden" name="courseid" value="{{id}}">
-        <input type="hidden" name="sesskey" value="{{config.sesskey}}">
+        <input type="hidden" name="sesskey" value="">
         <button type="submit" class="btn btn-sm btn-outline-primary" title="{{#str}} preview_title, block_kursfilter {{/str}}">
           <i class="fa fa-eye me-1" aria-hidden="true"></i>{{#str}} btn_preview, block_kursfilter {{/str}}
         </button>

@@ -64,20 +64,22 @@ export const init = (blockid) => {
         count.textContent = emptyCount;
     };
 
-    const search = () => {
+    const search = async() => {
         const args = filters();
         if (!args.category && !args.schooltype && !args.subject && !args.level && !args.searchterm) {
             showEmpty();
             return;
         }
         spinner.classList.remove('d-none');
-        Ajax.call([{methodname: 'block_kursfilter_search_courses', args}])[0]
-            .then((result) => renderResults(result.courses))
-            .catch((error) => {
-                results.innerHTML = '';
-                return Notification.exception(error);
-            })
-            .finally(() => spinner.classList.add('d-none'));
+        try {
+            const result = await Ajax.call([{methodname: 'block_kursfilter_search_courses', args}])[0];
+            await renderResults(result.courses);
+        } catch (error) {
+            results.innerHTML = '';
+            await Notification.exception(error);
+        } finally {
+            spinner.classList.add('d-none');
+        }
     };
 
     const renderResults = async(courses) => {
@@ -85,6 +87,10 @@ export const init = (blockid) => {
         const {html, js} = await Templates.renderForPromise('block_kursfilter/results', context);
         Templates.replaceNodeContents(results, html, js);
         count.textContent = await getString('results_count', 'block_kursfilter', courses.length);
+        // The client-side template context has no sesskey, so the preview forms get it here.
+        results.querySelectorAll('input[name="sesskey"]').forEach((input) => {
+            input.value = Config.sesskey;
+        });
         results.querySelectorAll('.kf-stars').forEach(initStars);
     };
 
