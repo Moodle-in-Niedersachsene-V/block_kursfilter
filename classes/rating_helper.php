@@ -137,7 +137,7 @@ class rating_helper {
             'success' => true,
             'saved' => $saved,
             'already_rated' => !$saved,
-            'stars' => $saved ? $stars : self::get_existing_rating($courseid, $hash),
+            'stars' => $saved ? $stars : (self::get_existing_rating($courseid, $hash) ?? $stars),
         ];
     }
 

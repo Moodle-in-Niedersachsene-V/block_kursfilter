@@ -81,25 +81,33 @@ class backup_helper {
         }
 
         $context = \context_system::instance();
+        // One writer per course: a parallel run must not delete the file the other one just stored.
+        $lock = \core\lock\lock_config::get_lock_factory('block_kursfilter_backup')
+            ->get_lock('course' . $courseid, MINSECS);
+        if (!$lock) {
+            $backupfile->delete();
+            throw new \moodle_exception('error_backup_not_created', 'block_kursfilter', '', $courseid);
+        }
         try {
-            // Store under a temporary name first: the old backup stays available until the new one is saved.
+            // The new file gets its final, unique name directly: the old backup stays available until it is
+            // saved, and there is no rename step that could fail after the old one is gone.
             $storedfile = get_file_storage()->create_file_from_storedfile([
                 'contextid' => $context->id,
                 'component' => self::COMPONENT,
                 'filearea'  => self::FILEAREA,
                 'itemid'    => $courseid,
                 'filepath'  => '/',
-                'filename'  => 'new_' . $courseid . '_' . uniqid() . '.mbz',
+                'filename'  => 'backup_course_' . $courseid . '_' . date('Ymd') . '_' . uniqid() . '.mbz',
             ], $backupfile);
+            foreach (self::get_area_files($courseid) as $file) {
+                if ($file->get_id() != $storedfile->get_id()) {
+                    $file->delete();
+                }
+            }
         } finally {
             $backupfile->delete();
+            $lock->release();
         }
-        foreach (self::get_area_files($courseid) as $file) {
-            if ($file->get_id() != $storedfile->get_id()) {
-                $file->delete();
-            }
-        }
-        $storedfile->rename('/', 'backup_course_' . $courseid . '_' . date('Ymd') . '.mbz');
 
         return $storedfile;
     }
