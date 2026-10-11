@@ -26,6 +26,7 @@ import Notification from 'core/notification';
 import Templates from 'core/templates';
 import {getString} from 'core/str';
 import Config from 'core/config';
+import Log from 'core/log';
 
 /** Delay after the last input before the search runs, in milliseconds. */
 const SEARCH_DELAY = 350;
@@ -174,8 +175,10 @@ const rate = async(widget, stars) => {
         if (!data.success) {
             throw new Error(data.error);
         }
-        await showRated(widget, stars);
-    } catch {
+        // On "already rated" the server returns the stored rating, not the one just tried.
+        await showRated(widget, data.stars);
+    } catch (error) {
+        Log.error(error);
         Notification.addNotification({
             message: await getString('error_rating_failed', 'block_kursfilter'),
             type: 'error',

@@ -150,9 +150,7 @@ class search_courses extends external_api {
      */
     private static function effective_limit(int $requested): int {
         $configured = (int)get_config('block_kursfilter', 'resultlimit');
-        if ($configured < 1 || $configured > self::MAX_RESULT_LIMIT) {
-            $configured = self::DEFAULT_RESULT_LIMIT;
-        }
+        $configured = $configured < 1 ? self::DEFAULT_RESULT_LIMIT : min($configured, self::MAX_RESULT_LIMIT);
         return $requested < 1 ? $configured : min($requested, $configured);
     }
 

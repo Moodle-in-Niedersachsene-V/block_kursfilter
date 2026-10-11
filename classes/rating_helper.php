@@ -73,24 +73,19 @@ class rating_helper {
     /**
      * Save a rating for a course.
      * If the visitor already rated this course, the rating is not changed
-     * (one rating per cookie per course).
+     * (one rating per cookie per course; the unique index decides, so double clicks are safe).
      *
      * @param int    $courseid   Course ID.
      * @param string $cookiehash SHA-256 hash from the rater cookie.
      * @param int    $stars      Rating 1–5.
      * @return bool True if saved, false if already rated.
+     * @throws \invalid_parameter_exception If the stars are not 1 to 5.
      */
     public static function save_rating(int $courseid, string $cookiehash, int $stars): bool {
         global $DB;
 
-        // Validate stars range.
         if ($stars < 1 || $stars > 5) {
-            return false;
-        }
-
-        // Check if already rated.
-        if ($DB->record_exists(self::TABLE, ['courseid' => $courseid, 'cookiehash' => $cookiehash])) {
-            return false;
+            throw new \invalid_parameter_exception('Stars must be between 1 and 5.');
         }
 
         $record = new \stdClass();
@@ -99,7 +94,14 @@ class rating_helper {
         $record->stars = $stars;
         $record->timecreated = time();
 
-        $record->id = $DB->insert_record(self::TABLE, $record);
+        try {
+            $record->id = $DB->insert_record(self::TABLE, $record);
+        } catch (\dml_write_exception $e) {
+            if (self::get_existing_rating($courseid, $cookiehash) !== null) {
+                return false;
+            }
+            throw $e;
+        }
 
         event\course_rated::create([
             'context'  => \context_course::instance($courseid),
@@ -119,7 +121,7 @@ class rating_helper {
      * @param int      $courseid   Course ID.
      * @param int      $stars      Rating 1–5.
      * @param callable $cookiehash Returns the rater cookie hash of the visitor (creating it if needed).
-     * @return array JSON-ready result: success plus saved/already_rated, or success false plus error.
+     * @return array JSON-ready result: success plus saved/already_rated and the stored stars, or success false plus error.
      */
     public static function submit(int $courseid, int $stars, callable $cookiehash): array {
         if ($stars < 1 || $stars > 5) {
@@ -129,8 +131,14 @@ class rating_helper {
             return ['success' => false, 'error' => 'Course not found'];
         }
 
-        $saved = self::save_rating($courseid, $cookiehash(), $stars);
-        return ['success' => true, 'saved' => $saved, 'already_rated' => !$saved];
+        $hash = $cookiehash();
+        $saved = self::save_rating($courseid, $hash, $stars);
+        return [
+            'success' => true,
+            'saved' => $saved,
+            'already_rated' => !$saved,
+            'stars' => $saved ? $stars : self::get_existing_rating($courseid, $hash),
+        ];
     }
 
     /**

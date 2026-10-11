@@ -135,23 +135,23 @@ final class search_courses_test extends \advanced_testcase {
         $this->assertCount(2, $this->search(['limit' => -5])['courses']);
     }
 
-    public function test_configured_limit_above_hard_maximum_falls_back_to_default(): void {
+    public function test_configured_limit_above_hard_maximum_is_capped_at_maximum(): void {
         global $DB;
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
         set_config('resultlimit', 100000, 'block_kursfilter');
         $category = $this->getDataGenerator()->create_category();
         // Plain course rows keep the setup fast; the search reads only the course table.
-        for ($i = 0; $i <= search_courses::DEFAULT_RESULT_LIMIT; $i++) {
+        for ($i = 0; $i <= search_courses::MAX_RESULT_LIMIT; $i++) {
             $DB->insert_record('course', [
                 'category' => $category->id, 'fullname' => "Course $i", 'shortname' => "c$i", 'summary' => '', 'visible' => 1,
             ]);
         }
 
-        $this->assertCount(search_courses::DEFAULT_RESULT_LIMIT, $this->search(['limit' => 100000])['courses']);
+        $this->assertCount(search_courses::MAX_RESULT_LIMIT, $this->search(['limit' => 100000])['courses']);
     }
 
-    public function test_rate_limit_blocks_request_over_threshold(): void {
+    public function test_request_over_rate_limit_fails_with_ratelimitexceeded(): void {
         $this->resetAfterTest();
         $this->setUser($this->getDataGenerator()->create_user());
 
@@ -159,8 +159,12 @@ final class search_courses_test extends \advanced_testcase {
             $this->search();
         }
 
-        $this->expectException(\moodle_exception::class);
-        $this->search();
+        try {
+            $this->search();
+            $this->fail('The request over the limit must fail.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('ratelimitexceeded', $e->errorcode);
+        }
     }
 
     public function test_rate_limit_is_tracked_per_user(): void {

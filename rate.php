@@ -38,7 +38,7 @@ require_once($CFG->dirroot . '/blocks/kursfilter/classes/rating_helper.php');
 header('Content-Type: application/json; charset=utf-8');
 
 // Only POST allowed.
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (!data_submitted()) {
     echo json_encode(['success' => false, 'error' => 'Method not allowed']);
     exit;
 }

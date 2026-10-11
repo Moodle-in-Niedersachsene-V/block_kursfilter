@@ -224,6 +224,7 @@ final class request_test extends \advanced_testcase {
         $this->assertTrue($first['saved']);
         $this->assertFalse($second['saved']);
         $this->assertTrue($second['already_rated']);
+        $this->assertSame(4, $second['stars']);
         $this->assertSame(4, (int)$DB->get_field('block_kursfilter_ratings', 'stars', ['courseid' => $course->id]));
         $this->assertSame(1, $DB->count_records('block_kursfilter_ratings'));
     }
@@ -299,13 +300,14 @@ final class request_test extends \advanced_testcase {
         $this->assertStringNotContainsString('MBZ-CONTENT', $body);
     }
 
-    public function test_backup_download_without_file_sends_no_attachment(): void {
+    public function test_backup_download_without_file_shows_notice_and_sends_no_attachment(): void {
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();
 
-        [$status, $headers] = $this->request('GET', '/blocks/kursfilter/backup.php', ['courseid' => $course->id]);
+        [$status, $headers, $body] = $this->request('GET', '/blocks/kursfilter/backup.php', ['courseid' => $course->id]);
 
         $this->assertSame(200, $status);
+        $this->assertStringContainsString(get_string('backup_not_available', 'block_kursfilter'), $body);
         $this->assertStringNotContainsStringIgnoringCase('attachment', $headers);
     }
 

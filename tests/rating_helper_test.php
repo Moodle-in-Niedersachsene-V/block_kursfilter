@@ -49,19 +49,35 @@ final class rating_helper_test extends \advanced_testcase {
         $this->assertStringNotContainsString(self::HASH, json_encode($events[0]->get_data()));
     }
 
-    public function test_repeated_or_invalid_rating_raises_no_event(): void {
+    public function test_repeated_rating_raises_no_event_and_keeps_the_first(): void {
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();
         rating_helper::save_rating((int)$course->id, self::HASH, 3);
         $sink = $this->redirectEvents();
 
         $again = rating_helper::save_rating((int)$course->id, self::HASH, 5);
-        $invalid = rating_helper::save_rating((int)$course->id, str_repeat('b', 64), 6);
 
         $this->assertFalse($again);
-        $this->assertFalse($invalid);
         $this->assertCount(0, $sink->get_events());
         $this->assertSame(3, rating_helper::get_existing_rating((int)$course->id, self::HASH));
+    }
+
+    public function test_invalid_stars_throw_and_store_nothing(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $sink = $this->redirectEvents();
+
+        foreach ([0, 6] as $stars) {
+            try {
+                rating_helper::save_rating((int)$course->id, self::HASH, $stars);
+                $this->fail("Stars $stars must throw.");
+            } catch (\invalid_parameter_exception $e) {
+                $this->assertStringContainsString('between 1 and 5', $e->getMessage());
+            }
+        }
+        $this->assertCount(0, $sink->get_events());
+        $this->assertSame(0, $DB->count_records('block_kursfilter_ratings'));
     }
 
     public function test_submit_saves_a_rating_for_a_public_course(): void {
@@ -70,7 +86,7 @@ final class rating_helper_test extends \advanced_testcase {
 
         $result = rating_helper::submit((int)$course->id, 4, fn() => self::HASH);
 
-        $this->assertSame(['success' => true, 'saved' => true, 'already_rated' => false], $result);
+        $this->assertSame(['success' => true, 'saved' => true, 'already_rated' => false, 'stars' => 4], $result);
         $this->assertSame(4, rating_helper::get_existing_rating((int)$course->id, self::HASH));
     }
 
@@ -81,7 +97,7 @@ final class rating_helper_test extends \advanced_testcase {
 
         $result = rating_helper::submit((int)$course->id, 5, fn() => self::HASH);
 
-        $this->assertSame(['success' => true, 'saved' => false, 'already_rated' => true], $result);
+        $this->assertSame(['success' => true, 'saved' => false, 'already_rated' => true, 'stars' => 2], $result);
         $this->assertSame(2, rating_helper::get_existing_rating((int)$course->id, self::HASH));
     }
 
