@@ -35,13 +35,17 @@ if ($ADMIN->fulltree) {
         'block_kursfilter/schooltypes',
         get_string('settings_schooltypes', 'block_kursfilter'),
         get_string('settings_schooltypes_help', 'block_kursfilter'),
-        "Grundschule\nHauptschule\nRealschule\nGymnasium\nGesamtschule\nBerufsschule"
+        "Grundschule\nHauptschule\nRealschule\nOberschule\nGymnasium\nIGS\nKGS\nFörderschule\nFreie Waldorfschule\n" .
+            "Abendrealschule\nAbendgymnasium\nKolleg\nBerufseinstiegsschule\nBerufsschule\nBerufsfachschule\n" .
+            "Fachoberschule\nBerufsoberschule\nBerufliches Gymnasium\nFachschule"
     ));
     $settings->add(new admin_setting_configtextarea(
         'block_kursfilter/subjects',
         get_string('settings_subjects', 'block_kursfilter'),
         get_string('settings_subjects_help', 'block_kursfilter'),
-        "Mathematik\nDeutsch\nEnglisch\nNaturwissenschaften\nGeschichte\nKunst\nMusik\nSport"
+        "Mathematik\nDeutsch\nEnglisch\nFranzösisch\nSpanisch\nLatein\nNaturwissenschaften\nBiologie\nChemie\nPhysik\n" .
+            "Gesellschaftslehre\nGeschichte\nErdkunde\nPolitik-Wirtschaft\nReligion\nWerte und Normen\nKunst\nMusik\n" .
+            "Darstellendes Spiel\nSport\nInformatik\nArbeit-Wirtschaft-Technik\nHauswirtschaft\nTextiles Gestalten"
     ));
     $settings->add(new admin_setting_configtextarea(
         'block_kursfilter/levels',
