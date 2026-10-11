@@ -19,11 +19,21 @@ Moodle 5.1 oder neuer.
 
 Filterwerte (Schulformen, Fächer, Niveaustufen) je eine Zeile; ein Kurs passt, wenn er einen Kurs-Tag mit genau diesem Wert trägt. Dazu Ergebnislimit, Anzahl der Pool-Konten und das Sicherungskonto.
 
+KI-Verschlagwortung (Abschnitt „KI-Verschlagwortung“ der Einstellungen):
+
+| Einstellung | Name | Standard | Wirkung |
+|---|---|---|---|
+| KI-Verschlagwortung aktivieren | `ai_enabled` | aus | erster Schalter: ohne ihn tut die Aufgabe `tag_courses` nichts |
+| Tags automatisch übernehmen | `ai_autoapply` | aus | passende Werte werden sofort Kurs-Tags, sonst bleiben sie Tag-Vorschläge |
+| Kurse je Lauf | `ai_batch_size` | 20 | Anzahl Kurse je Lauf der Aufgabe |
+
+Die KI-Verschlagwortung läuft nur, wenn beide Schalter an sind: die Einstellung `ai_enabled` und die geplante Aufgabe `tag_courses` (Websiteverwaltung > Server > Geplante Aufgaben; standardmäßig deaktiviert).
+
 ## Geplante Aufgaben
 
 - 02:00 `backup_courses`: eine Kurssicherung ohne Nutzerdaten je öffentlichem Kurs; scheitert eine, schlägt die Aufgabe mit Ursache im Protokoll fehl.
 - 03:00 `setup_pool`: legt fehlende Pool-Konten an und schreibt sie in öffentliche Kurse ein.
-- 04:00 `tag_courses` (standardmäßig aus): KI-Verschlagwortung über den in Moodle eingerichteten KI-Anbieter (Aktion „Text generieren“). Übernommen werden nur Werte aus den Filterlisten, je Kurs einmal; ohne „Tags automatisch übernehmen“ bleiben sie als Tag-Vorschläge stehen (Prüfseite: Issue #3).
+- 04:00 `tag_courses` (standardmäßig aus, zusätzlich Einstellung `ai_enabled`): KI-Verschlagwortung über den in Moodle eingerichteten KI-Anbieter (Aktion „Text generieren“). Übernommen werden nur Werte aus den Filterlisten, je Kurs einmal; ohne „Tags automatisch übernehmen“ bleiben sie als Tag-Vorschläge stehen (Prüfseite: Issue #3).
 
 ## Entwicklung
 

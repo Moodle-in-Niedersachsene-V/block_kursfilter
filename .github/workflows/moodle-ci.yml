@@ -96,7 +96,7 @@ jobs:
           cd moodle
           cat > kf-web-config.php <<'EOF'
           <?php
-          // Der Webserver der Request-Tests liest die PHPUnit-Tabellen.
+          // The web server of the request tests reads the PHPUnit tables.
           if (getenv('KURSFILTER_WEB_TESTS')) {
               $CFG->prefix = $CFG->phpunit_prefix;
               $CFG->dataroot = $CFG->phpunit_dataroot;
@@ -119,6 +119,10 @@ jobs:
         run: moodle-plugin-ci phplint
 
       - name: PHP Mess Detector
+        # Advisory only (A2): the 7 remaining findings are structural and not fixable in
+        # the plugin: Moodle's event API dictates the boolean get_*_mapping() names,
+        # the web service class needs 15 core classes, and the PHPUnit test classes have
+        # one public method per case. phpmd has no annotation the Moodle code checker accepts.
         continue-on-error: true
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci phpmd

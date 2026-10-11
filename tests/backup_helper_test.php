@@ -37,7 +37,6 @@ final class backup_helper_test extends \advanced_testcase {
      * @return string Concatenated file content.
      */
     private function extracted_content(\stored_file $file): string {
-        global $CFG;
         $dir = make_request_directory();
         $packer = get_file_packer('application/vnd.moodle.backup');
         $this->assertNotFalse($file->extract_to_pathname($packer, $dir));
@@ -52,7 +51,6 @@ final class backup_helper_test extends \advanced_testcase {
     }
 
     public function test_backup_contains_course_but_no_participant_data(): void {
-        global $CFG;
         $this->resetAfterTest();
         $this->setAdminUser();
         $generator = $this->getDataGenerator();
