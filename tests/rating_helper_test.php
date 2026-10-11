@@ -63,4 +63,61 @@ final class rating_helper_test extends \advanced_testcase {
         $this->assertCount(0, $sink->get_events());
         $this->assertSame(3, rating_helper::get_existing_rating((int)$course->id, self::HASH));
     }
+
+    public function test_submit_saves_a_rating_for_a_public_course(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+
+        $result = rating_helper::submit((int)$course->id, 4, fn() => self::HASH);
+
+        $this->assertSame(['success' => true, 'saved' => true, 'already_rated' => false], $result);
+        $this->assertSame(4, rating_helper::get_existing_rating((int)$course->id, self::HASH));
+    }
+
+    public function test_submit_reports_a_repeated_rating_without_changing_it(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        rating_helper::submit((int)$course->id, 2, fn() => self::HASH);
+
+        $result = rating_helper::submit((int)$course->id, 5, fn() => self::HASH);
+
+        $this->assertSame(['success' => true, 'saved' => false, 'already_rated' => true], $result);
+        $this->assertSame(2, rating_helper::get_existing_rating((int)$course->id, self::HASH));
+    }
+
+    public function test_submit_rejects_invalid_stars_before_touching_the_cookie(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $cookiecalls = 0;
+        $cookie = function () use (&$cookiecalls) {
+            $cookiecalls++;
+            return self::HASH;
+        };
+
+        $zero = rating_helper::submit((int)$course->id, 0, $cookie);
+        $six = rating_helper::submit((int)$course->id, 6, $cookie);
+
+        $this->assertSame(['success' => false, 'error' => 'Invalid rating'], $zero);
+        $this->assertSame(['success' => false, 'error' => 'Invalid rating'], $six);
+        $this->assertSame(0, $cookiecalls);
+    }
+
+    public function test_submit_rejects_hidden_and_unknown_courses_before_touching_the_cookie(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
+        $cookiecalls = 0;
+        $cookie = function () use (&$cookiecalls) {
+            $cookiecalls++;
+            return self::HASH;
+        };
+
+        $resulthidden = rating_helper::submit((int)$hidden->id, 3, $cookie);
+        $resultunknown = rating_helper::submit(99999, 3, $cookie);
+
+        $this->assertSame(['success' => false, 'error' => 'Course not found'], $resulthidden);
+        $this->assertSame(['success' => false, 'error' => 'Course not found'], $resultunknown);
+        $this->assertSame(0, $cookiecalls);
+        $this->assertSame(0, $DB->count_records('block_kursfilter_ratings'));
+    }
 }

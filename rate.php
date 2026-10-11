@@ -53,28 +53,12 @@ if (!confirm_sesskey()) {
 $courseid = required_param('courseid', PARAM_INT);
 $stars = required_param('stars', PARAM_INT);
 
-// Validate stars range.
-if ($stars < 1 || $stars > 5) {
-    echo json_encode(['success' => false, 'error' => 'Invalid rating']);
-    exit;
-}
+$result = \block_kursfilter\rating_helper::submit(
+    $courseid,
+    $stars,
+    fn() => \block_kursfilter\rating_helper::get_cookie_hash()
+        ?? \block_kursfilter\rating_helper::create_cookie_hash()
+);
 
-// Course must exist and be visible.
-$course = \block_kursfilter\course_access::get_public_course($courseid);
-if (!$course) {
-    echo json_encode(['success' => false, 'error' => 'Course not found']);
-    exit;
-}
-
-$cookiehash = \block_kursfilter\rating_helper::get_cookie_hash()
-    ?? \block_kursfilter\rating_helper::create_cookie_hash();
-
-// Save rating (returns false if already rated).
-$saved = \block_kursfilter\rating_helper::save_rating($courseid, $cookiehash, $stars);
-
-echo json_encode([
-    'success'      => true,
-    'saved'        => $saved,
-    'already_rated' => !$saved,
-]);
+echo json_encode($result);
 exit;

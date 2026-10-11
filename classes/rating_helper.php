@@ -112,6 +112,28 @@ class rating_helper {
     }
 
     /**
+     * Decide and store a rating request: valid stars, public course, then save.
+     *
+     * The cookie is only requested once the request is valid, so rejected requests set no cookie.
+     *
+     * @param int      $courseid   Course ID.
+     * @param int      $stars      Rating 1–5.
+     * @param callable $cookiehash Returns the rater cookie hash of the visitor (creating it if needed).
+     * @return array JSON-ready result: success plus saved/already_rated, or success false plus error.
+     */
+    public static function submit(int $courseid, int $stars, callable $cookiehash): array {
+        if ($stars < 1 || $stars > 5) {
+            return ['success' => false, 'error' => 'Invalid rating'];
+        }
+        if (!course_access::get_public_course($courseid)) {
+            return ['success' => false, 'error' => 'Course not found'];
+        }
+
+        $saved = self::save_rating($courseid, $cookiehash(), $stars);
+        return ['success' => true, 'saved' => $saved, 'already_rated' => !$saved];
+    }
+
+    /**
      * Check if a visitor has already rated a course.
      *
      * @param int    $courseid   Course ID.
