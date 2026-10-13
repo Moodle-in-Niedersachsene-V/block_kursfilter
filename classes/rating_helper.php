@@ -39,13 +39,33 @@ class rating_helper {
     const TABLE = 'block_kursfilter_ratings';
 
     /**
+     * Cookie options: one year lifetime, renewed on every call.
+     *
+     * @return array Options for setcookie().
+     */
+    public static function get_cookie_options(): array {
+        return [
+            'expires'  => time() + YEARSECS,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+    }
+
+    /**
      * Get or create the rater cookie hash for the current visitor.
-     * Sets the cookie in the response if it does not exist yet.
-     * Cookie has no expiry (session=false, expires=0 → permanent).
+     * Sets the cookie in the response (new or renewed) with a lifetime of one year.
      *
      * @return string SHA-256 hash identifying this browser.
      */
     public static function get_or_create_cookie_hash(): string {
+        // One hash and one Set-Cookie header per request (called once per course in search results).
+        static $requesthash = null;
+        if ($requesthash !== null) {
+            return $requesthash;
+        }
+
         // Moodle has no required_param() for cookies; validated to 64 hex chars before use.
         // phpcs:disable moodle.PHP.ForbiddenFunctions
         $cookiename = self::COOKIE_NAME;
@@ -54,28 +74,18 @@ class rating_helper {
         // phpcs:enable moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
         // phpcs:enable moodle.PHP.ForbiddenFunctions
         if ($rawcookie !== '' && preg_match('/^[0-9a-f]{64}$/', $rawcookie)) {
-            return $rawcookie;
+            $hash = $rawcookie;
+        } else {
+            // Generate a new random identifier.
+            $hash = hash('sha256', bin2hex(random_bytes(32)));
         }
-
-        // Generate a new random identifier and store as cookie.
-        $token = bin2hex(random_bytes(32));
-        $hash  = hash('sha256', $token);
 
         // Only set the cookie when headers have not yet been sent (e.g. skip in PHPUnit).
         if (!headers_sent()) {
-            setcookie(
-                self::COOKIE_NAME,
-                $hash,
-                [
-                    'expires' => 0, // Session cookie - survives until browser data cleared.
-                    'path'     => '/',
-                    'secure'   => true,
-                    'httponly' => true,
-                    'samesite' => 'Lax',
-                ]
-            );
+            setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
         }
 
+        $requesthash = $hash;
         return $hash;
     }
 

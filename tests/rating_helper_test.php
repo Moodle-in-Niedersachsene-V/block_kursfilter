@@ -41,6 +41,19 @@ final class rating_helper_test extends advanced_testcase {
     }
 
     /**
+     * Test the rater cookie lives one year instead of ending with the session.
+     *
+     * @covers \block_kursfilter\rating_helper::get_cookie_options
+     */
+    public function test_cookie_options_expire_after_one_year(): void {
+        $before = time();
+        $options = rating_helper::get_cookie_options();
+
+        $this->assertGreaterThanOrEqual($before + YEARSECS, $options['expires']);
+        $this->assertLessThanOrEqual(time() + YEARSECS, $options['expires']);
+    }
+
+    /**
      * Test save_rating stores a new rating successfully.
      *
      * @covers \block_kursfilter\rating_helper::save_rating
