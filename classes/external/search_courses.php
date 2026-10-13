@@ -182,7 +182,7 @@ class search_courses extends external_api {
         $records = $DB->get_records_sql($sql, $args, 0, $effectivelimit);
 
         $courses = [];
-        // Once per request: a new cookie must not be generated and set per course.
+        // Once per request: the call sets/renews the rater cookie, so not once per course.
         $cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
         foreach ($records as $course) {
             $cat = \core_course_category::get($course->category, IGNORE_MISSING);

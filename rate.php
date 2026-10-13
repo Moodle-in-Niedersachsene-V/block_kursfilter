@@ -17,7 +17,7 @@
 /**
  * Public rating endpoint for block_kursfilter.
  *
- * Nimmt eine Sternebewertung entgegen, setzt den Cookie
+ * Nimmt eine Sternebewertung entgegen, setzt bzw. erneuert den Cookie (1 Jahr)
  * und speichert die Bewertung in der Datenbank.
  * Antwortet mit JSON.
  *

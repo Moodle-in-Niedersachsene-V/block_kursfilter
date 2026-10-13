@@ -54,6 +54,53 @@ final class rating_helper_test extends advanced_testcase {
     }
 
     /**
+     * Test the rater cookie keeps its protective flags.
+     *
+     * @covers \block_kursfilter\rating_helper::get_cookie_options
+     */
+    public function test_cookie_options_are_secure(): void {
+        $options = rating_helper::get_cookie_options();
+
+        $this->assertTrue($options['secure']);
+        $this->assertTrue($options['httponly']);
+        $this->assertSame('Lax', $options['samesite']);
+        $this->assertSame('/', $options['path']);
+    }
+
+    /**
+     * Test a valid rater cookie is kept, so the visitor is recognised again.
+     *
+     * @covers \block_kursfilter\rating_helper::get_or_create_cookie_hash
+     */
+    public function test_get_or_create_cookie_hash_keeps_valid_cookie(): void {
+        $hash = hash('sha256', 'existing-visitor');
+        $_COOKIE[rating_helper::COOKIE_NAME] = $hash;
+
+        try {
+            $this->assertSame($hash, rating_helper::get_or_create_cookie_hash());
+        } finally {
+            unset($_COOKIE[rating_helper::COOKIE_NAME]);
+        }
+    }
+
+    /**
+     * Test an invalid rater cookie is replaced by a new random hash.
+     *
+     * @covers \block_kursfilter\rating_helper::get_or_create_cookie_hash
+     */
+    public function test_get_or_create_cookie_hash_replaces_invalid_cookie(): void {
+        $_COOKIE[rating_helper::COOKIE_NAME] = 'not-a-hash';
+
+        try {
+            $hash = rating_helper::get_or_create_cookie_hash();
+        } finally {
+            unset($_COOKIE[rating_helper::COOKIE_NAME]);
+        }
+
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $hash);
+    }
+
+    /**
      * Test save_rating stores a new rating successfully.
      *
      * @covers \block_kursfilter\rating_helper::save_rating

@@ -39,7 +39,7 @@ class rating_helper {
     const TABLE = 'block_kursfilter_ratings';
 
     /**
-     * Cookie options: one year lifetime, renewed on every call.
+     * Cookie options with a lifetime of one year, counted from now.
      *
      * @return array Options for setcookie().
      */
@@ -55,7 +55,8 @@ class rating_helper {
 
     /**
      * Get or create the rater cookie hash for the current visitor.
-     * Sets the cookie in the response (new or renewed) with a lifetime of one year.
+     * Side effect: sends a Set-Cookie header (new or renewed, one year) on every call,
+     * so call it once per request.
      *
      * @return string SHA-256 hash identifying this browser.
      */
