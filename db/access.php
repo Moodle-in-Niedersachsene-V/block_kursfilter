@@ -46,4 +46,13 @@ $capabilities = [
             'manager'        => CAP_ALLOW,
         ],
     ],
+
+    'block/kursfilter:search' => [
+        'captype'      => 'read',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes'   => [
+            'guest' => CAP_ALLOW,
+            'user'  => CAP_ALLOW,
+        ],
+    ],
 ];

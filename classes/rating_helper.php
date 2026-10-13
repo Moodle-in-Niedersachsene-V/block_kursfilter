@@ -17,8 +17,8 @@
 /**
  * Rating helper for block_kursfilter.
  *
- * Verwaltet anonyme Kursbewertungen per Cookie-Hash.
- * Kein Nutzerkonto erforderlich – auch Gaeste koennen bewerten.
+ * Manages anonymous course ratings via cookie hash.
+ * No user account required: visitors without an account can rate as well.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -39,67 +39,53 @@ class rating_helper {
     const TABLE = 'block_kursfilter_ratings';
 
     /**
-     * Get or create the rater cookie hash for the current visitor.
-     * Sets the cookie in the response if it does not exist yet.
-     * Cookie has no expiry (session=false, expires=0 → permanent).
+     * Rater cookie of the current visitor, if the browser sent a valid one.
+     *
+     * @return string|null SHA-256 hash identifying this browser, or null.
+     */
+    public static function get_cookie_hash(): ?string {
+        // Moodle offers no *_param() for cookies; only 64 hex characters pass.
+        // phpcs:ignore moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar -- Semgrep marker syntax.
+        $raw = $_COOKIE[self::COOKIE_NAME] ?? ''; // nosemgrep: moodle-superglobal-direkt
+        return is_string($raw) && preg_match('/^[0-9a-f]{64}$/', $raw) ? $raw : null;
+    }
+
+    /**
+     * Give the current visitor a new rater cookie.
+     *
+     * It is a session cookie: it ends with the browser session, so one rating per course is only
+     * enforced within a session (see TODO https://github.com/Moodle-in-Niedersachsene-V/block_kursfilter/issues/2).
      *
      * @return string SHA-256 hash identifying this browser.
      */
-    public static function get_or_create_cookie_hash(): string {
-        // Moodle has no required_param() for cookies; validated to 64 hex chars before use.
-        // phpcs:disable moodle.PHP.ForbiddenFunctions
-        $cookiename = self::COOKIE_NAME;
-        // phpcs:disable moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
-        $rawcookie = isset($_COOKIE[$cookiename]) ? (string)$_COOKIE[$cookiename] : ''; // nosemgrep: moodle-superglobal-direkt
-        // phpcs:enable moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
-        // phpcs:enable moodle.PHP.ForbiddenFunctions
-        if ($rawcookie !== '' && preg_match('/^[0-9a-f]{64}$/', $rawcookie)) {
-            return $rawcookie;
-        }
-
-        // Generate a new random identifier and store as cookie.
-        $token = bin2hex(random_bytes(32));
-        $hash  = hash('sha256', $token);
-
-        // Only set the cookie when headers have not yet been sent (e.g. skip in PHPUnit).
-        if (!headers_sent()) {
-            setcookie(
-                self::COOKIE_NAME,
-                $hash,
-                [
-                    'expires' => 0, // Session cookie - survives until browser data cleared.
-                    'path'     => '/',
-                    'secure'   => true,
-                    'httponly' => true,
-                    'samesite' => 'Lax',
-                ]
-            );
-        }
-
+    public static function create_cookie_hash(): string {
+        $hash = hash('sha256', bin2hex(random_bytes(32)));
+        setcookie(self::COOKIE_NAME, $hash, [
+            'expires'  => 0,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ]);
         return $hash;
     }
 
     /**
      * Save a rating for a course.
      * If the visitor already rated this course, the rating is not changed
-     * (one rating per cookie per course).
+     * (one rating per cookie per course; the unique index decides, so double clicks are safe).
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash SHA-256 hash from get_or_create_cookie_hash().
+     * @param string $cookiehash SHA-256 hash from the rater cookie.
      * @param int    $stars      Rating 1–5.
      * @return bool True if saved, false if already rated.
+     * @throws \invalid_parameter_exception If the stars are not 1 to 5.
      */
     public static function save_rating(int $courseid, string $cookiehash, int $stars): bool {
         global $DB;
 
-        // Validate stars range.
         if ($stars < 1 || $stars > 5) {
-            return false;
-        }
-
-        // Check if already rated.
-        if ($DB->record_exists(self::TABLE, ['courseid' => $courseid, 'cookiehash' => $cookiehash])) {
-            return false;
+            throw new \invalid_parameter_exception('Stars must be between 1 and 5.');
         }
 
         $record = new \stdClass();
@@ -108,15 +94,58 @@ class rating_helper {
         $record->stars = $stars;
         $record->timecreated = time();
 
-        $DB->insert_record(self::TABLE, $record);
+        try {
+            $record->id = $DB->insert_record(self::TABLE, $record);
+        } catch (\dml_write_exception $e) {
+            if (self::get_existing_rating($courseid, $cookiehash) !== null) {
+                return false;
+            }
+            throw $e;
+        }
+
+        event\course_rated::create([
+            'context'  => \context_course::instance($courseid),
+            'objectid' => $record->id,
+            'courseid' => $courseid,
+            'other'    => ['stars' => $stars],
+        ])->trigger();
+
         return true;
+    }
+
+    /**
+     * Decide and store a rating request: valid stars, public course, then save.
+     *
+     * The cookie is only requested once the request is valid, so rejected requests set no cookie.
+     *
+     * @param int      $courseid   Course ID.
+     * @param int      $stars      Rating 1–5.
+     * @param callable $cookiehash Returns the rater cookie hash of the visitor (creating it if needed).
+     * @return array JSON-ready result: success plus saved/already_rated and the stored stars, or success false plus error.
+     */
+    public static function submit(int $courseid, int $stars, callable $cookiehash): array {
+        if ($stars < 1 || $stars > 5) {
+            return ['success' => false, 'error' => 'Invalid rating'];
+        }
+        if (!course_access::get_public_course($courseid)) {
+            return ['success' => false, 'error' => 'Course not found'];
+        }
+
+        $hash = $cookiehash();
+        $saved = self::save_rating($courseid, $hash, $stars);
+        return [
+            'success' => true,
+            'saved' => $saved,
+            'already_rated' => !$saved,
+            'stars' => $saved ? $stars : (self::get_existing_rating($courseid, $hash) ?? $stars),
+        ];
     }
 
     /**
      * Check if a visitor has already rated a course.
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash Visitor cookie hash.
+     * @param string $cookiehash Rater cookie hash.
      * @return int|null The star rating if already rated, null otherwise.
      */
     public static function get_existing_rating(int $courseid, string $cookiehash): ?int {

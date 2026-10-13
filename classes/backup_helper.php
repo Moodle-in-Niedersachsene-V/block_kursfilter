@@ -17,8 +17,8 @@
 /**
  * Backup helper for block_kursfilter.
  *
- * Erzeugt eine Moodle-Kurssicherung (.mbz) und speichert sie
- * im Moodle-Dateibereich. Immer nur eine Datei pro Kurs vorhanden.
+ * Creates a Moodle course backup (.mbz) and stores it in the
+ * Moodle file area. Only one file per course exists at any time.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -44,101 +44,89 @@ class backup_helper {
 
     /**
      * Create a backup for the given course and store it in the Moodle file area.
-     * Any existing backup for this course is deleted first (one file per course).
+     * The previous backup of the course is replaced only after the new one exists (one file per course).
      *
      * @param int $courseid Course ID to back up.
-     * @param int $adminid  User ID to run the backup as (must have backup capability).
-     * @return stored_file|null The stored backup file, or null on failure.
+     * @param int $userid   User the backup runs as (needs the backup capability).
+     * @return \stored_file The stored backup file.
+     * @throws \moodle_exception If the course is missing or the backup fails.
      */
-    public static function backup_course(int $courseid, int $adminid): ?\stored_file {
-        global $CFG;
+    public static function backup_course(int $courseid, int $userid): \stored_file {
+        get_course($courseid);
 
-        // Validate course exists.
-        $course = get_course($courseid);
-        if (!$course) {
-            return null;
+        $bc = new \backup_controller(
+            \backup::TYPE_1COURSE,
+            $courseid,
+            \backup::FORMAT_MOODLE,
+            \backup::INTERACTIVE_NO,
+            \backup::MODE_GENERAL,
+            $userid
+        );
+        try {
+            // No user data and no logs: the backup is public. A locked setting that already
+            // holds 0 is fine; a locked setting holding 1 makes set_value() throw (fail loudly).
+            foreach (['users', 'role_assignments', 'logs', 'grade_histories'] as $name) {
+                $setting = $bc->get_plan()->get_setting($name);
+                if ((int)$setting->get_value() !== 0) {
+                    $setting->set_value(0);
+                }
+            }
+            $bc->execute_plan();
+            $backupfile = $bc->get_results()['backup_destination'] ?? null;
+        } finally {
+            $bc->destroy();
+        }
+        if (!$backupfile) {
+            throw new \moodle_exception('error_backup_not_created', 'block_kursfilter', '', $courseid);
         }
 
-        // Context for file storage: system context, itemid = courseid.
         $context = \context_system::instance();
-        $itemid = $courseid;
-        $filename = 'backup_course_' . $courseid . '_' . date('Ymd') . '.mbz';
-
-        // Delete existing backup for this course (one file per course rule).
-        self::delete_existing_backup($context, $itemid);
-
-        // Create backup in a temp directory.
-        $tempdir = make_temp_directory('backup_kursfilter_' . $courseid);
-
+        // One writer per course: a parallel run must not delete the file the other one just stored.
+        $lock = \core\lock\lock_config::get_lock_factory('block_kursfilter_backup')
+            ->get_lock('course' . $courseid, MINSECS);
+        if (!$lock) {
+            $backupfile->delete();
+            throw new \moodle_exception('error_backup_not_created', 'block_kursfilter', '', $courseid);
+        }
         try {
-            $bc = new \backup_controller(
-                \backup::TYPE_1COURSE,
-                $courseid,
-                \backup::FORMAT_MOODLE,
-                \backup::INTERACTIVE_NO,
-                \backup::MODE_GENERAL,
-                $adminid
-            );
-
-            // Disable user data and logs for smaller, faster, privacy-safe backups.
-            $bc->get_plan()->get_setting('users')->set_value(0);
-            $bc->get_plan()->get_setting('role_assignments')->set_value(0);
-            $bc->get_plan()->get_setting('logs')->set_value(0);
-            $bc->get_plan()->get_setting('grade_histories')->set_value(0);
-
-            $bc->execute_plan();
-
-            $results = $bc->get_results();
-            $backupfile = $results['backup_destination'];
-            $bc->destroy();
-
-            if (!$backupfile) {
-                return null;
-            }
-
-            // Store the backup file in the Moodle file area.
-            $fs = get_file_storage();
-            $fileinfo = [
+            // The new file gets its final, unique name directly: the old backup stays available until it is
+            // saved, and there is no rename step that could fail after the old one is gone.
+            $storedfile = get_file_storage()->create_file_from_storedfile([
                 'contextid' => $context->id,
                 'component' => self::COMPONENT,
                 'filearea'  => self::FILEAREA,
-                'itemid'    => $itemid,
+                'itemid'    => $courseid,
                 'filepath'  => '/',
-                'filename'  => $filename,
-            ];
-
-            // Store from the backup temp file.
-            $storedfile = $fs->create_file_from_storedfile($fileinfo, $backupfile);
-
-            // Clean up the temp backup.
+                'filename'  => 'backup_course_' . $courseid . '_' . date('Ymd') . '_' . uniqid() . '.mbz',
+            ], $backupfile);
+            foreach (self::get_area_files($courseid) as $file) {
+                if ($file->get_id() != $storedfile->get_id()) {
+                    $file->delete();
+                }
+            }
+        } finally {
             $backupfile->delete();
-
-            return $storedfile;
-        } catch (\Exception $e) {
-            debugging('block_kursfilter backup_helper: ' . $e->getMessage(), DEBUG_DEVELOPER);
-            return null;
+            $lock->release();
         }
+
+        return $storedfile;
     }
 
     /**
-     * Delete any existing backup file for a given course.
+     * All stored backup files of a course, newest first.
      *
-     * @param \context $context System context.
-     * @param int      $itemid  Course ID used as itemid.
+     * @param int $courseid Course ID used as itemid.
+     * @return \stored_file[]
      */
-    public static function delete_existing_backup(\context $context, int $itemid): void {
-        $fs = get_file_storage();
-        $files = $fs->get_area_files(
-            $context->id,
+    private static function get_area_files(int $courseid): array {
+        return get_file_storage()->get_area_files(
+            \context_system::instance()->id,
             self::COMPONENT,
             self::FILEAREA,
-            $itemid,
+            $courseid,
             'timemodified DESC',
             false
         );
-        foreach ($files as $file) {
-            $file->delete();
-        }
     }
 
     /**
@@ -148,16 +136,7 @@ class backup_helper {
      * @return \stored_file|null
      */
     public static function get_backup_file(int $courseid): ?\stored_file {
-        $context = \context_system::instance();
-        $fs = get_file_storage();
-        $files = $fs->get_area_files(
-            $context->id,
-            self::COMPONENT,
-            self::FILEAREA,
-            $courseid,
-            'timemodified DESC',
-            false
-        );
+        $files = self::get_area_files($courseid);
         return !empty($files) ? reset($files) : null;
     }
 

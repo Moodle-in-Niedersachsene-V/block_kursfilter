@@ -17,11 +17,11 @@
 /**
  * Public backup download endpoint for block_kursfilter.
  *
- * Erlaubt auch nicht angemeldeten Nutzern (Gäste) den Download
- * einer vorgefertigten Kurssicherung (.mbz).
- * Die Datei wird täglich durch den Scheduled Task erzeugt.
+ * Allows visitors without an account to download
+ * a prebuilt course backup (.mbz).
+ * The file is generated daily by the scheduled task.
  *
- * Aufruf: /blocks/kursfilter/backup.php?courseid=42
+ * Usage: /blocks/kursfilter/backup.php?courseid=42
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -29,26 +29,23 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// Intentional public endpoint: serves pre-generated .mbz backup downloads to guests.
-// No user data is exposed. Access is limited to courses with visible=1 (checked below).
-// phpcs:disable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+// phpcs:ignore moodle.Files.RequireLogin.Missing,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar -- Public endpoint: backups of public courses are downloadable without an account; access is limited to public courses below. The Semgrep marker has a fixed syntax.
 require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
-// phpcs:enable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/backup_helper.php');
 
-// Parameter einlesen und validieren.
+// Read and validate the parameters.
 $courseid = required_param('courseid', PARAM_INT);
 
-// Kurs muss sichtbar und vorhanden sein.
-$course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], '*', IGNORE_MISSING);
-if (!$course || $course->id === SITEID) {
+// The course must exist and be visible.
+$course = \block_kursfilter\course_access::get_public_course($courseid);
+if (!$course) {
     send_file_not_found();
 }
 
-// Backup-Datei aus dem Moodle-Dateibereich laden.
+// Load the backup file from the Moodle file area.
 $backupfile = \block_kursfilter\backup_helper::get_backup_file($courseid);
 if (!$backupfile) {
-    // Noch keine Sicherung vorhanden – Hinweis ausgeben.
+    // No backup available yet: show a notice.
     $PAGE->set_context(context_system::instance());
     $PAGE->set_url(new moodle_url('/blocks/kursfilter/backup.php', ['courseid' => $courseid]));
     echo $OUTPUT->header();
@@ -60,13 +57,13 @@ if (!$backupfile) {
     exit;
 }
 
-// Datei als Download ausliefern.
-// send_stored_file() setzt alle nötigen Header und streamt die Datei.
-// forcedownload = true, damit Browser die Datei speichert statt öffnet.
+// Serve the file as a download.
+// send_stored_file() sends all required headers and streams the file.
+// forcedownload = true so that browsers save the file instead of opening it.
 send_stored_file(
     $backupfile,
-    0, // Lifetime: kein Browser-Caching.
-    0, // Filter: keine Nachbearbeitung.
+    0, // Lifetime: no browser caching.
+    0, // Filter: no post-processing.
     true, // Force download.
     [
         'filename'  => clean_filename($course->shortname . '_backup.mbz'),
