@@ -17,12 +17,12 @@
 /**
  * Public rating endpoint for block_kursfilter.
  *
- * Nimmt eine Sternebewertung entgegen, setzt bzw. erneuert den Cookie (1 Jahr)
- * und speichert die Bewertung in der Datenbank.
- * Antwortet mit JSON.
+ * Accepts a star rating, sets or renews the cookie (one year)
+ * and stores the rating in the database.
+ * Responds with JSON.
  *
- * Aufruf: POST /blocks/kursfilter/rate.php
- *         Body: courseid=42&stars=4&sesskey=...
+ * Usage: POST /blocks/kursfilter/rate.php
+ *        Body: courseid=42&stars=4&sesskey=...
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -30,23 +30,21 @@
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-// Intentional public endpoint: anonymous ratings; CSRF via confirm_sesskey(); POST + PARAM_INT only.
 define('AJAX_SCRIPT', true);
-// phpcs:disable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
+// phpcs:ignore moodle.Files.RequireLogin.Missing,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar -- Public endpoint: visitors without an account may rate (sesskey-protected). The Semgrep marker has a fixed syntax.
 require_once(__DIR__ . '/../../config.php'); // nosemgrep: moodle-einstiegsdatei-ohne-login
-// phpcs:enable moodle.Files.RequireLogin,moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar
 require_once($CFG->dirroot . '/blocks/kursfilter/classes/rating_helper.php');
 
 header('Content-Type: application/json; charset=utf-8');
 
 // Only POST allowed.
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+if (!data_submitted()) {
     echo json_encode(['success' => false, 'error' => 'Method not allowed']);
     exit;
 }
 
 // Validate sesskey to prevent CSRF from external sites.
-// Guests without a session get a temporary sesskey from Moodle.
+// Visitors without an account get a sesskey from their Moodle session as well.
 if (!confirm_sesskey()) {
     echo json_encode(['success' => false, 'error' => 'Invalid sesskey']);
     exit;
@@ -55,28 +53,12 @@ if (!confirm_sesskey()) {
 $courseid = required_param('courseid', PARAM_INT);
 $stars = required_param('stars', PARAM_INT);
 
-// Validate stars range.
-if ($stars < 1 || $stars > 5) {
-    echo json_encode(['success' => false, 'error' => 'Invalid rating']);
-    exit;
-}
+$result = \block_kursfilter\rating_helper::submit(
+    $courseid,
+    $stars,
+    fn() => \block_kursfilter\rating_helper::renew_cookie_hash()
+        ?? \block_kursfilter\rating_helper::create_cookie_hash()
+);
 
-// Course must exist and be visible.
-$course = $DB->get_record('course', ['id' => $courseid, 'visible' => 1], 'id', IGNORE_MISSING);
-if (!$course || $course->id === SITEID) {
-    echo json_encode(['success' => false, 'error' => 'Course not found']);
-    exit;
-}
-
-// Get or create visitor cookie hash.
-$cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
-
-// Save rating (returns false if already rated).
-$saved = \block_kursfilter\rating_helper::save_rating($courseid, $cookiehash, $stars);
-
-echo json_encode([
-    'success'      => true,
-    'saved'        => $saved,
-    'already_rated' => !$saved,
-]);
+echo json_encode($result);
 exit;

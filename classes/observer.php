@@ -14,40 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Event observer for block_kursfilter.
- *
- * @package   block_kursfilter
- * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace block_kursfilter;
 
 /**
- * Handles Moodle events relevant to block_kursfilter.
+ * Releases pool accounts when their session ends.
+ *
+ * @package   block_kursfilter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class observer {
     /**
-     * Frees a pool user account when it logs out.
+     * Free the pool account of a user who logged out; other users are ignored.
      *
-     * Called on \core\event\user_loggedout. If the logging-out user is one of
-     * the kursfilter pool accounts, it is marked as free so another visitor
-     * can reuse it.
-     *
-     * @param \core\event\user_loggedout $event The logout event.
+     * @param \core\event\user_loggedout $event Logout event.
      */
     public static function user_loggedout(\core\event\user_loggedout $event): void {
-        $userid = (int)$event->objectid;
-        // Only act on pool users (username prefix check).
-        $user = \core_user::get_user($userid, 'id, username', IGNORE_MISSING);
-        if (!$user) {
-            return;
+        global $DB;
+
+        $username = $DB->get_field('user', 'username', ['id' => $event->userid]);
+        if ($username !== false && in_array($username, pool_manager::get_pool_usernames(), true)) {
+            pool_manager::mark_free($username);
         }
-        if (strpos($user->username, pool_manager::USERNAME_PREFIX) !== 0) {
-            return;
-        }
-        pool_manager::mark_free($user->username);
     }
 }

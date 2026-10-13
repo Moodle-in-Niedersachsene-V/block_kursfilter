@@ -24,6 +24,34 @@
  */
 
 /**
+ * Move the settings that got English names to the new names (idempotent).
+ */
+function xmldb_block_kursfilter_rename_settings(): void {
+    $renamed = [
+        'schulformen' => 'schooltypes',
+        'faecher' => 'subjects',
+        'niveaustufen' => 'levels',
+        'backup_adminid' => 'backup_userid',
+    ];
+    foreach ($renamed as $old => $new) {
+        $value = get_config('block_kursfilter', $old);
+        if ($value !== false) {
+            set_config($new, $value, 'block_kursfilter');
+            unset_config($old, 'block_kursfilter');
+        }
+    }
+}
+
+/**
+ * Remove the settings of the former own AI backend (idempotent).
+ */
+function xmldb_block_kursfilter_remove_ai_settings(): void {
+    foreach (['ai_backend', 'ai_claude_apikey', 'ai_claude_model', 'ai_ollama_url', 'ai_ollama_model'] as $name) {
+        unset_config($name, 'block_kursfilter');
+    }
+}
+
+/**
  * Upgrade the block_kursfilter plugin.
  *
  * @param int $oldversion Previous plugin version.
@@ -34,8 +62,14 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
 
     $dbman = $DB->get_manager();
 
+    if ($oldversion < 2026100600) {
+        // Pool accounts get a role without access to participants, user identity and grades.
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
+        upgrade_block_savepoint(true, 2026100600, 'kursfilter');
+    }
+
     if ($oldversion < 2026100801) {
-        // Tabelle fuer ausstehende KI-Tag-Vorschlaege anlegen.
+        // Table for pending AI tag suggestions.
         $table = new \xmldb_table('block_kursfilter_tag_pending');
 
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -56,78 +90,31 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026100801, 'kursfilter');
     }
 
-    if ($oldversion < 2026101001) {
-        // Einstellungsschluessel umbenennen:
-        // schulformen  → schooltypes
-        // faecher      → subjects
-        // niveaustufen → levels
-        // backup_adminid => backup_userid.
-        $renames = [
-            'schulformen'  => 'schooltypes',
-            'faecher'      => 'subjects',
-            'niveaustufen' => 'levels',
-            'backup_adminid' => 'backup_userid',
-        ];
-        foreach ($renames as $old => $new) {
-            $value = get_config('block_kursfilter', $old);
-            if ($value !== false) {
-                set_config($new, $value, 'block_kursfilter');
-                unset_config($old, 'block_kursfilter');
-            }
-        }
+    if ($oldversion < 2026100901) {
+        // Settings got English names (coding standard N3); values move to the new names.
+        xmldb_block_kursfilter_rename_settings();
+        upgrade_block_savepoint(true, 2026100901, 'kursfilter');
+    }
 
+    if ($oldversion < 2026101000) {
+        // AI tagging uses Moodle's AI subsystem; the own backend settings, including the API key, go away.
+        xmldb_block_kursfilter_remove_ai_settings();
+        upgrade_block_savepoint(true, 2026101000, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101001) {
+        // Installations from the 1.4.0 line (2026100811) skipped the step 2026100600: repeat the idempotent migration.
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
         upgrade_block_savepoint(true, 2026101001, 'kursfilter');
     }
 
-    if ($oldversion < 2026101016) {
-        // Assign the kursfilter_pooluser restriction role to all existing pool users
-        // so they cannot edit their own profile or change their password.
-        // New pool users created after this build get the role in pool_manager::create_pool_users().
-        $prefix = \block_kursfilter\pool_manager::USERNAME_PREFIX;
-        $roleid = \block_kursfilter\pool_manager::ensure_pool_role();
-        $systemcontext = \context_system::instance();
-
-        $poolusers = $DB->get_records_select(
-            'user',
-            $DB->sql_like('username', ':prefix') . ' AND deleted = 0',
-            ['prefix' => $DB->sql_like_escape($prefix) . '%'],
-            '',
-            'id'
-        );
-
-        foreach ($poolusers as $pooluser) {
-            // role_assign() is idempotent — safe to call even if already assigned.
-            role_assign($roleid, $pooluser->id, $systemcontext->id);
-        }
-
-        upgrade_block_savepoint(true, 2026101016, 'kursfilter');
-    }
-
-    if ($oldversion < 2026101017) {
-        // Extend the kursfilter_pooluser role with additional prohibitions:
-        // messaging, own-files management and message-profile editing.
-        // ensure_pool_role() is idempotent; the new capabilities are added
-        // via assign_capability() which overwrites any existing permission value.
-        $roleid        = \block_kursfilter\pool_manager::ensure_pool_role();
-        $systemcontext = \context_system::instance();
-
-        $newcaps = [
-            'moodle/user:editownmessageprofile',
-            'moodle/user:manageownfiles',
-            'moodle/site:sendmessage',
-        ];
-        foreach ($newcaps as $cap) {
-            assign_capability($cap, CAP_PROHIBIT, $roleid, $systemcontext->id, true);
-        }
-
-        upgrade_block_savepoint(true, 2026101017, 'kursfilter');
-    }
-
-    if ($oldversion < 2026101018) {
-        // No DB changes — block_kursfilter_after_config() in lib.php now handles
-        // session-level messaging suppression and URL redirect for pool users.
-        // This savepoint records the build that introduced that behaviour.
-        upgrade_block_savepoint(true, 2026101018, 'kursfilter');
+    if ($oldversion < 2026101100) {
+        // The 1.5.0 line on main (up to 2026101006) passed 2026101000/2026101001 with other steps under the same numbers.
+        // All three migrations are idempotent and run again.
+        xmldb_block_kursfilter_rename_settings();
+        xmldb_block_kursfilter_remove_ai_settings();
+        \block_kursfilter\pool_manager::migrate_to_pool_role();
+        upgrade_block_savepoint(true, 2026101100, 'kursfilter');
     }
 
     return true;

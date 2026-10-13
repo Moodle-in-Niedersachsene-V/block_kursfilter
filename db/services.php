@@ -27,11 +27,11 @@ defined('MOODLE_INTERNAL') || die();
 
 $functions = [
     'block_kursfilter_search_courses' => [
-        'classname'      => 'block_kursfilter\external\search_courses',
-        'methodname'     => 'execute',
-        'description'    => 'Search courses by filter criteria',
-        'type'           => 'read',
-        'ajax'           => true,
-        'loginrequired'  => false,
+        'classname'     => \block_kursfilter\external\search_courses::class,
+        'description'   => 'Search public courses by category, course tags and search term.',
+        'type'          => 'read',
+        'ajax'          => true,
+        'loginrequired' => true,
+        'capabilities'  => 'block/kursfilter:search',
     ],
 ];

@@ -14,29 +14,24 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * Privacy provider for block_kursfilter.
- *
- * Dieses Plugin speichert keine personenbezogenen Daten.
- * Bewertungen werden nur per anonymem Cookie-Hash gespeichert.
- * Pool-Nutzer sind keine echten Personen.
- *
- * @package   block_kursfilter
- * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace block_kursfilter\privacy;
 
 /**
- * Privacy provider: no personal data stored.
+ * Privacy provider: ratings carry only a random browser cookie, no link to a user account.
+ *
+ * Pool accounts are Moodle accounts of the plugin, not of persons; their data is core data.
+ * Changes to the rating model (TODO https://github.com/Moodle-in-Niedersachsene-V/block_kursfilter/issues/2)
+ * must revisit this provider.
+ *
+ * @package   block_kursfilter
+ * @copyright 2026 Moodle in Niedersachsen e. V.
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements \core_privacy\local\metadata\null_provider {
     /**
-     * Returns the reason why this plugin stores no personal data.
+     * Language string key explaining why no personal data of users is stored.
      *
-     * @return string Language string key.
+     * @return string
      */
     public static function get_reason(): string {
         return 'privacy:metadata';
