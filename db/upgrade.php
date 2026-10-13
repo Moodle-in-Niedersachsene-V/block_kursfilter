@@ -79,5 +79,56 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101001, 'kursfilter');
     }
 
+    if ($oldversion < 2026101016) {
+        // Assign the kursfilter_pooluser restriction role to all existing pool users
+        // so they cannot edit their own profile or change their password.
+        // New pool users created after this build get the role in pool_manager::create_pool_users().
+        $prefix = \block_kursfilter\pool_manager::USERNAME_PREFIX;
+        $roleid = \block_kursfilter\pool_manager::ensure_pool_role();
+        $systemcontext = \context_system::instance();
+
+        $poolusers = $DB->get_records_select(
+            'user',
+            $DB->sql_like('username', ':prefix') . ' AND deleted = 0',
+            ['prefix' => $DB->sql_like_escape($prefix) . '%'],
+            '',
+            'id'
+        );
+
+        foreach ($poolusers as $pooluser) {
+            // role_assign() is idempotent — safe to call even if already assigned.
+            role_assign($roleid, $pooluser->id, $systemcontext->id);
+        }
+
+        upgrade_block_savepoint(true, 2026101016, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101017) {
+        // Extend the kursfilter_pooluser role with additional prohibitions:
+        // messaging, own-files management and message-profile editing.
+        // ensure_pool_role() is idempotent; the new capabilities are added
+        // via assign_capability() which overwrites any existing permission value.
+        $roleid        = \block_kursfilter\pool_manager::ensure_pool_role();
+        $systemcontext = \context_system::instance();
+
+        $newcaps = [
+            'moodle/user:editownmessageprofile',
+            'moodle/user:manageownfiles',
+            'moodle/site:sendmessage',
+        ];
+        foreach ($newcaps as $cap) {
+            assign_capability($cap, CAP_PROHIBIT, $roleid, $systemcontext->id, true);
+        }
+
+        upgrade_block_savepoint(true, 2026101017, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101018) {
+        // No DB changes — block_kursfilter_after_config() in lib.php now handles
+        // session-level messaging suppression and URL redirect for pool users.
+        // This savepoint records the build that introduced that behaviour.
+        upgrade_block_savepoint(true, 2026101018, 'kursfilter');
+    }
+
     return true;
 }

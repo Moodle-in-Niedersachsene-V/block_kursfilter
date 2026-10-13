@@ -44,6 +44,9 @@ class pool_manager {
     /** Role shortname for course access. */
     const ROLE_SHORTNAME = 'teacher';
 
+    /** Shortname of the system-level role that restricts pool-user capabilities. */
+    const RESTRICT_ROLE_SHORTNAME = 'kursfilter_pooluser';
+
     /** Cache key for tracking active sessions per pool user. */
     const CACHE_PREFIX = 'pool_active_';
 
@@ -104,10 +107,73 @@ class pool_manager {
             $user->timemodified = time();
             $user->description = 'Automatisch angelegter Gastnutzer fuer den Kursfilter-Block.';
 
-            user_create_user($user, false, false);
+            $newuserid = user_create_user($user, false, false);
+            self::assign_restrict_role((int)$newuserid);
             $created++;
         }
         return $created;
+    }
+
+    /**
+     * Ensure the kursfilter_pooluser system role exists and return its ID.
+     *
+     * The role is created once with prohibited capabilities that prevent pool
+     * users from accessing their profile, preferences, files or messaging:
+     *   - moodle/user:editownprofile
+     *   - moodle/user:changeownpassword
+     *   - moodle/user:editownmessageprofile
+     *   - moodle/user:manageownfiles
+     *   - moodle/site:sendmessage
+     *
+     * Subsequent calls are idempotent: if the role already exists it is
+     * returned unchanged.
+     *
+     * @return int Role ID.
+     */
+    public static function ensure_pool_role(): int {
+        global $DB;
+
+        $role = $DB->get_record('role', ['shortname' => self::RESTRICT_ROLE_SHORTNAME]);
+        if ($role) {
+            return (int)$role->id;
+        }
+
+        // Create the role at system context.
+        $roleid = create_role(
+            get_string('poolrole_name', 'block_kursfilter'),
+            self::RESTRICT_ROLE_SHORTNAME,
+            get_string('poolrole_description', 'block_kursfilter'),
+            '' // No archetype — this is a restriction role, not a base role.
+        );
+
+        $systemcontext = \context_system::instance();
+
+        // Prohibit all profile, preferences, files and messaging access for pool users.
+        $prohibit = [
+            'moodle/user:editownprofile',
+            'moodle/user:changeownpassword',
+            'moodle/user:editownmessageprofile',
+            'moodle/user:manageownfiles',
+            'moodle/site:sendmessage',
+        ];
+        foreach ($prohibit as $cap) {
+            assign_capability($cap, CAP_PROHIBIT, $roleid, $systemcontext->id, true);
+        }
+
+        return (int)$roleid;
+    }
+
+    /**
+     * Assign the kursfilter_pooluser restriction role to a user at system context.
+     *
+     * Idempotent: calling it multiple times for the same user is safe.
+     *
+     * @param int $userid Moodle user ID.
+     */
+    public static function assign_restrict_role(int $userid): void {
+        $roleid       = self::ensure_pool_role();
+        $systemcontext = \context_system::instance();
+        role_assign($roleid, $userid, $systemcontext->id);
     }
 
     /**
@@ -232,6 +298,21 @@ class pool_manager {
     public static function mark_free(string $username): void {
         $cache = \cache::make('block_kursfilter', 'poolsessions');
         $cache->delete(self::CACHE_PREFIX . $username);
+    }
+
+    /**
+     * Return true when the currently logged-in user is a pool user.
+     *
+     * Checks only the username prefix — no DB query needed.
+     *
+     * @return bool
+     */
+    public static function is_pool_user(): bool {
+        global $USER;
+        if (empty($USER->username)) {
+            return false;
+        }
+        return strpos($USER->username, self::USERNAME_PREFIX) === 0;
     }
 
     /**
