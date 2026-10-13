@@ -38,14 +38,17 @@ final class request_test extends \advanced_testcase {
 
     protected function setUp(): void {
         global $DB;
+        // Skip early, before parent::setUp() sets up the DB transaction wrapper.
+        // This avoids PHPUnit 11 compatibility issues when getName() is called
+        // inside advanced_testcase::setUp() on a test that will be skipped anyway.
+        $url = getenv('KURSFILTER_WEB_URL');
+        if (!$url) {
+            $this->markTestSkipped('KURSFILTER_WEB_URL is not set.');
+        }
         parent::setUp();
         // The web server only sees test data once it is committed: end the test transaction.
         if ($DB->is_transaction_started()) {
             $DB->force_transaction_rollback();
-        }
-        $url = getenv('KURSFILTER_WEB_URL');
-        if (!$url) {
-            $this->markTestSkipped('KURSFILTER_WEB_URL is not set.');
         }
         $this->baseurl = rtrim($url, '/');
         $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
