@@ -182,6 +182,8 @@ class search_courses extends external_api {
         $records = $DB->get_records_sql($sql, $args, 0, $effectivelimit);
 
         $courses = [];
+        // Once per request: a new cookie must not be generated and set per course.
+        $cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
         foreach ($records as $course) {
             $cat = \core_course_category::get($course->category, IGNORE_MISSING);
             $catname = $cat ? $cat->get_nested_name(false) : '';
@@ -208,7 +210,6 @@ class search_courses extends external_api {
 
             // Rating-Daten.
             $ratingdata = \block_kursfilter\rating_helper::get_course_rating($course->id);
-            $cookiehash = \block_kursfilter\rating_helper::get_or_create_cookie_hash();
             $existingrating = \block_kursfilter\rating_helper::get_existing_rating(
                 $course->id,
                 $cookiehash

@@ -60,12 +60,6 @@ class rating_helper {
      * @return string SHA-256 hash identifying this browser.
      */
     public static function get_or_create_cookie_hash(): string {
-        // One hash and one Set-Cookie header per request (called once per course in search results).
-        static $requesthash = null;
-        if ($requesthash !== null) {
-            return $requesthash;
-        }
-
         // Moodle has no required_param() for cookies; validated to 64 hex chars before use.
         // phpcs:disable moodle.PHP.ForbiddenFunctions
         $cookiename = self::COOKIE_NAME;
@@ -85,7 +79,6 @@ class rating_helper {
             setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
         }
 
-        $requesthash = $hash;
         return $hash;
     }
 
