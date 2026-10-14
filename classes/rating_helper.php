@@ -51,22 +51,43 @@ class rating_helper {
     }
 
     /**
-     * Give the current visitor a new rater cookie.
+     * Cookie options with a lifetime of one year, counted from now.
      *
-     * It is a session cookie: it ends with the browser session, so one rating per course is only
-     * enforced within a session (see TODO https://github.com/Moodle-in-Niedersachsene-V/block_kursfilter/issues/2).
+     * @return array Options for setcookie().
+     */
+    public static function get_cookie_options(): array {
+        return [
+            'expires'  => time() + YEARSECS,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+    }
+
+    /**
+     * Give the current visitor a new rater cookie (valid one year).
      *
      * @return string SHA-256 hash identifying this browser.
      */
     public static function create_cookie_hash(): string {
         $hash = hash('sha256', bin2hex(random_bytes(32)));
-        setcookie(self::COOKIE_NAME, $hash, [
-            'expires'  => 0,
-            'path'     => '/',
-            'secure'   => true,
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
+        setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
+        return $hash;
+    }
+
+    /**
+     * Extend the rater cookie of a returning visitor by one year, so the rating stays recognised.
+     *
+     * Call it once per request. Visitors without a valid cookie get none.
+     *
+     * @return string|null The visitor's hash, or null without a valid cookie.
+     */
+    public static function renew_cookie_hash(): ?string {
+        $hash = self::get_cookie_hash();
+        if ($hash !== null && !headers_sent()) {
+            setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
+        }
         return $hash;
     }
 

@@ -17,7 +17,7 @@
 /**
  * Public rating endpoint for block_kursfilter.
  *
- * Accepts a star rating, sets the cookie
+ * Accepts a star rating, sets or renews the cookie (one year)
  * and stores the rating in the database.
  * Responds with JSON.
  *
@@ -56,7 +56,7 @@ $stars = required_param('stars', PARAM_INT);
 $result = \block_kursfilter\rating_helper::submit(
     $courseid,
     $stars,
-    fn() => \block_kursfilter\rating_helper::get_cookie_hash()
+    fn() => \block_kursfilter\rating_helper::renew_cookie_hash()
         ?? \block_kursfilter\rating_helper::create_cookie_hash()
 );
 

@@ -106,7 +106,8 @@ class search_courses extends external_api {
             self::effective_limit($params['limit'])
         );
 
-        $cookiehash = rating_helper::get_cookie_hash();
+        // Once per request: renews the rater cookie of a returning visitor.
+        $cookiehash = rating_helper::renew_cookie_hash();
         $courses = [];
         foreach ($records as $course) {
             $courses[] = self::course_result($course, $cookiehash);
