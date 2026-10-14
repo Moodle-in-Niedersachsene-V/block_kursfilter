@@ -337,4 +337,110 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
+     * Counts active sessions of the given users.
      *
+     * @param int[] $userids User IDs.
+     * @return int Number.
+     */
+    private function count_sessions(array $userids): int {
+        global $DB;
+        [$insql, $params] = $DB->get_in_or_equal($userids);
+        return $DB->count_records_select('sessions', "userid $insql", $params);
+    }
+
+    /**
+     * Starts a preview the way the result card's form does.
+     *
+     * @param int $courseid Course ID.
+     * @return array [status, headers, body].
+     */
+    private function preview(int $courseid): array {
+        return $this->request('POST', '/blocks/kursfilter/preview.php', ['courseid' => $courseid, 'sesskey' => $this->sesskey()]);
+    }
+
+    public function test_preview_logs_in_pool_account_and_redirects_to_course(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(2);
+
+        [$status, $headers] = $this->preview((int)$course->id);
+
+        $this->assertSame(303, $status);
+        $this->assertStringContainsString('/course/view.php?id=' . $course->id, $headers);
+        $this->assertSame(1, $this->count_sessions($poolids));
+        $context = \context_course::instance($course->id);
+        $roleid = $DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
+        foreach ($poolids as $id) {
+            $this->assertTrue(is_enrolled($context, $id, '', true));
+            $this->assertTrue(user_has_role_assignment($id, $roleid, $context->id));
+        }
+    }
+
+    public function test_preview_refuses_get_and_missing_sesskey(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(2);
+
+        [, $getheaders, $getbody] = $this->request('GET', '/blocks/kursfilter/preview.php', ['courseid' => $course->id]);
+        [, $postheaders] = $this->request('POST', '/blocks/kursfilter/preview.php', ['courseid' => $course->id]);
+        [, $wrongheaders] = $this->request('POST', '/blocks/kursfilter/preview.php', [
+            'courseid' => $course->id, 'sesskey' => 'wrong12345',
+        ]);
+
+        $this->assertStringContainsString(get_string('error_preview_needs_post', 'block_kursfilter'), $getbody);
+        foreach ([$getheaders, $postheaders, $wrongheaders] as $headers) {
+            $this->assertStringNotContainsString('/course/view.php', $headers);
+        }
+        $this->assertSame(0, $this->count_sessions($poolids));
+    }
+
+    public function test_preview_rejects_hidden_unknown_and_site_course(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
+        $poolids = $this->create_pool(2);
+
+        foreach ([$hidden->id, 99999, SITEID] as $courseid) {
+            [, $headers, $body] = $this->preview((int)$courseid);
+            $this->assertStringNotContainsString('Location:', $headers, "Course $courseid");
+            $this->assertStringContainsString(get_string('course_not_found', 'block_kursfilter'), $body, "Course $courseid");
+        }
+        $this->assertSame(0, $this->count_sessions($poolids));
+        [$insql, $params] = $DB->get_in_or_equal($poolids);
+        $this->assertSame(0, $DB->count_records_select('user_enrolments', "userid $insql", $params));
+    }
+
+    public function test_preview_shows_pool_full_when_all_pool_accounts_are_occupied(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(1);
+
+        $this->preview((int)$course->id);
+        $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
+        [, $headers, $body] = $this->preview((int)$course->id);
+
+        $this->assertStringNotContainsString('Location:', $headers);
+        $this->assertStringContainsString(get_string('pool_full', 'block_kursfilter'), $body);
+        $this->assertSame(1, $this->count_sessions($poolids));
+    }
+
+    public function test_preview_does_not_replace_a_real_login(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(2);
+        $user = $this->getDataGenerator()->create_user(['username' => 'realuser', 'password' => 'Test-Password1!']);
+        [, , $loginpage] = $this->request('GET', '/login/index.php');
+        $this->assertSame(1, preg_match('/name="logintoken" value="([^"]+)"/', $loginpage, $m));
+        $this->request('POST', '/login/index.php', [
+            'username' => 'realuser', 'password' => 'Test-Password1!', 'logintoken' => $m[1],
+        ]);
+
+        [$status, $headers] = $this->preview((int)$course->id);
+
+        $this->assertSame(303, $status);
+        $this->assertStringContainsString('/course/view.php?id=' . $course->id, $headers);
+        $this->assertSame(0, $this->count_sessions($poolids));
+        $this->assertSame(1, $this->count_sessions([$user->id]));
+    }
+}
