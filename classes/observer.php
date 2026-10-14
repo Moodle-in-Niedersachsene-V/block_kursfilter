@@ -33,7 +33,7 @@ class observer {
         global $DB;
 
         $username = $DB->get_field('user', 'username', ['id' => $event->userid]);
-        if ($username !== false && in_array($username, pool_manager::get_pool_usernames(), true)) {
+        if ($username !== false && pool_manager::is_pool_account($username)) {
             pool_manager::mark_free($username);
         }
     }

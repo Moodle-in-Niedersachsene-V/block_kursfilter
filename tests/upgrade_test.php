@@ -49,7 +49,7 @@ final class upgrade_test extends \advanced_testcase {
         foreach (['schulformen', 'faecher', 'niveaustufen', 'backup_adminid', 'ai_claude_apikey'] as $old) {
             $this->assertFalse(get_config('block_kursfilter', $old), $old);
         }
-        $this->assertSame('2026101028', get_config('block_kursfilter', 'version'));
+        $this->assertSame('2026101029', get_config('block_kursfilter', 'version'));
     }
 
     public function test_upgrade_from_main_1_4_0_moves_pool_accounts_from_teacher_to_pool_role(): void {

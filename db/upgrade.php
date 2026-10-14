@@ -134,5 +134,14 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101028, 'kursfilter');
     }
 
+    if ($oldversion < 2026101029) {
+        // Profile, profile editing and password change are now also prohibited for the pool role.
+        $roleid = \block_kursfilter\pool_manager::ensure_role();
+        foreach (\block_kursfilter\pool_manager::PROHIBITED_CAPABILITIES as $capability) {
+            assign_capability($capability, CAP_PROHIBIT, $roleid, \context_system::instance()->id, true);
+        }
+        upgrade_block_savepoint(true, 2026101029, 'kursfilter');
+    }
+
     return true;
 }
