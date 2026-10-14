@@ -62,7 +62,7 @@ final class request_test extends \advanced_testcase {
             @unlink($this->cookiejar);
         }
         if (!$this->setupdone) {
-            // parent::setUp() was never called (test was skipped early), so skip
+            // Parent::setUp() was never called (test was skipped early), so skip
             // the Moodle-internal cleanup that requires an active test transaction.
             return;
         }
