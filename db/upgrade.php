@@ -108,13 +108,13 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101001, 'kursfilter');
     }
 
-    if ($oldversion < 2026101100) {
+    if ($oldversion < 2026101023) {
         // The 1.5.0 line on main (up to 2026101006) passed 2026101000/2026101001 with other steps under the same numbers.
         // All three migrations are idempotent and run again.
         xmldb_block_kursfilter_rename_settings();
         xmldb_block_kursfilter_remove_ai_settings();
         \block_kursfilter\pool_manager::migrate_to_pool_role();
-        upgrade_block_savepoint(true, 2026101100, 'kursfilter');
+        upgrade_block_savepoint(true, 2026101023, 'kursfilter');
     }
 
     return true;

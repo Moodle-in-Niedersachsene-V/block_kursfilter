@@ -41,7 +41,7 @@
   <div class="d-flex justify-content-between align-items-start gap-1">
     <a href="{{courseurl}}" class="fw-semibold small text-decoration-none kf-course-link" target="_blank" rel="noopener noreferrer">{{fullname}}</a>
     <div class="d-flex gap-1 flex-shrink-0">
-      <form method="post" class="d-inline" action="{{config.wwwroot}}/blocks/kursfilter/preview.php">
+      <form method="post" class="d-inline" action="{{config.wwwroot}}/blocks/kursfilter/preview.php" target="_blank" rel="noopener noreferrer">
         <input type="hidden" name="courseid" value="{{id}}">
         <input type="hidden" name="sesskey" value="">
         <button type="submit" class="btn btn-sm btn-outline-primary" title="{{#str}} preview_title, block_kursfilter {{/str}}">
