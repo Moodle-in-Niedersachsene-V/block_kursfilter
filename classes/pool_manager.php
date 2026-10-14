@@ -49,7 +49,6 @@ class pool_manager {
         'moodle/course:viewparticipants',
         'moodle/site:viewuseridentity',
         'moodle/grade:viewall',
-        'moodle/user:viewownprofile',
         'moodle/user:editownprofile',
     ];
 
