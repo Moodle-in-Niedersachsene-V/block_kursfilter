@@ -49,7 +49,9 @@ class pool_manager {
         'moodle/course:viewparticipants',
         'moodle/site:viewuseridentity',
         'moodle/grade:viewall',
+        'moodle/user:viewdetails',
         'moodle/user:editownprofile',
+        'moodle/user:changeownpassword',
     ];
 
     /** Cache key prefix marking a pool account as occupied. */
@@ -66,6 +68,16 @@ class pool_manager {
             $configured = self::POOL_SIZE_DEFAULT;
         }
         return min($configured, self::POOL_SIZE_MAX);
+    }
+
+    /**
+     * Whether the username belongs to a pool account.
+     *
+     * @param string $username Username.
+     * @return bool
+     */
+    public static function is_pool_account(string $username): bool {
+        return in_array($username, self::get_pool_usernames(), true);
     }
 
     /**
