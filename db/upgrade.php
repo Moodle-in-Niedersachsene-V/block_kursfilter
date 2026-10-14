@@ -117,5 +117,10 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101023, 'kursfilter');
     }
 
+    if ($oldversion < 2026101027) {
+        // Bump savepoint to match plugin version.
+        upgrade_block_savepoint(true, 2026101027, 'kursfilter');
+    }
+
     return true;
 }
