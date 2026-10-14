@@ -123,16 +123,16 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
     }
 
     if ($oldversion < 2026101028) {
-    // Re-apply prohibited capabilities to the pool role to include profile access restrictions.
-    $roleid = $DB->get_field('role', 'id', ['shortname' => \block_kursfilter\pool_manager::ROLE_SHORTNAME]);
-    if ($roleid) {
-        $ctx = \context_system::instance();
-        foreach (\block_kursfilter\pool_manager::PROHIBITED_CAPABILITIES as $cap) {
-            assign_capability($cap, CAP_PROHIBIT, $roleid, $ctx->id, true);
+        // Re-apply prohibited capabilities to the pool role to include profile access restrictions.
+        $roleid = $DB->get_field('role', 'id', ['shortname' => \block_kursfilter\pool_manager::ROLE_SHORTNAME]);
+        if ($roleid) {
+            $ctx = \context_system::instance();
+            foreach (\block_kursfilter\pool_manager::PROHIBITED_CAPABILITIES as $cap) {
+                assign_capability($cap, CAP_PROHIBIT, $roleid, $ctx->id, true);
+            }
         }
+        upgrade_block_savepoint(true, 2026101028, 'kursfilter');
     }
-    upgrade_block_savepoint(true, 2026101028, 'kursfilter');
-}
- 
-   return true;
+
+    return true;
 }
