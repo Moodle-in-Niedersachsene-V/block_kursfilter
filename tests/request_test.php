@@ -31,21 +31,23 @@ use PHPUnit\Framework\Attributes\DataProvider;
  */
 final class request_test extends \advanced_testcase {
     /** @var string Base URL of the test web server. */
-    private string $baseurl;
+    private string $baseurl = '';
 
     /** @var string Cookie file of this test session. */
-    private string $cookiejar;
+    private string $cookiejar = '';
+
+    /** @var bool Whether setUp() completed and parent::setUp() was called. */
+    private bool $setupdone = false;
 
     protected function setUp(): void {
         global $DB;
         // Skip early, before parent::setUp() sets up the DB transaction wrapper.
-        // This avoids PHPUnit 11 compatibility issues when getName() is called
-        // inside advanced_testcase::setUp() on a test that will be skipped anyway.
         $url = getenv('KURSFILTER_WEB_URL');
         if (!$url) {
             $this->markTestSkipped('KURSFILTER_WEB_URL is not set.');
         }
         parent::setUp();
+        $this->setupdone = true;
         // The web server only sees test data once it is committed: end the test transaction.
         if ($DB->is_transaction_started()) {
             $DB->force_transaction_rollback();
@@ -58,6 +60,11 @@ final class request_test extends \advanced_testcase {
         global $CFG;
         if (!empty($this->cookiejar)) {
             @unlink($this->cookiejar);
+        }
+        if (!$this->setupdone) {
+            // Parent::setUp() was never called (test was skipped early), so skip
+            // the Moodle-internal cleanup that requires an active test transaction.
+            return;
         }
         // PHPUnit does not detect writes by the web server: an empty table list forces a full reset.
         \testing_util::$tableupdated = [];

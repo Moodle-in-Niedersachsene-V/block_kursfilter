@@ -49,6 +49,7 @@ class pool_manager {
         'moodle/course:viewparticipants',
         'moodle/site:viewuseridentity',
         'moodle/grade:viewall',
+        'moodle/user:editownprofile',
     ];
 
     /** Cache key prefix marking a pool account as occupied. */

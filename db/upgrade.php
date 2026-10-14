@@ -108,13 +108,30 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101001, 'kursfilter');
     }
 
-    if ($oldversion < 2026101100) {
+    if ($oldversion < 2026101023) {
         // The 1.5.0 line on main (up to 2026101006) passed 2026101000/2026101001 with other steps under the same numbers.
         // All three migrations are idempotent and run again.
         xmldb_block_kursfilter_rename_settings();
         xmldb_block_kursfilter_remove_ai_settings();
         \block_kursfilter\pool_manager::migrate_to_pool_role();
-        upgrade_block_savepoint(true, 2026101100, 'kursfilter');
+        upgrade_block_savepoint(true, 2026101023, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101027) {
+        // Bump savepoint to match plugin version.
+        upgrade_block_savepoint(true, 2026101027, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101028) {
+        // Re-apply prohibited capabilities to the pool role to include profile access restrictions.
+        $roleid = $DB->get_field('role', 'id', ['shortname' => \block_kursfilter\pool_manager::ROLE_SHORTNAME]);
+        if ($roleid) {
+            $ctx = \context_system::instance();
+            foreach (\block_kursfilter\pool_manager::PROHIBITED_CAPABILITIES as $cap) {
+                assign_capability($cap, CAP_PROHIBIT, $roleid, $ctx->id, true);
+            }
+        }
+        upgrade_block_savepoint(true, 2026101028, 'kursfilter');
     }
 
     return true;
