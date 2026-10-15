@@ -50,9 +50,13 @@ if ($outcome === \block_kursfilter\preview_starter::COURSE_NOT_FOUND) {
     exit;
 }
 
-if ($outcome === \block_kursfilter\preview_starter::POOL_FULL) {
+$notices = [
+    \block_kursfilter\preview_starter::POOL_FULL => 'pool_full',
+    \block_kursfilter\preview_starter::IP_IN_USE => 'preview_in_use',
+];
+if (isset($notices[$outcome])) {
     echo $OUTPUT->header();
-    echo $OUTPUT->notification(get_string('pool_full', 'block_kursfilter'), \core\output\notification::NOTIFY_WARNING);
+    echo $OUTPUT->notification(get_string($notices[$outcome], 'block_kursfilter'), \core\output\notification::NOTIFY_WARNING);
     echo html_writer::div(html_writer::link(
         new moodle_url('/'),
         get_string('back_to_search', 'block_kursfilter'),

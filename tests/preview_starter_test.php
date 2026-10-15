@@ -92,4 +92,26 @@ final class preview_starter_test extends \advanced_testcase {
 
         $this->assertSame(preview_starter::POOL_FULL, preview_starter::start((int)$course->id, false));
     }
+
+    public function test_ip_in_use_when_this_ip_already_occupies_an_account(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        set_config('poolsize', 2, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        $poolname = pool_manager::get_pool_usernames()[0];
+        $ip = getremoteaddr();
+        $DB->insert_record('sessions', [
+            'state' => 0,
+            'sid' => 'kfpreviewipuse',
+            'userid' => $DB->get_field('user', 'id', ['username' => $poolname]),
+            'sessdata' => null,
+            'timecreated' => time(),
+            'timemodified' => time(),
+            'firstip' => $ip,
+            'lastip' => $ip,
+        ]);
+
+        $this->assertSame(preview_starter::IP_IN_USE, preview_starter::start((int)$course->id, false));
+    }
 }
