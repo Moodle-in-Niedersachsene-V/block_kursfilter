@@ -93,8 +93,7 @@ Code: `occupied` / `free`
 **Bewertung**:
 Ein bis fünf Sterne, die ein Besucher einem öffentlichen Kurs gibt; höchstens eine je Besucher und Kurs.
 _Avoid_: Rating, Kursbewertung, Stimme
-Code: `rating`
-Die Kennung des Besuchers für seine Bewertung steht im Cookie `kf_rater_id`; der Name bleibt unverändert (ADR 0005), weil eine Umbenennung die Bewertungen bestehender Besucher von ihrem Cookie trennen und sie erneut bewerten lassen würde. Die Datenfelder (`visitorrating`) folgen dem Begriff Besucher.
+Code: `rating`; Cookie `kf_rater_id` bleibt unverändert (ADR 0003, 0005): eine Umbenennung trennte bestehende Besucher von ihren Bewertungen und ließe sie erneut bewerten. Das WS-Feld heißt `visitorrating` (ersetzt `userrating`).
 
 **Kurssicherung**:
 Die nächtlich erzeugte Sicherungsdatei (.mbz) eines öffentlichen Kurses ohne Nutzerdaten; je Kurs gibt es höchstens eine.

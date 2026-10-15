@@ -39,7 +39,7 @@ class rating_helper {
     const TABLE = 'block_kursfilter_ratings';
 
     /**
-     * Rater cookie of the current visitor, if the browser sent a valid one.
+     * Rating cookie of the current visitor, if the browser sent a valid one.
      *
      * @return string|null SHA-256 hash identifying this browser, or null.
      */
@@ -166,7 +166,7 @@ class rating_helper {
      * Check if a visitor has already rated a course.
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash Rater cookie hash.
+     * @param string $cookiehash Rating cookie hash.
      * @return int|null The star rating if already rated, null otherwise.
      */
     public static function get_existing_rating(int $courseid, string $cookiehash): ?int {

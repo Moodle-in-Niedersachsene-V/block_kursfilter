@@ -211,7 +211,7 @@ class search_courses extends external_api {
      * Build the result entry of one course.
      *
      * @param \stdClass   $course     Course record.
-     * @param string|null $cookiehash Rater cookie of this visitor, null if none.
+     * @param string|null $cookiehash Rating cookie of this visitor, null if none.
      * @return array Result entry.
      */
     private static function course_result(\stdClass $course, ?string $cookiehash): array {
