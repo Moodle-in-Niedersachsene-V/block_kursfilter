@@ -7,6 +7,8 @@ Der Gastzugang genügt nicht, weil er pro Kurs eingeschaltet werden müsste, kei
 - Eine echte Anmeldung wird nie durch ein Pool-Konto ersetzt.
 - Ist kein Konto frei, zeigt `preview.php` einen Hinweis; es entstehen keine Konten auf Vorrat.
 - Nur `POST` mit gültigem Sesskey startet eine Vorschau.
+- Pro IP-Adresse läuft höchstens eine Vorschau. Die IP-Ermittlung folgt Moodles Proxy-Konfiguration (`getremoteaddr()`).
+- Ein Moodle-Lock schützt Auswahl und Anmeldung bis zum Anlegen der Sitzung. Aktive Moodle-Sitzungen bestimmen die Belegung; Logout und Moodles Inaktivitätslimit geben das Konto frei. Ein zusätzlicher Cache mit eigener Laufzeit entfällt.
 
 ## Consequences
 

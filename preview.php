@@ -68,5 +68,4 @@ if (!$account) {
     exit;
 }
 
-complete_user_login(get_complete_user_data('id', $account->id));
 redirect($courseurl);

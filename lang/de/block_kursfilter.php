@@ -56,6 +56,7 @@ $string['pluginname']                  = 'Kursfilter';
 $string['pool_account_description']    = 'Pool-Konto des Kursfilter-Blocks für Kursvorschauen.';
 $string['pool_account_firstname']      = 'Pool-Konto';
 $string['pool_full']                   = 'Aktuell sind alle Pool-Konten belegt. Bitte versuchen Sie es in einigen Minuten erneut.';
+$string['preview_in_use']             = 'Für diese IP-Adresse läuft bereits eine Vorschau. Bitte zuerst dort abmelden.';
 $string['preview_title']               = 'Kurs wie eine Lehrkraft ohne Bearbeitungsrecht ansehen';
 $string['privacy:metadata']            = 'Der Kursfilter speichert Bewertungen nur mit einem zufälligen Browser-Cookie, das mit keinem Nutzerkonto verknüpft ist; personenbezogene Daten von Nutzer/innen speichert er nicht. Für die KI-Verschlagwortung sendet er Kursinhalte, keine personenbezogenen Daten, über das KI-System von Moodle, das diese Anfragen selbst protokolliert.';
 $string['ratelimitexceeded']           = 'Zu viele Suchanfragen. Bitte {$a->seconds} Sekunden warten.';

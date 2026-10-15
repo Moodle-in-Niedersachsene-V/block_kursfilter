@@ -38,7 +38,7 @@ class search_courses extends external_api {
     /** Result limit when the setting is missing or out of range (documented in the setting). */
     const DEFAULT_RESULT_LIMIT = 100;
 
-    /** Rate limit: maximum requests per time window and user. */
+    /** Rate limit: maximum requests per time window and visitor. */
     const RATE_LIMIT_REQUESTS = 30;
 
     /** Rate limit: time window in seconds. */
@@ -252,7 +252,7 @@ class search_courses extends external_api {
      */
     private static function check_rate_limit(int $userid): void {
         $cache = \cache::make('block_kursfilter', 'ratelimit');
-        $key = 'rl_' . $userid;
+        $key = !isloggedin() || isguestuser() ? 'rl_ip_' . hash('sha256', getremoteaddr()) : 'rl_' . $userid;
         $now = time();
         $data = $cache->get($key);
 

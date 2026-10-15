@@ -140,12 +140,27 @@ final class pool_manager_test extends \advanced_testcase {
         [$first, $second] = pool_manager::get_pool_usernames();
 
         $this->assertSame($first, pool_manager::get_free_pool_account()->username);
-        pool_manager::mark_occupied($first);
+        $firstsession = $this->create_session($this->pool_userids()[0]);
         $this->assertSame($second, pool_manager::get_free_pool_account()->username);
-        pool_manager::mark_occupied($second);
+        $this->create_session($this->pool_userids()[1]);
         $this->assertNull(pool_manager::get_free_pool_account());
-        pool_manager::mark_free($first);
+        \core\session\manager::destroy($firstsession->sid);
         $this->assertSame($first, pool_manager::get_free_pool_account()->username);
+    }
+
+    public function test_expired_preview_session_releases_pool_account(): void {
+        global $DB, $CFG;
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        $username = pool_manager::get_pool_usernames()[0];
+        $DB->insert_record('sessions', (object)[
+            'state' => 0, 'sid' => 'expired-preview', 'userid' => $this->pool_userids()[0], 'sessdata' => null,
+            'timecreated' => time() - $CFG->sessiontimeout - 1, 'timemodified' => time() - $CFG->sessiontimeout - 1,
+            'firstip' => '192.0.2.1', 'lastip' => '192.0.2.1',
+        ]);
+
+        $this->assertSame($username, pool_manager::get_free_pool_account()->username);
     }
 
     public function test_pool_role_cannot_see_participants_identity_or_grades(): void {
@@ -212,23 +227,19 @@ final class pool_manager_test extends \advanced_testcase {
         $this->assertFalse($DB->record_exists('role', ['shortname' => pool_manager::ROLE_SHORTNAME]));
     }
 
-    public function test_marking_active_ends_existing_sessions_of_the_account(): void {
+    /**
+     * Create an active session as a fixture; PHPUnit itself has no browser session.
+     *
+     * @param int $userid Pool account ID.
+     * @return \stdClass Session record.
+     */
+    private function create_session(int $userid): \stdClass {
         global $DB;
-        $this->resetAfterTest();
-        set_config('poolsize', 2, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
-        [$first, $second] = $this->pool_userids();
-        $usernames = pool_manager::get_pool_usernames();
-        foreach ([[$first, 'sid-first'], [$second, 'sid-second']] as [$userid, $sid]) {
-            $DB->insert_record('sessions', (object)[
-                'state' => 0, 'sid' => $sid, 'userid' => $userid, 'sessdata' => null,
-                'timecreated' => time(), 'timemodified' => time(), 'firstip' => '127.0.0.1', 'lastip' => '127.0.0.1',
-            ]);
-        }
-
-        pool_manager::mark_occupied($usernames[0]);
-
-        $this->assertSame(0, $DB->count_records('sessions', ['userid' => $first]));
-        $this->assertSame(1, $DB->count_records('sessions', ['userid' => $second]));
+        $session = (object)[
+            'state' => 0, 'sid' => random_string(32), 'userid' => $userid, 'sessdata' => null,
+            'timecreated' => time(), 'timemodified' => time(), 'firstip' => '192.0.2.1', 'lastip' => '192.0.2.1',
+        ];
+        $session->id = $DB->insert_record('sessions', $session);
+        return $session;
     }
 }

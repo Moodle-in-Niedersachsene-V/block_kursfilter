@@ -143,5 +143,10 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101029, 'kursfilter');
     }
 
+    if ($oldversion < 2026101500) {
+        // Rebuild observer and cache definitions after removing the separate occupancy cache.
+        upgrade_block_savepoint(true, 2026101500, 'kursfilter');
+    }
+
     return true;
 }

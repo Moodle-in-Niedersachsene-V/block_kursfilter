@@ -39,6 +39,9 @@ final class request_test extends \advanced_testcase {
     /** @var bool Whether setUp() completed and parent::setUp() was called. */
     private bool $setupdone = false;
 
+    /** @var string Visitor IP passed through Moodle's configured reverse proxy headers. */
+    private string $visitorip = '192.0.2.1';
+
     protected function setUp(): void {
         global $DB;
         // Skip early, before parent::setUp() sets up the DB transaction wrapper.
@@ -52,12 +55,13 @@ final class request_test extends \advanced_testcase {
         if ($DB->is_transaction_started()) {
             $DB->force_transaction_rollback();
         }
+        // Model distinct visitors behind a reverse proxy using Moodle's IP configuration.
+        set_config('getremoteaddrconf', 0);
         $this->baseurl = rtrim($url, '/');
         $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
     }
 
     protected function tearDown(): void {
-        global $CFG;
         if (!empty($this->cookiejar)) {
             @unlink($this->cookiejar);
         }
@@ -68,8 +72,6 @@ final class request_test extends \advanced_testcase {
         }
         // PHPUnit does not detect writes by the web server: an empty table list forces a full reset.
         \testing_util::$tableupdated = [];
-        // Pool occupancy markers live in the web server's file cache.
-        fulldelete($CFG->dataroot . '/cache/cachestore_file/default_application/block_kursfilter_poolsessions');
         \phpunit_util::$lastdbwrites = null;
         self::resetAllData(false);
         parent::tearDown();
@@ -100,6 +102,7 @@ final class request_test extends \advanced_testcase {
             CURLOPT_COOKIEJAR => $this->cookiejar,
             CURLOPT_COOKIEFILE => $this->cookiejar,
             CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTPHEADER => ['X-Forwarded-For: ' . $this->visitorip],
         ]);
         if ($cookie !== '') {
             curl_setopt($ch, CURLOPT_COOKIE, $cookie);
@@ -416,12 +419,150 @@ final class request_test extends \advanced_testcase {
         $poolids = $this->create_pool(1);
 
         $this->preview((int)$course->id);
+        unlink($this->cookiejar);
         $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
+        $this->visitorip = '192.0.2.2';
         [, $headers, $body] = $this->preview((int)$course->id);
 
         $this->assertStringNotContainsString('Location:', $headers);
         $this->assertStringContainsString(get_string('pool_full', 'block_kursfilter'), $body);
         $this->assertSame(1, $this->count_sessions($poolids));
+    }
+
+    public function test_fresh_session_on_same_ip_cannot_occupy_another_account(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(2);
+        $this->preview((int)$course->id);
+        unlink($this->cookiejar);
+        $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
+
+        [, $headers, $body] = $this->preview((int)$course->id);
+
+        $this->assertStringNotContainsString('Location:', $headers);
+        $this->assertStringContainsString(get_string('preview_in_use', 'block_kursfilter'), $body);
+        $this->assertSame(1, $this->count_sessions($poolids));
+    }
+
+    public function test_visitors_keep_distinct_accounts_and_reuse_their_own_session(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(2);
+        $this->preview((int)$course->id);
+        $this->preview((int)$course->id);
+        $this->assertSame(1, $this->count_sessions($poolids));
+        unlink($this->cookiejar);
+        $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
+        $this->visitorip = '192.0.2.2';
+
+        [$status] = $this->preview((int)$course->id);
+
+        $this->assertSame(303, $status);
+        foreach ($poolids as $id) {
+            $this->assertSame(1, $this->count_sessions([$id]));
+        }
+    }
+
+    public function test_logout_releases_account_for_another_preview(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(1);
+        $this->preview((int)$course->id);
+
+        $this->request('GET', '/login/logout.php', ['sesskey' => $this->sesskey()]);
+
+        $this->assertSame(0, $this->count_sessions($poolids));
+        [$status] = $this->preview((int)$course->id);
+        $this->assertSame(303, $status);
+        $this->assertSame(1, $this->count_sessions($poolids));
+    }
+
+    public function test_expired_session_allows_another_preview_on_same_ip(): void {
+        global $DB, $CFG;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool(1);
+        $this->preview((int)$course->id);
+        $DB->set_field('sessions', 'timemodified', time() - $CFG->sessiontimeout - 1, ['userid' => $poolids[0]]);
+        unlink($this->cookiejar);
+        $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
+
+        [$status] = $this->preview((int)$course->id);
+
+        $this->assertSame(303, $status);
+        $this->assertSame(1, $this->count_sessions($poolids));
+    }
+
+    /**
+     * Concurrent requests must respect both the IP limit and account occupancy.
+     *
+     * @param int $poolsize Available accounts.
+     * @param string $secondip Second visitor IP.
+     * @param string $error Expected refusal string.
+     */
+    #[DataProvider('concurrent_preview_provider')]
+    public function test_concurrent_previews(int $poolsize, string $secondip, string $error): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $poolids = $this->create_pool($poolsize);
+        $multi = curl_multi_init();
+        $handles = [];
+        $jars = [];
+        unlink($this->cookiejar);
+        try {
+            foreach (['192.0.2.1', $secondip] as $ip) {
+                $this->cookiejar = tempnam(sys_get_temp_dir(), 'kfjar');
+                $jars[] = $this->cookiejar;
+                $this->visitorip = $ip;
+                $sesskey = $this->sesskey();
+                $ch = curl_init($this->baseurl . '/blocks/kursfilter/preview.php');
+                curl_setopt_array($ch, [
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => http_build_query(['courseid' => $course->id, 'sesskey' => $sesskey], '', '&'),
+                    CURLOPT_COOKIEFILE => $this->cookiejar,
+                    CURLOPT_HTTPHEADER => ['X-Forwarded-For: ' . $ip],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_TIMEOUT => 30,
+                ]);
+                $handles[] = $ch;
+                curl_multi_add_handle($multi, $ch);
+            }
+            do {
+                $result = curl_multi_exec($multi, $running);
+                $this->assertSame(CURLM_OK, $result);
+                if ($running) {
+                    curl_multi_select($multi, 1);
+                }
+            } while ($running);
+            $statuses = array_map(fn($ch) => curl_getinfo($ch, CURLINFO_RESPONSE_CODE), $handles);
+            $bodies = implode('', array_map(fn($ch) => curl_multi_getcontent($ch), $handles));
+            $this->assertSame(1, count(array_filter($statuses, fn($status) => $status === 303)), $bodies);
+            $this->assertStringContainsString(get_string($error, 'block_kursfilter'), $bodies);
+            $this->assertSame(1, $this->count_sessions($poolids));
+        } finally {
+            foreach ($handles as $ch) {
+                curl_multi_remove_handle($multi, $ch);
+                curl_close($ch);
+            }
+            curl_multi_close($multi);
+            foreach ($jars as $jar) {
+                if (file_exists($jar)) {
+                    unlink($jar);
+                }
+            }
+        }
+    }
+
+    /**
+     * Concurrent preview scenarios.
+     *
+     * @return array[] Scenarios.
+     */
+    public static function concurrent_preview_provider(): array {
+        return [
+            'same IP, spare account' => [2, '192.0.2.1', 'preview_in_use'],
+            'different IPs, last account' => [1, '192.0.2.2', 'pool_full'],
+        ];
     }
 
     public function test_preview_does_not_replace_a_real_login(): void {

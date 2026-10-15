@@ -56,6 +56,7 @@ $string['pluginname']                  = 'Course Filter';
 $string['pool_account_description']    = 'Pool account of the Course Filter block for course previews.';
 $string['pool_account_firstname']      = 'Pool account';
 $string['pool_full']                   = 'All pool accounts are currently occupied. Please try again in a few minutes.';
+$string['preview_in_use']             = 'A preview is already active for this IP address. Please log out of it first.';
 $string['preview_title']               = 'View the course like a teacher without editing rights';
 $string['privacy:metadata']            = 'The Course Filter stores ratings only with a random browser cookie that is not linked to any user account; it stores no personal data of users. For AI tagging it sends course content, no personal data, through Moodle\'s AI subsystem, which records these requests itself.';
 $string['ratelimitexceeded']           = 'Too many requests. Please wait {$a->seconds} seconds.';
