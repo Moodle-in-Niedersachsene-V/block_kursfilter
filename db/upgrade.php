@@ -109,10 +109,9 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
 
     $dbman = $DB->get_manager();
 
-    if ($oldversion < 2026101501) {
-        // Glossary names (N1): the pool accounts must be renamed before the older steps look them up by name.
-        xmldb_block_kursfilter_rename_pool_accounts();
-    }
+    // Glossary names (N1): the pool accounts must be renamed before the older steps look them up by name.
+    // Not a savepoint step: the rename is idempotent and the savepoint 2026101501 below covers it.
+    $oldversion < 2026101501 && xmldb_block_kursfilter_rename_pool_accounts();
 
     if ($oldversion < 2026100600) {
         // Pool accounts get a role without access to participants, user identity and grades.
