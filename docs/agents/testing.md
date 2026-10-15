@@ -29,3 +29,17 @@ Die Tests schließen vor dem Aufruf ihre Transaktion, damit der Webserver die Te
 
 - Änderungen an `amd/src/` brauchen einen Grunt-Build (`amd/build/`), sonst schlägt der CI-Schritt `grunt` fehl.
 - Nach Änderungen an `db/access.php`, `db/services.php`, `db/install.xml` oder `version.php` Moodle-Upgrade ausführen.
+
+## Browser-Tests (Playwright) gegen eine laufende Instanz
+
+`tests/e2e/kursfilter.spec.js` bedient den Block auf der Startseite einer echten Instanz (z. B. der Spike-Instanz): Filter, Suche, Chips samt Tastaturfokus, Bewertung, Backup-Link und Vorschau (echter Login und anonymer Besucher über Pool-Konto). Die Specs sind nicht Teil der CI und brauchen kein `package.json`; es genügt eine vorhandene Playwright-Installation (z. B. die von Coursepilot):
+
+```bash
+NODE_PATH=/opt/moodle-coursepilot/node_modules KURSFILTER_E2E_URL=https://spike.gruenwald.fun KURSFILTER_E2E_USER=<Nutzer> KURSFILTER_E2E_PASS=<Passwort> KURSFILTER_E2E_COURSEID=<ID eines öffentlichen Kurses> /opt/moodle-coursepilot/node_modules/.bin/playwright test -c tests/e2e
+```
+
+- Ohne `KURSFILTER_E2E_URL`/`USER`/`PASS` werden alle Tests übersprungen.
+- Der Block muss auf der Startseite liegen; ist `forcelogin` aktiv, sieht ihn nur ein angemeldeter Nutzer. Der anonyme Vorschau-Test ruft `preview.php` deshalb direkt mit der Sitzungs-Sesskey der Login-Seite auf.
+- Die Tests legen eine Bewertung für einen frischen Besucher an (Kurs `bolda-testkurs`). Nach dem Lauf die Zeile in `block_kursfilter_ratings` entfernen, sonst wird der Test bei erneutem Lauf mit gleichem Cookie nicht erneut bewertet; ein frischer Browser-Kontext vermeidet das.
+- Läufe nie parallel starten: Die Pool-Konten sind pro IP belegt, die Vorschau-Tests melden ihr Konto am Ende wieder ab.
+

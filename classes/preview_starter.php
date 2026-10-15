@@ -30,6 +30,8 @@ final class preview_starter {
     public const COURSE_NOT_FOUND = 'course_not_found';
     /** @var string All pool accounts are occupied. */
     public const POOL_FULL = 'pool_full';
+    /** @var string This IP address already has a running preview. */
+    public const IP_IN_USE = 'ip_in_use';
     /** @var string A pool account was occupied and is now logged in; send the visitor to the course. */
     public const LOGGED_IN = 'logged_in';
 
@@ -39,7 +41,7 @@ final class preview_starter {
      * @param int $courseid Requested course.
      * @param bool $hasreallogin True if the visitor is logged in with a real account; it is never replaced.
      * @return string One of the outcome constants.
-     * @throws \moodle_exception If this IP already has a preview or the pool lock times out.
+     * @throws \moodle_exception If the pool lock times out.
      */
     public static function start(int $courseid, bool $hasreallogin): string {
         if (!course_access::get_public_course($courseid)) {
@@ -48,6 +50,13 @@ final class preview_starter {
         if ($hasreallogin) {
             return self::REDIRECT;
         }
-        return pool_manager::occupy_free_account($courseid) ? self::LOGGED_IN : self::POOL_FULL;
+        try {
+            return pool_manager::occupy_free_account($courseid) ? self::LOGGED_IN : self::POOL_FULL;
+        } catch (\moodle_exception $e) {
+            if ($e->errorcode !== 'preview_in_use') {
+                throw $e;
+            }
+            return self::IP_IN_USE;
+        }
     }
 }
