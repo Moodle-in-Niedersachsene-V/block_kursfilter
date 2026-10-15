@@ -28,7 +28,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(pool_manager::class)]
 final class pool_manager_test extends \advanced_testcase {
     /**
-     * Returns the pool user IDs according to the current pool size.
+     * Returns the pool account IDs according to the current pool size.
      *
      * @return int[] User IDs.
      */
@@ -133,7 +133,7 @@ final class pool_manager_test extends \advanced_testcase {
         $this->assertFalse($DB->record_exists('enrol', ['courseid' => SITEID, 'enrol' => 'manual']));
     }
 
-    public function test_free_pool_user_changes_with_occupancy(): void {
+    public function test_free_pool_account_changes_with_occupancy(): void {
         $this->resetAfterTest();
         set_config('poolsize', 2, 'block_kursfilter');
         pool_manager::create_pool_accounts();
@@ -192,7 +192,7 @@ final class pool_manager_test extends \advanced_testcase {
         ));
     }
 
-    public function test_migrate_moves_teacher_assignments_of_pool_users_only(): void {
+    public function test_migrate_moves_teacher_assignments_of_pool_accounts_only(): void {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
@@ -228,7 +228,7 @@ final class pool_manager_test extends \advanced_testcase {
     }
 
     /**
-     * Create an active session as a fixture; PHPUnit itself has no browser session.
+     * Create a session that occupies a pool account as a fixture; PHPUnit itself has no browser session.
      *
      * @param int $userid Pool account ID.
      * @return \stdClass Session record.

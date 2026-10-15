@@ -106,7 +106,7 @@ class search_courses extends external_api {
             self::effective_limit($params['limit'])
         );
 
-        // Once per request: renews the rater cookie of a returning visitor.
+        // Once per request: renews the rating cookie of a returning visitor.
         $cookiehash = rating_helper::renew_cookie_hash();
         $courses = [];
         foreach ($records as $course) {
@@ -124,19 +124,19 @@ class search_courses extends external_api {
         return new external_single_structure([
             'courses' => new external_multiple_structure(
                 new external_single_structure([
-                    'id'           => new external_value(PARAM_INT, 'Course ID'),
-                    'fullname'     => new external_value(PARAM_TEXT, 'Course full name'),
-                    'shortname'    => new external_value(PARAM_TEXT, 'Course short name'),
-                    'summary'      => new external_value(PARAM_RAW, 'Course summary as plain text, shortened'),
-                    'categoryname' => new external_value(PARAM_TEXT, 'Category path'),
-                    'tags'         => new external_multiple_structure(new external_value(PARAM_TEXT, 'Course tag')),
-                    'courseurl'    => new external_value(PARAM_URL, 'Course URL'),
-                    'backupurl'    => new external_value(PARAM_URL, 'Backup download URL, empty without backup'),
-                    'hasbackup'    => new external_value(PARAM_BOOL, 'Whether a backup can be downloaded'),
-                    'ratingavg'    => new external_value(PARAM_FLOAT, 'Average rating'),
-                    'ratingcount'  => new external_value(PARAM_INT, 'Number of ratings'),
-                    'userrating'   => new external_value(PARAM_INT, 'Rating of this visitor (0 = none)'),
-                    'alreadyrated' => new external_value(PARAM_BOOL, 'Whether this visitor rated the course'),
+                    'id'            => new external_value(PARAM_INT, 'Course ID'),
+                    'fullname'      => new external_value(PARAM_TEXT, 'Course full name'),
+                    'shortname'     => new external_value(PARAM_TEXT, 'Course short name'),
+                    'summary'       => new external_value(PARAM_RAW, 'Course summary as plain text, shortened'),
+                    'categoryname'  => new external_value(PARAM_TEXT, 'Category path'),
+                    'tags'          => new external_multiple_structure(new external_value(PARAM_TEXT, 'Course tag')),
+                    'courseurl'     => new external_value(PARAM_URL, 'Course URL'),
+                    'backupurl'     => new external_value(PARAM_URL, 'Backup download URL, empty without backup'),
+                    'hasbackup'     => new external_value(PARAM_BOOL, 'Whether a backup can be downloaded'),
+                    'ratingavg'     => new external_value(PARAM_FLOAT, 'Average rating'),
+                    'ratingcount'   => new external_value(PARAM_INT, 'Number of ratings'),
+                    'visitorrating' => new external_value(PARAM_INT, 'Rating of this visitor (0 = none)'),
+                    'alreadyrated'  => new external_value(PARAM_BOOL, 'Whether this visitor rated the course'),
                 ])
             ),
             'total' => new external_value(PARAM_INT, 'Number of returned courses'),
@@ -225,22 +225,22 @@ class search_courses extends external_api {
             ? (new \moodle_url('/blocks/kursfilter/backup.php', ['courseid' => $course->id]))->out(false)
             : '';
         $rating = rating_helper::get_course_rating($course->id);
-        $userrating = $cookiehash === null ? null : rating_helper::get_existing_rating($course->id, $cookiehash);
+        $visitorrating = $cookiehash === null ? null : rating_helper::get_existing_rating($course->id, $cookiehash);
 
         return [
-            'id'           => (int)$course->id,
-            'fullname'     => format_string($course->fullname),
-            'shortname'    => format_string($course->shortname),
-            'summary'      => $summary,
-            'categoryname' => $category ? $category->get_nested_name(false) : '',
-            'tags'         => array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id)),
-            'courseurl'    => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
-            'backupurl'    => $backupurl,
-            'hasbackup'    => $backupurl !== '',
-            'ratingavg'    => $rating['avg'],
-            'ratingcount'  => $rating['count'],
-            'userrating'   => $userrating ?? 0,
-            'alreadyrated' => $userrating !== null,
+            'id'            => (int)$course->id,
+            'fullname'      => format_string($course->fullname),
+            'shortname'     => format_string($course->shortname),
+            'summary'       => $summary,
+            'categoryname'  => $category ? $category->get_nested_name(false) : '',
+            'tags'          => array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id)),
+            'courseurl'     => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
+            'backupurl'     => $backupurl,
+            'hasbackup'     => $backupurl !== '',
+            'ratingavg'     => $rating['avg'],
+            'ratingcount'   => $rating['count'],
+            'visitorrating' => $visitorrating ?? 0,
+            'alreadyrated'  => $visitorrating !== null,
         ];
     }
 

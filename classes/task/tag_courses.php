@@ -21,8 +21,8 @@ use block_kursfilter\tag_suggester;
 /**
  * Scheduled task: AI tagging of public courses that have no tag suggestion yet.
  *
- * Each course is processed once; the outcome is kept in block_kursfilter_tag_pending:
- * 'applied' (tags added), 'pending' (waiting for review) or 'empty' (no value fits).
+ * Each course is processed once; the outcome is kept in block_kursfilter_tag_suggest:
+ * 'applied' (tags added), 'suggested' (tag suggestion waiting for review) or 'empty' (no value fits).
  * A failed request leaves no record, so the course is retried on the next run.
  *
  * @package   block_kursfilter
@@ -93,7 +93,7 @@ class tag_courses extends \core\task\scheduled_task {
         $sql = "SELECT c.id, c.fullname, c.shortname, c.summary, cc.name AS categoryname
                   FROM {course} c
                   JOIN {course_categories} cc ON cc.id = c.category
-             LEFT JOIN {block_kursfilter_tag_pending} tp ON tp.courseid = c.id
+             LEFT JOIN {block_kursfilter_tag_suggest} tp ON tp.courseid = c.id
                  WHERE " . implode(' AND ', [$publicsql, 'tp.id IS NULL']) . "
               ORDER BY c.id ASC";
         return $DB->get_records_sql($sql, $params, 0, $limit);
@@ -119,11 +119,11 @@ class tag_courses extends \core\task\scheduled_task {
             }
             $status = 'applied';
         } else {
-            $status = 'pending';
+            $status = 'suggested';
         }
 
         $now = time();
-        $DB->insert_record('block_kursfilter_tag_pending', [
+        $DB->insert_record('block_kursfilter_tag_suggest', [
             'courseid' => $course->id,
             'tags' => implode(',', $tags),
             'status' => $status,

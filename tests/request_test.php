@@ -339,7 +339,7 @@ final class request_test extends \advanced_testcase {
     }
 
     /**
-     * Counts active sessions of the given users.
+     * Counts sessions that occupy the given users.
      *
      * @param int[] $userids User IDs.
      * @return int Number.

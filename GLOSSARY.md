@@ -7,6 +7,7 @@ Ein Block, mit dem Lehrkräfte im Materialien-Hub öffentliche Kurse finden, ans
 **Materialien-Hub**:
 Das Moodle des Vereins Moodle in Niedersachsen e. V., in dem Lehrkräfte Kurse und Testfragen zur Nachnutzung finden.
 _Avoid_: Aufgabenpool, Vereins-Moodle
+Code: `materials hub`
 
 **Kurs**:
 Ein Moodle-Kurs im Materialien-Hub, den Lehrkräfte ansehen und für den eigenen Unterricht übernehmen können; Gegenstand des Kursfilters.
@@ -32,16 +33,23 @@ Code: `category`
 
 **Schulform**:
 Filter nach der Schulform, für die ein Kurs gedacht ist (z. B. Gymnasium).
+_Avoid_: Schulart, Schultyp
 Code: `school type` (`schooltype`)
 
 **Fach**:
 Filter nach dem Unterrichtsfach eines Kurses.
+_Avoid_: Schulfach, Kursfach
 Code: `subject`
 
 **Niveaustufe**:
 Filter nach Jahrgang oder Stufe, für die ein Kurs gedacht ist (z. B. Klasse 5-6).
 _Avoid_: Level, Klassenstufe
 Code: `level`
+
+**Filterwert**:
+Ein Wert in der Liste einer Einstellung (Schulform, Fach, Niveaustufe), nach dem Besucher filtern; ein Kurs trifft ihn, wenn er einen Kurs-Tag mit genau diesem Wert trägt.
+_Avoid_: Filteroption, Chip (nur Darstellung)
+Code: `filter value`
 
 **Kurs-Tag**:
 Ein Schlagwort am Kurs; Schulform, Fach und Niveaustufe sind Kurs-Tags, deren Wert in der Liste der Einstellungen steht.
@@ -68,7 +76,7 @@ Code: `preview`
 **Pool-Konto**:
 Ein vom Plugin angelegtes Moodle-Konto, das genau einem Besucher für eine Vorschau überlassen wird.
 _Avoid_: Pool-Nutzer, Gastnutzer, Vorschaukonto, Gastkonto
-Code: `pool account`
+Code: `pool account` (Benutzername `kursfilter_pool01` bis `kursfilter_pool50`)
 
 **Pool-Rolle**:
 Die Rolle der Pool-Konten in öffentlichen Kursen: sieht den Kurs wie eine Lehrkraft ohne Bearbeitungsrecht, aber keine Teilnehmenden, Identitäten oder Noten.
@@ -86,6 +94,7 @@ Code: `occupied` / `free`
 Ein bis fünf Sterne, die ein Besucher einem öffentlichen Kurs gibt; höchstens eine je Besucher und Kurs.
 _Avoid_: Rating, Kursbewertung, Stimme
 Code: `rating`
+Die Kennung des Besuchers für seine Bewertung steht im Cookie `kf_rater_id`; der Name bleibt unverändert (ADR 0005), weil eine Umbenennung die Bewertungen bestehender Besucher von ihrem Cookie trennen und sie erneut bewerten lassen würde. Die Datenfelder (`visitorrating`) folgen dem Begriff Besucher.
 
 **Kurssicherung**:
 Die nächtlich erzeugte Sicherungsdatei (.mbz) eines öffentlichen Kurses ohne Nutzerdaten; je Kurs gibt es höchstens eine.
@@ -102,7 +111,7 @@ Code: `ai tagging`
 **Tag-Vorschlag**:
 Die von der KI-Verschlagwortung ermittelten Filterwerte eines Kurses, die vor dem Übernehmen als Kurs-Tags auf Prüfung warten.
 _Avoid_: KI-Vorschlag, pending tags
-Code: `tag suggestion`
+Code: `tag suggestion` (Tabelle `block_kursfilter_tag_suggest`, gekürzt wegen der 28-Zeichen-Grenze für Tabellennamen; Status `suggested`)
 
 **Sicherungskonto**:
 Das Administratorkonto, unter dem die Kurssicherungen erzeugt werden.

@@ -66,7 +66,7 @@ class rating_helper {
     }
 
     /**
-     * Give the current visitor a new rater cookie (valid one year).
+     * Give the current visitor a new rating cookie (valid one year).
      *
      * @return string SHA-256 hash identifying this browser.
      */
@@ -77,7 +77,7 @@ class rating_helper {
     }
 
     /**
-     * Extend the rater cookie of a returning visitor by one year, so the rating stays recognised.
+     * Extend the rating cookie of a returning visitor by one year, so the rating stays recognised.
      *
      * Call it once per request. Visitors without a valid cookie get none.
      *
@@ -97,7 +97,7 @@ class rating_helper {
      * (one rating per cookie per course; the unique index decides, so double clicks are safe).
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash SHA-256 hash from the rater cookie.
+     * @param string $cookiehash SHA-256 hash from the rating cookie.
      * @param int    $stars      Rating 1–5.
      * @return bool True if saved, false if already rated.
      * @throws \invalid_parameter_exception If the stars are not 1 to 5.
@@ -141,7 +141,7 @@ class rating_helper {
      *
      * @param int      $courseid   Course ID.
      * @param int      $stars      Rating 1–5.
-     * @param callable $cookiehash Returns the rater cookie hash of the visitor (creating it if needed).
+     * @param callable $cookiehash Returns the rating cookie hash of the visitor (creating it if needed).
      * @return array JSON-ready result: success plus saved/already_rated and the stored stars, or success false plus error.
      */
     public static function submit(int $courseid, int $stars, callable $cookiehash): array {

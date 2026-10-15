@@ -39,7 +39,7 @@ class pool_manager {
     const POOL_SIZE_MAX = 50;
 
     /** Username prefix for pool accounts. */
-    const USERNAME_PREFIX = 'kursfilter_guest';
+    const USERNAME_PREFIX = 'kursfilter_pool';
 
     /** Role shortname for course access (non-editing teacher without access to personal data). */
     const ROLE_SHORTNAME = 'kursfilter_pool';
@@ -263,7 +263,7 @@ class pool_manager {
     public static function get_free_pool_account(): ?\stdClass {
         global $DB;
 
-        $occupied = array_column(self::get_active_pool_sessions(), 'userid');
+        $occupied = array_column(self::get_occupying_sessions(), 'userid');
         foreach (self::get_pool_usernames() as $username) {
             $user = $DB->get_record('user', ['username' => $username, 'deleted' => 0], '*', IGNORE_MISSING);
             if ($user && !in_array($user->id, $occupied)) {
@@ -288,7 +288,7 @@ class pool_manager {
         }
         try {
             $ip = getremoteaddr();
-            foreach (self::get_active_pool_sessions() as $session) {
+            foreach (self::get_occupying_sessions() as $session) {
                 if ($session->firstip === $ip || $session->lastip === $ip) {
                     throw new \moodle_exception('preview_in_use', 'block_kursfilter');
                 }
@@ -308,11 +308,11 @@ class pool_manager {
     }
 
     /**
-     * Return the pool sessions that have not reached Moodle's inactivity timeout.
+     * Return the sessions that occupy a pool account, i.e. have not reached Moodle's inactivity timeout.
      *
-     * @return \stdClass[] Active sessions, including accounts outside the configured pool size.
+     * @return \stdClass[] Sessions, including accounts outside the configured pool size.
      */
-    private static function get_active_pool_sessions(): array {
+    private static function get_occupying_sessions(): array {
         global $DB, $CFG;
 
         [$insql, $params] = $DB->get_in_or_equal(self::get_pool_usernames(self::POOL_SIZE_MAX), SQL_PARAMS_NAMED);
