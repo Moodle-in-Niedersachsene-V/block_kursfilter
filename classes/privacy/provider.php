@@ -49,6 +49,9 @@ class provider implements \core_privacy\local\metadata\provider {
             'userid' => 'privacy:metadata:ai:userid',
             'contextid' => 'privacy:metadata:ai:contextid',
         ], 'privacy:metadata:ai');
+        $collection->add_external_location_link('anthropic', [
+            'prompt' => 'privacy:metadata:claude:prompt',
+        ], 'privacy:metadata:claude');
         $collection->add_plugintype_link('logstore', [
             'userid' => 'privacy:metadata:logs:userid',
             'ip' => 'privacy:metadata:logs:ip',

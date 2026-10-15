@@ -1,5 +1,7 @@
 # Datenfluss der KI-Verschlagwortung
 
+**Ergänzt um [0007](0007-optional-direct-claude-backend.md): optional direkter Versand an die Anthropic-API statt über `core_ai`.**
+
 ## Entscheidung
 
 Die KI-Verschlagwortung nutzt ausschließlich Moodles `core_ai` mit der Aktion `generate_text`. Der Datenfluss ist:

@@ -24,6 +24,8 @@ KI-Verschlagwortung (Abschnitt „KI-Verschlagwortung“ der Einstellungen):
 | Einstellung | Name | Standard | Wirkung |
 |---|---|---|---|
 | KI-Verschlagwortung aktivieren | `ai_enabled` | aus | erster Schalter: ohne ihn tut die Aufgabe `tag_courses` nichts |
+| KI-Backend | `ai_backend` | `coreai` | `coreai` (KI-Anbieter in Moodle) oder `claude` (direkt an die Anthropic-API, ADR 0007) |
+| Claude-API-Schlüssel / -Modell | `ai_claude_apikey`, `ai_claude_model` | leer, `claude-haiku-4-5` | nur bei `ai_backend` = `claude` |
 | Tags automatisch übernehmen | `ai_autoapply` | aus | passende Werte werden sofort Kurs-Tags, sonst bleiben sie Tag-Vorschläge |
 | Kurse je Lauf | `ai_batch_size` | 20 | Anzahl Kurse je Lauf der Aufgabe |
 
@@ -33,7 +35,7 @@ Die KI-Verschlagwortung läuft nur, wenn beide Schalter an sind: die Einstellung
 
 - 02:00 `backup_courses`: eine Kurssicherung ohne Nutzerdaten je öffentlichem Kurs; scheitert eine, schlägt die Aufgabe mit Ursache im Protokoll fehl.
 - 03:00 `setup_pool`: legt fehlende Pool-Konten an und schreibt sie in öffentliche Kurse ein.
-- 04:00 `tag_courses` (standardmäßig aus, zusätzlich Einstellung `ai_enabled`): KI-Verschlagwortung über den in Moodle eingerichteten KI-Anbieter (Aktion „Text generieren“). Übernommen werden nur Werte aus den Filterlisten, je Kurs einmal; ohne „Tags automatisch übernehmen“ bleiben sie als Tag-Vorschläge stehen (Prüfseite: Issue #3).
+- 04:00 `tag_courses` (standardmäßig aus, zusätzlich Einstellung `ai_enabled`): KI-Verschlagwortung über den in Moodle eingerichteten KI-Anbieter (Aktion „Text generieren“) oder direkt über die Claude-API (`ai_backend`). Übernommen werden nur Werte aus den Filterlisten, je Kurs einmal; ohne „Tags automatisch übernehmen“ bleiben sie als Tag-Vorschläge stehen (Prüfseite: Issue #3).
 
 ## Entwicklung
 
