@@ -23,7 +23,7 @@ namespace block_kursfilter;
  * @copyright 2026 Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class preview_starter {
+final class preview_starter {
     /** @var string Send the visitor to the course; no pool account was taken. */
     public const REDIRECT = 'redirect';
     /** @var string The course is not a public course. */

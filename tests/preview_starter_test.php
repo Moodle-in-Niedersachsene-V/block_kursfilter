@@ -37,7 +37,7 @@ final class preview_starter_test extends \advanced_testcase {
     }
 
     public function test_real_login_is_redirected_without_taking_a_pool_account(): void {
-        global $DB;
+        global $DB, $USER;
         $this->resetAfterTest();
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
@@ -47,7 +47,7 @@ final class preview_starter_test extends \advanced_testcase {
         $outcome = preview_starter::start((int)$course->id, true);
 
         $this->assertSame(preview_starter::REDIRECT, $outcome);
-        $this->assertFalse(pool_manager::is_pool_account($GLOBALS['USER']->username));
+        $this->assertFalse(pool_manager::is_pool_account($USER->username));
         $this->assertSame(0, $DB->count_records('sessions'));
     }
 
@@ -58,7 +58,10 @@ final class preview_starter_test extends \advanced_testcase {
         set_config('poolsize', 1, 'block_kursfilter');
         pool_manager::create_pool_accounts();
         // The login regenerates the session id, which PHPUnit's headless run cannot do; only that warning is muted.
-        set_error_handler(static fn() => true, E_WARNING);
+        set_error_handler(
+            static fn(int $no, string $message): bool => str_contains($message, 'session_regenerate_id'),
+            E_WARNING
+        );
         try {
             $outcome = preview_starter::start((int)$course->id, false);
         } finally {

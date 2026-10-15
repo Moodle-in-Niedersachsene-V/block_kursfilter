@@ -41,7 +41,6 @@ require_sesskey();
 $PAGE->set_context(context_system::instance());
 $PAGE->set_url(new moodle_url('/blocks/kursfilter/preview.php'));
 
-$courseurl = new moodle_url('/course/view.php', ['id' => $courseid]);
 $outcome = \block_kursfilter\preview_starter::start($courseid, isloggedin() && !isguestuser());
 
 if ($outcome === \block_kursfilter\preview_starter::COURSE_NOT_FOUND) {
@@ -63,4 +62,4 @@ if ($outcome === \block_kursfilter\preview_starter::POOL_FULL) {
     exit;
 }
 
-redirect($courseurl);
+redirect(new moodle_url('/course/view.php', ['id' => $courseid]));
