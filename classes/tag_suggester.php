@@ -19,7 +19,7 @@ namespace block_kursfilter;
 /**
  * Tag suggestions for a course through Moodle's AI subsystem (core_ai, action generate_text).
  *
- * Only course content leaves the server: full name, short name, category and a shortened summary.
+ * Course text is filtered before sending: full name, short name, category and a shortened summary.
  * The model may only pick values from the configured filter value lists; code enforces this,
  * the prompt only explains it.
  *
@@ -50,7 +50,7 @@ class tag_suggester {
      * @param string $categoryname Name of the course category.
      * @param int $userid User the AI request is made for (logged by core_ai).
      * @return string[] Filter values in their configured spelling; empty if none fits.
-     * @throws \moodle_exception If the AI request fails or the answer is not the expected JSON.
+     * @throws \moodle_exception If the request fails, the answer is invalid or the AI flags personal data.
      */
     public static function suggest(\stdClass $course, string $categoryname, int $userid): array {
         $lists = [];
@@ -92,14 +92,14 @@ class tag_suggester {
      * @return string Prompt.
      */
     private static function build_prompt(\stdClass $course, string $categoryname, array $lists): string {
-        $summary = html_to_text((string)$course->summary, 0, false);
+        $summary = self::filter_personal_details((string)$course->summary);
         if (\core_text::strlen($summary) > self::SUMMARY_LENGTH) {
             $summary = \core_text::substr($summary, 0, self::SUMMARY_LENGTH);
         }
         $coursedata = json_encode([
-            'fullname' => $course->fullname,
-            'shortname' => $course->shortname,
-            'category' => $categoryname,
+            'fullname' => self::filter_personal_details($course->fullname),
+            'shortname' => self::filter_personal_details($course->shortname),
+            'category' => self::filter_personal_details($categoryname),
             'summary' => $summary,
         ], JSON_UNESCAPED_UNICODE);
         $allowed = json_encode($lists, JSON_UNESCAPED_UNICODE);
@@ -110,7 +110,29 @@ class tag_suggester {
             . "<course>{$coursedata}</course>\n"
             . "Allowed values per list (JSON): {$allowed}\n"
             . "Pick the values that fit the course, only from these lists, and none from a list if nothing fits. "
-            . 'Answer with JSON only, in exactly this form: {"schooltypes": [], "subjects": [], "levels": []}';
+            . "Do not reproduce or use personal data. If you detect any, set personaldata to true and leave all lists empty; "
+            . "this reports the problem to the administrator for correction. Otherwise set personaldata to false. "
+            . 'Answer with JSON only, in exactly this form: '
+            . '{"personaldata": false, "schooltypes": [], "subjects": [], "levels": []}';
+    }
+
+    /**
+     * Remove email addresses and recognisable name patterns from course text.
+     *
+     * This is data minimisation, not guaranteed anonymisation (ADR 0006).
+     *
+     * @param string $text Course text, possibly HTML.
+     * @return string Plain text with detected personal details replaced.
+     */
+    private static function filter_personal_details(string $text): string {
+        $text = html_to_text($text, 0, false);
+        $text = preg_replace('/[\p{L}\p{N}.!#$%&\x27*+\/=?^_\x60{|}~-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}/u', '[redacted]', $text);
+        $name = '(?:\p{Lu}[\p{L}\p{M}]+(?:[-\x27’]\p{L}[\p{L}\p{M}]+)*|\p{Lu}\.)';
+        $parts = '(?:(?:von|van|de|der|den|zu)\s+)*' . $name;
+        $text = preg_replace('/(?<!\p{L})(?:(?:Herrn?|Frau|Dr\.|Prof\.)\s+)+' . $parts
+            . '(?:\s+' . $parts . ')*(?!\p{L})/u', '[redacted]', $text);
+        $pattern = '/(?<!\p{L})' . $name . '(?:\s+(?:(?:von|van|de|der|den|zu)\s+)*' . $name . ')+(?!\p{L})/u';
+        return preg_replace($pattern, '[redacted]', $text);
     }
 
     /**
@@ -119,7 +141,7 @@ class tag_suggester {
      * @param string $answer Model answer.
      * @param array $lists Allowed values per filter setting (setting name => string[]).
      * @return string[] Allowed values in their configured spelling, without duplicates.
-     * @throws \moodle_exception If the answer contains no JSON object.
+     * @throws \moodle_exception If the answer contains no JSON object or flags personal data.
      */
     private static function parse_answer(string $answer, array $lists): array {
         // Models sometimes wrap the JSON in prose or code fences; take the outermost object.
@@ -128,6 +150,10 @@ class tag_suggester {
         $data = ($start !== false && $end > $start) ? json_decode(substr($answer, $start, $end - $start + 1), true) : null;
         if (!is_array($data)) {
             throw new \moodle_exception('error_ai_answer_invalid', 'block_kursfilter', '', \core_text::substr($answer, 0, 200));
+        }
+
+        if (!empty($data['personaldata'])) {
+            throw new \moodle_exception('error_ai_personal_data', 'block_kursfilter');
         }
 
         $tags = [];

@@ -91,6 +91,55 @@ final class tag_suggester_test extends \advanced_testcase {
         $this->assertSame(['Deutsch'], $tags);
     }
 
+    public function test_personal_details_are_removed_before_the_provider_receives_course_content(): void {
+        $course = $this->getDataGenerator()->create_course([
+            'fullname' => 'Lyrik von Erika Musterfrau',
+            'shortname' => 'Lyrik-erika@example.org',
+            'summary' => '<p>lyrik: Erika Musterfrau; Anna-Lena Müller; Jörg von Berg; E. Meier; Frau Schulz.</p>'
+                . '<p>kontakt: <a href="mailto:erika+lyrik@example.org">erika+lyrik@example.org</a></p>'
+                . '<p>poesie und reime</p>',
+        ]);
+        $this->answer('{"subjects": ["Deutsch"]}');
+
+        $tags = tag_suggester::suggest($course, 'Deutsch von Dr. Schulz', (int)get_admin()->id);
+
+        $prompt = json_decode((string)$this->history[0]['request']->getBody(), true)['prompt'];
+        foreach (['Erika', 'Musterfrau', 'Anna-Lena', 'Müller', 'Jörg', 'Berg', 'Meier', 'Schulz', '@example.org'] as $detail) {
+            $this->assertStringNotContainsString($detail, $prompt);
+        }
+        $this->assertStringContainsString('poesie und reime', $prompt);
+        $this->assertSame(['Deutsch'], $tags);
+    }
+
+    public function test_titles_and_surname_particles_do_not_leave_a_name_in_the_prompt(): void {
+        $course = $this->getDataGenerator()->create_course([
+            'summary' => 'kontakt: Prof. Dr. Weber und Frau von Stein; Herr Jörg von Berg; thema: bruchrechnung',
+        ]);
+        $this->answer('{"subjects": ["Mathematik"]}');
+
+        $tags = tag_suggester::suggest($course, 'Mathematik', (int)get_admin()->id);
+
+        $prompt = json_decode((string)$this->history[0]['request']->getBody(), true)['prompt'];
+        $this->assertStringNotContainsString('Weber', $prompt);
+        $this->assertStringNotContainsString('Stein', $prompt);
+        $this->assertStringNotContainsString('Berg', $prompt);
+        $this->assertStringContainsString('bruchrechnung', $prompt);
+        $this->assertSame(['Mathematik'], $tags);
+    }
+
+    public function test_ai_detected_personal_data_stops_tagging_and_requests_course_correction(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $this->answer('{"personaldata": true, "subjects": ["Deutsch"]}');
+
+        try {
+            tag_suggester::suggest($course, 'Deutsch', (int)get_admin()->id);
+            $this->fail('Personal data detected by the AI must stop tagging.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_ai_personal_data', $e->errorcode);
+            $this->assertStringContainsString('Remove personal data from the course text', $e->getMessage());
+        }
+    }
+
     public function test_answer_without_json_is_reported_with_its_content(): void {
         $course = $this->getDataGenerator()->create_course();
         $this->answer('I cannot help with that.');
