@@ -17,14 +17,14 @@
 namespace block_kursfilter;
 
 /**
- * Decides what a preview request leads to; the endpoint preview.php only renders the outcome.
+ * Starts course previews and course-independent previews through the shared pool.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class preview_starter {
-    /** @var string Send the visitor to the course; no pool account was taken. */
+    /** @var string Keep the real login; no pool account was taken. */
     public const REDIRECT = 'redirect';
     /** @var string The course is not a public course. */
     public const COURSE_NOT_FOUND = 'course_not_found';
@@ -32,19 +32,22 @@ final class preview_starter {
     public const POOL_FULL = 'pool_full';
     /** @var string This IP address already has a running preview. */
     public const IP_IN_USE = 'ip_in_use';
-    /** @var string A pool account was occupied and is now logged in; send the visitor to the course. */
+    /** @var string A pool account was occupied and is now logged in. */
     public const LOGGED_IN = 'logged_in';
 
     /**
      * Decide the outcome of a preview and, if needed, log the visitor in as pool account.
      *
-     * @param int $courseid Requested course.
+     * Callers must accept only POST with a valid sesskey before calling this method.
+     * A null course ID starts a course-independent preview without enrolment (ADR 0002).
+     *
+     * @param int|null $courseid Requested public course, or null to skip course access and enrolment.
      * @param bool $hasreallogin True if the visitor is logged in with a real account; it is never replaced.
      * @return string One of the outcome constants.
      * @throws \moodle_exception If the pool lock times out.
      */
-    public static function start(int $courseid, bool $hasreallogin): string {
-        if (!course_access::get_public_course($courseid)) {
+    public static function start(?int $courseid, bool $hasreallogin): string {
+        if ($courseid !== null && !course_access::get_public_course($courseid)) {
             return self::COURSE_NOT_FOUND;
         }
         if ($hasreallogin) {

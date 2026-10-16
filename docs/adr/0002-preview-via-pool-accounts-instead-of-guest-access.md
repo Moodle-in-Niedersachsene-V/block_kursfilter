@@ -10,6 +10,20 @@ Der Gastzugang genügt nicht, weil er pro Kurs eingeschaltet werden müsste, kei
 - Pro IP-Adresse läuft höchstens eine Vorschau. Die IP-Ermittlung folgt Moodles Proxy-Konfiguration (`getremoteaddr()`).
 - Ein Moodle-Lock schützt Auswahl und Anmeldung bis zum Anlegen der Sitzung. Aktive Moodle-Sitzungen bestimmen die Belegung; Logout und Moodles Inaktivitätslimit geben das Konto frei. Ein zusätzlicher Cache mit eigener Laufzeit entfällt.
 
+## Fragenfilter als weiterer Nutzer
+
+Der Fragenfilter nutzt denselben Pool für die Fragenvorschau. Die öffentliche Methode
+`\block_kursfilter\preview_starter::start(null, $hasreallogin)` belegt ein Konto und
+meldet es an, ohne einen Kurs zu prüfen oder Pool-Konten einzuschreiben. Die Kursvorschau
+übergibt weiterhin ihre Kurs-ID an dieselbe Methode. Beide Wege verwenden denselben
+Moodle-Lock, dieselben aktiven Sitzungen und dieselbe IP-Grenze; es gibt keinen zweiten
+Belegungsmechanismus. Eine echte Anmeldung bleibt bei beiden Wegen erhalten.
+
+Der aufrufende Endpunkt prüft vor dem Start POST und Sesskey und ermittelt
+`$hasreallogin` aus `isloggedin() && !isguestuser()`. Die Methode liefert `LOGGED_IN`,
+`POOL_FULL`, `IP_IN_USE` oder `REDIRECT` (echte Anmeldung); Lock-Fehler werden weitergegeben.
+Die Fragenfilter-Vorschaurolle und der Zugriff auf Fragen bleiben Aufgabe des Fragenfilters.
+
 ## Consequences
 
 Die Zahl gleichzeitiger Vorschauen ist durch die Poolgröße begrenzt. Der Verein muss die Größe an die Last anpassen. Die Pool-Rolle ist Teil des Plugins; neue Moodle-Capabilities mit Personenbezug müssen dort geprüft und gegebenenfalls gesperrt werden.
