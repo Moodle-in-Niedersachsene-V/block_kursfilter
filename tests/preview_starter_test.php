@@ -114,4 +114,92 @@ final class preview_starter_test extends \advanced_testcase {
 
         $this->assertSame(preview_starter::IP_IN_USE, preview_starter::start((int)$course->id, false));
     }
+
+    public function test_course_independent_start_logs_in_without_enrolment(): void {
+        global $DB, $USER;
+        $this->resetAfterTest();
+        $this->getDataGenerator()->create_course();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        // The login regenerates the session id, which PHPUnit's headless run cannot do; only that warning is muted.
+        set_error_handler(
+            static fn(int $no, string $message): bool => str_contains($message, 'session_regenerate_id'),
+            E_WARNING
+        );
+        try {
+            $outcome = preview_starter::start(null, false);
+        } finally {
+            restore_error_handler();
+        }
+
+        $this->assertSame(preview_starter::LOGGED_IN, $outcome);
+        $this->assertTrue(pool_manager::is_pool_account($USER->username));
+        $this->assertSame(0, $DB->count_records('user_enrolments', ['userid' => $USER->id]));
+        $this->assertSame(0, $DB->count_records('role_assignments', ['userid' => $USER->id]));
+        $this->assertSame(1, $DB->count_records('sessions', ['userid' => $USER->id]));
+        $this->assertNull(pool_manager::get_free_pool_account());
+    }
+
+    public function test_course_independent_start_reports_pool_full(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        $poolname = pool_manager::get_pool_usernames()[0];
+        $DB->insert_record('sessions', [
+            'state' => 0,
+            'sid' => 'kfpreviewtest',
+            'userid' => $DB->get_field('user', 'id', ['username' => $poolname]),
+            'sessdata' => null,
+            'timecreated' => time(),
+            'timemodified' => time(),
+            'firstip' => '203.0.113.9',
+            'lastip' => '203.0.113.9',
+        ]);
+
+        $sessions = $DB->get_records('sessions');
+        $this->assertSame(preview_starter::POOL_FULL, preview_starter::start(null, false));
+        $this->assertEquals($sessions, $DB->get_records('sessions'));
+        $this->assertSame(0, $DB->count_records('user_enrolments'));
+    }
+
+    public function test_course_independent_start_respects_ip_limit(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('poolsize', 2, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        $poolname = pool_manager::get_pool_usernames()[0];
+        $ip = getremoteaddr();
+        $DB->insert_record('sessions', [
+            'state' => 0,
+            'sid' => 'kfpreviewipuse',
+            'userid' => $DB->get_field('user', 'id', ['username' => $poolname]),
+            'sessdata' => null,
+            'timecreated' => time(),
+            'timemodified' => time(),
+            'firstip' => $ip,
+            'lastip' => $ip,
+        ]);
+
+        $sessions = $DB->get_records('sessions');
+        $this->assertSame(preview_starter::IP_IN_USE, preview_starter::start(null, false));
+        $this->assertEquals($sessions, $DB->get_records('sessions'));
+        $this->assertSame(0, $DB->count_records('user_enrolments'));
+    }
+
+    public function test_course_independent_start_keeps_real_login(): void {
+        global $DB, $USER;
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+
+        $outcome = preview_starter::start(null, true);
+
+        $this->assertSame(preview_starter::REDIRECT, $outcome);
+        $this->assertSame($user->id, $USER->id);
+        $this->assertSame(0, $DB->count_records('sessions'));
+        $this->assertSame(0, $DB->count_records('user_enrolments'));
+    }
 }

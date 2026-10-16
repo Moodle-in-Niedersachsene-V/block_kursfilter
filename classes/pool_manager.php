@@ -274,13 +274,13 @@ class pool_manager {
     }
 
     /**
-     * Enrol and log in a free pool account atomically, allowing one preview per IP.
+     * Occupy and log in a free pool account atomically, allowing one preview per IP.
      *
-     * @param int $courseid Public course to preview.
+     * @param int|null $courseid Public course to enrol into, or null for a preview without enrolment.
      * @return \stdClass|null The occupied pool account, or null if all are occupied.
      * @throws \moodle_exception If this IP already has a preview or the pool lock times out.
      */
-    public static function occupy_free_account(int $courseid): ?\stdClass {
+    public static function occupy_free_account(?int $courseid): ?\stdClass {
         $factory = \core\lock\lock_config::get_lock_factory('block_kursfilter_pool');
         $lock = $factory->get_lock('occupancy', 10);
         if (!$lock) {
@@ -297,7 +297,9 @@ class pool_manager {
             if (!$account) {
                 return null;
             }
-            self::enrol_pool_into_course($courseid);
+            if ($courseid !== null) {
+                self::enrol_pool_into_course($courseid);
+            }
             \core\session\manager::destroy_user_sessions($account->id);
             // Keep the lock until Moodle has recorded the new session, with no reservation/login gap.
             complete_user_login(get_complete_user_data('id', $account->id));

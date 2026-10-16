@@ -15,6 +15,24 @@ Moodle 5.1 oder neuer.
 | Bewertung | `rate.php`, nur POST mit Sesskey | öffentlich; eine Bewertung je Browser-Sitzung und Kurs (siehe Issue #2) |
 | Kurssicherung | `backup.php?courseid=…` | öffentlich, nur für öffentliche Kurse |
 
+## Pool-Start für andere Plugins
+
+Der Fragenfilter kann nach POST- und Sesskey-Prüfung denselben Pool ohne Kurseinschreibung nutzen:
+
+```php
+if (!data_submitted()) {
+    throw new moodle_exception('error_preview_needs_post', 'block_kursfilter');
+}
+require_sesskey();
+$outcome = \block_kursfilter\preview_starter::start(null, isloggedin() && !isguestuser());
+```
+
+`LOGGED_IN` bedeutet erfolgreiche Pool-Anmeldung,
+`REDIRECT` erhält eine echte Anmeldung, `POOL_FULL` und `IP_IN_USE` lehnen die Belegung ab.
+Die Konstanten liegen in `preview_starter`; bei einem Lock-Timeout wird eine Moodle-Exception
+weitergegeben. Kursvorschauen übergeben statt `null` eine öffentliche Kurs-ID und können
+zusätzlich `COURSE_NOT_FOUND` erhalten. Siehe [ADR 0002](docs/adr/0002-preview-via-pool-accounts-instead-of-guest-access.md).
+
 ## Einstellungen
 
 Filterwerte (Schulformen, Fächer, Niveaustufen) je eine Zeile; ein Kurs passt, wenn er einen Kurs-Tag mit genau diesem Wert trägt. Dazu Ergebnislimit, Anzahl der Pool-Konten und das Sicherungskonto.
