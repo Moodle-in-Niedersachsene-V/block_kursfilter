@@ -142,7 +142,7 @@ const setChip = (chip, isActive) => {
  */
 const initStars = async(widget) => {
     if (widget.dataset.alreadyrated === '1') {
-        await showRated(widget, parseInt(widget.dataset.userrating, 10) || 0);
+        await showRated(widget, parseInt(widget.dataset.visitorrating, 10) || 0);
         return;
     }
     const labels = await Promise.all(

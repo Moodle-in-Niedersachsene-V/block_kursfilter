@@ -39,7 +39,7 @@ class rating_helper {
     const TABLE = 'block_kursfilter_ratings';
 
     /**
-     * Rater cookie of the current visitor, if the browser sent a valid one.
+     * Rating cookie of the current visitor, if the browser sent a valid one.
      *
      * @return string|null SHA-256 hash identifying this browser, or null.
      */
@@ -51,22 +51,43 @@ class rating_helper {
     }
 
     /**
-     * Give the current visitor a new rater cookie.
+     * Cookie options with a lifetime of one year, counted from now.
      *
-     * It is a session cookie: it ends with the browser session, so one rating per course is only
-     * enforced within a session (see TODO https://github.com/Moodle-in-Niedersachsene-V/block_kursfilter/issues/2).
+     * @return array Options for setcookie().
+     */
+    public static function get_cookie_options(): array {
+        return [
+            'expires'  => time() + YEARSECS,
+            'path'     => '/',
+            'secure'   => true,
+            'httponly' => true,
+            'samesite' => 'Lax',
+        ];
+    }
+
+    /**
+     * Give the current visitor a new rating cookie (valid one year).
      *
      * @return string SHA-256 hash identifying this browser.
      */
     public static function create_cookie_hash(): string {
         $hash = hash('sha256', bin2hex(random_bytes(32)));
-        setcookie(self::COOKIE_NAME, $hash, [
-            'expires'  => 0,
-            'path'     => '/',
-            'secure'   => true,
-            'httponly' => true,
-            'samesite' => 'Lax',
-        ]);
+        setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
+        return $hash;
+    }
+
+    /**
+     * Extend the rating cookie of a returning visitor by one year, so the rating stays recognised.
+     *
+     * Call it once per request. Visitors without a valid cookie get none.
+     *
+     * @return string|null The visitor's hash, or null without a valid cookie.
+     */
+    public static function renew_cookie_hash(): ?string {
+        $hash = self::get_cookie_hash();
+        if ($hash !== null && !headers_sent()) {
+            setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
+        }
         return $hash;
     }
 
@@ -76,7 +97,7 @@ class rating_helper {
      * (one rating per cookie per course; the unique index decides, so double clicks are safe).
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash SHA-256 hash from the rater cookie.
+     * @param string $cookiehash SHA-256 hash from the rating cookie.
      * @param int    $stars      Rating 1–5.
      * @return bool True if saved, false if already rated.
      * @throws \invalid_parameter_exception If the stars are not 1 to 5.
@@ -120,7 +141,7 @@ class rating_helper {
      *
      * @param int      $courseid   Course ID.
      * @param int      $stars      Rating 1–5.
-     * @param callable $cookiehash Returns the rater cookie hash of the visitor (creating it if needed).
+     * @param callable $cookiehash Returns the rating cookie hash of the visitor (creating it if needed).
      * @return array JSON-ready result: success plus saved/already_rated and the stored stars, or success false plus error.
      */
     public static function submit(int $courseid, int $stars, callable $cookiehash): array {
@@ -145,7 +166,7 @@ class rating_helper {
      * Check if a visitor has already rated a course.
      *
      * @param int    $courseid   Course ID.
-     * @param string $cookiehash Rater cookie hash.
+     * @param string $cookiehash Rating cookie hash.
      * @return int|null The star rating if already rated, null otherwise.
      */
     public static function get_existing_rating(int $courseid, string $cookiehash): ?int {

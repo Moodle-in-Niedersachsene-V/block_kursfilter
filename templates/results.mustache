@@ -31,7 +31,7 @@
             "courseurl": "https://example.org/course/view.php?id=42",
             "backupurl": "https://example.org/blocks/kursfilter/backup.php?courseid=42",
             "hasbackup": true,
-            "userrating": 0,
+            "visitorrating": 0,
             "alreadyrated": false
         }]
     }
@@ -68,7 +68,7 @@
     {{#tags}}<span class="badge bg-primary bg-opacity-10 text-primary me-1">{{.}}</span>{{/tags}}
   </div>
   {{/hastags}}
-  <div class="kf-stars mt-2" data-courseid="{{id}}" data-userrating="{{userrating}}"
+  <div class="kf-stars mt-2" data-courseid="{{id}}" data-visitorrating="{{visitorrating}}"
        data-alreadyrated="{{#alreadyrated}}1{{/alreadyrated}}{{^alreadyrated}}0{{/alreadyrated}}"></div>
 </div>
 {{/courses}}

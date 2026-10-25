@@ -136,4 +136,28 @@ final class rating_helper_test extends \advanced_testcase {
         $this->assertSame(0, $cookiecalls);
         $this->assertSame(0, $DB->count_records('block_kursfilter_ratings'));
     }
+
+    public function test_cookie_options_expire_after_one_year_and_stay_protected(): void {
+        $before = time();
+        $options = rating_helper::get_cookie_options();
+
+        $this->assertGreaterThanOrEqual($before + YEARSECS, $options['expires']);
+        $this->assertLessThanOrEqual(time() + YEARSECS, $options['expires']);
+        $this->assertTrue($options['secure']);
+        $this->assertTrue($options['httponly']);
+        $this->assertSame('Lax', $options['samesite']);
+        $this->assertSame('/', $options['path']);
+    }
+
+    public function test_renew_cookie_hash_returns_a_valid_cookie_and_ignores_an_invalid_one(): void {
+        $hash = str_repeat('a', 64);
+        $_COOKIE[rating_helper::COOKIE_NAME] = $hash;
+        $this->assertSame($hash, rating_helper::renew_cookie_hash());
+
+        $_COOKIE[rating_helper::COOKIE_NAME] = 'not-a-hash';
+        $this->assertNull(rating_helper::renew_cookie_hash());
+
+        unset($_COOKIE[rating_helper::COOKIE_NAME]);
+        $this->assertNull(rating_helper::renew_cookie_hash());
+    }
 }

@@ -38,7 +38,7 @@ class search_courses extends external_api {
     /** Result limit when the setting is missing or out of range (documented in the setting). */
     const DEFAULT_RESULT_LIMIT = 100;
 
-    /** Rate limit: maximum requests per time window and user. */
+    /** Rate limit: maximum requests per time window and visitor. */
     const RATE_LIMIT_REQUESTS = 30;
 
     /** Rate limit: time window in seconds. */
@@ -106,7 +106,8 @@ class search_courses extends external_api {
             self::effective_limit($params['limit'])
         );
 
-        $cookiehash = rating_helper::get_cookie_hash();
+        // Once per request: renews the rating cookie of a returning visitor.
+        $cookiehash = rating_helper::renew_cookie_hash();
         $courses = [];
         foreach ($records as $course) {
             $courses[] = self::course_result($course, $cookiehash);
@@ -123,19 +124,19 @@ class search_courses extends external_api {
         return new external_single_structure([
             'courses' => new external_multiple_structure(
                 new external_single_structure([
-                    'id'           => new external_value(PARAM_INT, 'Course ID'),
-                    'fullname'     => new external_value(PARAM_TEXT, 'Course full name'),
-                    'shortname'    => new external_value(PARAM_TEXT, 'Course short name'),
-                    'summary'      => new external_value(PARAM_RAW, 'Course summary as plain text, shortened'),
-                    'categoryname' => new external_value(PARAM_TEXT, 'Category path'),
-                    'tags'         => new external_multiple_structure(new external_value(PARAM_TEXT, 'Course tag')),
-                    'courseurl'    => new external_value(PARAM_URL, 'Course URL'),
-                    'backupurl'    => new external_value(PARAM_URL, 'Backup download URL, empty without backup'),
-                    'hasbackup'    => new external_value(PARAM_BOOL, 'Whether a backup can be downloaded'),
-                    'ratingavg'    => new external_value(PARAM_FLOAT, 'Average rating'),
-                    'ratingcount'  => new external_value(PARAM_INT, 'Number of ratings'),
-                    'userrating'   => new external_value(PARAM_INT, 'Rating of this visitor (0 = none)'),
-                    'alreadyrated' => new external_value(PARAM_BOOL, 'Whether this visitor rated the course'),
+                    'id'            => new external_value(PARAM_INT, 'Course ID'),
+                    'fullname'      => new external_value(PARAM_TEXT, 'Course full name'),
+                    'shortname'     => new external_value(PARAM_TEXT, 'Course short name'),
+                    'summary'       => new external_value(PARAM_RAW, 'Course summary as plain text, shortened'),
+                    'categoryname'  => new external_value(PARAM_TEXT, 'Category path'),
+                    'tags'          => new external_multiple_structure(new external_value(PARAM_TEXT, 'Course tag')),
+                    'courseurl'     => new external_value(PARAM_URL, 'Course URL'),
+                    'backupurl'     => new external_value(PARAM_URL, 'Backup download URL, empty without backup'),
+                    'hasbackup'     => new external_value(PARAM_BOOL, 'Whether a backup can be downloaded'),
+                    'ratingavg'     => new external_value(PARAM_FLOAT, 'Average rating'),
+                    'ratingcount'   => new external_value(PARAM_INT, 'Number of ratings'),
+                    'visitorrating' => new external_value(PARAM_INT, 'Rating of this visitor (0 = none)'),
+                    'alreadyrated'  => new external_value(PARAM_BOOL, 'Whether this visitor rated the course'),
                 ])
             ),
             'total' => new external_value(PARAM_INT, 'Number of returned courses'),
@@ -210,7 +211,7 @@ class search_courses extends external_api {
      * Build the result entry of one course.
      *
      * @param \stdClass   $course     Course record.
-     * @param string|null $cookiehash Rater cookie of this visitor, null if none.
+     * @param string|null $cookiehash Rating cookie of this visitor, null if none.
      * @return array Result entry.
      */
     private static function course_result(\stdClass $course, ?string $cookiehash): array {
@@ -224,22 +225,22 @@ class search_courses extends external_api {
             ? (new \moodle_url('/blocks/kursfilter/backup.php', ['courseid' => $course->id]))->out(false)
             : '';
         $rating = rating_helper::get_course_rating($course->id);
-        $userrating = $cookiehash === null ? null : rating_helper::get_existing_rating($course->id, $cookiehash);
+        $visitorrating = $cookiehash === null ? null : rating_helper::get_existing_rating($course->id, $cookiehash);
 
         return [
-            'id'           => (int)$course->id,
-            'fullname'     => format_string($course->fullname),
-            'shortname'    => format_string($course->shortname),
-            'summary'      => $summary,
-            'categoryname' => $category ? $category->get_nested_name(false) : '',
-            'tags'         => array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id)),
-            'courseurl'    => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
-            'backupurl'    => $backupurl,
-            'hasbackup'    => $backupurl !== '',
-            'ratingavg'    => $rating['avg'],
-            'ratingcount'  => $rating['count'],
-            'userrating'   => $userrating ?? 0,
-            'alreadyrated' => $userrating !== null,
+            'id'            => (int)$course->id,
+            'fullname'      => format_string($course->fullname),
+            'shortname'     => format_string($course->shortname),
+            'summary'       => $summary,
+            'categoryname'  => $category ? $category->get_nested_name(false) : '',
+            'tags'          => array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id)),
+            'courseurl'     => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
+            'backupurl'     => $backupurl,
+            'hasbackup'     => $backupurl !== '',
+            'ratingavg'     => $rating['avg'],
+            'ratingcount'   => $rating['count'],
+            'visitorrating' => $visitorrating ?? 0,
+            'alreadyrated'  => $visitorrating !== null,
         ];
     }
 
@@ -251,7 +252,7 @@ class search_courses extends external_api {
      */
     private static function check_rate_limit(int $userid): void {
         $cache = \cache::make('block_kursfilter', 'ratelimit');
-        $key = 'rl_' . $userid;
+        $key = !isloggedin() || isguestuser() ? 'rl_ip_' . hash('sha256', getremoteaddr()) : 'rl_' . $userid;
         $now = time();
         $data = $cache->get($key);
 

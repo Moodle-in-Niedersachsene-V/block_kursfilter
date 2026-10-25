@@ -41,24 +41,22 @@ require_sesskey();
 $PAGE->set_context(context_system::instance());
 $PAGE->set_url(new moodle_url('/blocks/kursfilter/preview.php'));
 
-if (!\block_kursfilter\course_access::get_public_course($courseid)) {
+$outcome = \block_kursfilter\preview_starter::start($courseid, isloggedin() && !isguestuser());
+
+if ($outcome === \block_kursfilter\preview_starter::COURSE_NOT_FOUND) {
     echo $OUTPUT->header();
     echo $OUTPUT->notification(get_string('course_not_found', 'block_kursfilter'), \core\output\notification::NOTIFY_ERROR);
     echo $OUTPUT->footer();
     exit;
 }
 
-$courseurl = new moodle_url('/course/view.php', ['id' => $courseid]);
-
-// A real login is never replaced by a pool account.
-if (isloggedin() && !isguestuser()) {
-    redirect($courseurl);
-}
-
-$account = \block_kursfilter\pool_manager::occupy_free_account($courseid);
-if (!$account) {
+$notices = [
+    \block_kursfilter\preview_starter::POOL_FULL => 'pool_full',
+    \block_kursfilter\preview_starter::IP_IN_USE => 'preview_in_use',
+];
+if (isset($notices[$outcome])) {
     echo $OUTPUT->header();
-    echo $OUTPUT->notification(get_string('pool_full', 'block_kursfilter'), \core\output\notification::NOTIFY_WARNING);
+    echo $OUTPUT->notification(get_string($notices[$outcome], 'block_kursfilter'), \core\output\notification::NOTIFY_WARNING);
     echo html_writer::div(html_writer::link(
         new moodle_url('/'),
         get_string('back_to_search', 'block_kursfilter'),
@@ -68,5 +66,4 @@ if (!$account) {
     exit;
 }
 
-complete_user_login(get_complete_user_data('id', $account->id));
-redirect($courseurl);
+redirect(new moodle_url('/course/view.php', ['id' => $courseid]));

@@ -49,7 +49,7 @@ final class upgrade_test extends \advanced_testcase {
         foreach (['schulformen', 'faecher', 'niveaustufen', 'backup_adminid', 'ai_claude_apikey'] as $old) {
             $this->assertFalse(get_config('block_kursfilter', $old), $old);
         }
-        $this->assertSame('2026101028', get_config('block_kursfilter', 'version'));
+        $this->assertSame('2026102501', get_config('block_kursfilter', 'version'));
     }
 
     public function test_upgrade_from_main_1_4_0_moves_pool_accounts_from_teacher_to_pool_role(): void {
@@ -98,5 +98,48 @@ final class upgrade_test extends \advanced_testcase {
         $this->assertTrue(user_has_role_assignment($userid, $poolroleid, $context->id));
         $this->assertFalse(user_has_role_assignment($userid, $teacherid, $context->id));
         $this->assertFalse(get_config('block_kursfilter', 'ai_claude_apikey'));
+    }
+
+    public function test_upgrade_from_2026101500_renames_pool_accounts_and_tag_suggestion_table_without_data_loss(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/upgradelib.php');
+        require_once($CFG->dirroot . '/blocks/kursfilter/db/upgrade.php');
+        $this->preventResetByRollback();
+        $this->resetAfterTest();
+        pool_manager::create_pool_accounts();
+        $userid = (int)$DB->get_field('user', 'id', ['username' => pool_manager::get_pool_usernames()[0]]);
+        $DB->set_field('user', 'username', 'kursfilter_guest01', ['id' => $userid]);
+        $DB->set_field('user', 'email', 'kursfilter_guest01@kursfilter.invalid', ['id' => $userid]);
+        $dbman = $DB->get_manager();
+        $dbman->rename_table(new \xmldb_table('block_kursfilter_tag_suggest'), 'block_kursfilter_tag_pending');
+        $old = new \xmldb_table('block_kursfilter_tag_pending');
+        $index = new \xmldb_index('status', XMLDB_INDEX_NOTUNIQUE, ['status']);
+        $dbman->drop_index($old, $index);
+        $dbman->change_field_default($old, new \xmldb_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'pending'));
+        $dbman->add_index($old, $index);
+        $DB->insert_record('block_kursfilter_tag_pending', [
+            'courseid' => 7, 'tags' => 'Deutsch', 'status' => 'pending', 'timecreated' => 1, 'timemodified' => 1,
+        ]);
+        $DB->insert_record('block_kursfilter_tag_pending', [
+            'courseid' => 8, 'tags' => 'Mathematik', 'status' => 'applied', 'timecreated' => 1, 'timemodified' => 1,
+        ]);
+        set_config('version', 2026101500, 'block_kursfilter');
+
+        xmldb_block_kursfilter_upgrade(2026101500);
+
+        $user = $DB->get_record('user', ['id' => $userid], 'username, email', MUST_EXIST);
+        $this->assertSame('kursfilter_pool01', $user->username);
+        $this->assertSame('kursfilter_pool01@kursfilter.invalid', $user->email);
+        $this->assertFalse($DB->record_exists('user', ['username' => 'kursfilter_guest01']));
+        $this->assertFalse($dbman->table_exists($old));
+        $this->assertSame(
+            ['7' => 'suggested', '8' => 'applied'],
+            $DB->get_records_menu('block_kursfilter_tag_suggest', null, 'courseid', 'courseid, status')
+        );
+        $this->assertSame('Deutsch', $DB->get_field('block_kursfilter_tag_suggest', 'tags', ['courseid' => 7]));
+        $id = $DB->insert_record('block_kursfilter_tag_suggest', [
+            'courseid' => 9, 'tags' => '', 'timecreated' => 1, 'timemodified' => 1,
+        ]);
+        $this->assertSame('suggested', $DB->get_field('block_kursfilter_tag_suggest', 'status', ['id' => $id]));
     }
 }

@@ -17,23 +17,47 @@
 namespace block_kursfilter\privacy;
 
 /**
- * Privacy provider: ratings carry only a random browser cookie, no link to a user account.
+ * Metadata for pseudonymous ratings and data passed to Moodle subsystems.
  *
- * Pool accounts are Moodle accounts of the plugin, not of persons; their data is core data.
- * Changes to the rating model (TODO https://github.com/Moodle-in-Niedersachsene-V/block_kursfilter/issues/2)
- * must revisit this provider.
+ * Rating events can link a rating to a user and IP in the configured logstore.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class provider implements \core_privacy\local\metadata\null_provider {
+class provider implements \core_privacy\local\metadata\provider {
     /**
-     * Language string key explaining why no personal data of users is stored.
+     * Describe stored ratings, the browser cookie, event logs and AI requests.
      *
-     * @return string
+     * @param \core_privacy\local\metadata\collection $collection Metadata collection.
+     * @return \core_privacy\local\metadata\collection Completed collection.
      */
-    public static function get_reason(): string {
-        return 'privacy:metadata';
+    public static function get_metadata(
+        \core_privacy\local\metadata\collection $collection
+    ): \core_privacy\local\metadata\collection {
+        $collection->add_database_table('block_kursfilter_ratings', [
+            'courseid' => 'privacy:metadata:ratings:courseid',
+            'cookiehash' => 'privacy:metadata:ratings:cookiehash',
+            'stars' => 'privacy:metadata:ratings:stars',
+            'timecreated' => 'privacy:metadata:ratings:timecreated',
+        ], 'privacy:metadata:ratings');
+        $collection->add_external_location_link('kf_rater_id', [
+            'cookiehash' => 'privacy:metadata:ratings:cookiehash',
+        ], 'privacy:metadata:cookie');
+        $collection->add_subsystem_link('core_ai', [
+            'prompt' => 'privacy:metadata:ai:prompt',
+            'userid' => 'privacy:metadata:ai:userid',
+            'contextid' => 'privacy:metadata:ai:contextid',
+        ], 'privacy:metadata:ai');
+        $collection->add_external_location_link('anthropic', [
+            'prompt' => 'privacy:metadata:claude:prompt',
+        ], 'privacy:metadata:claude');
+        $collection->add_plugintype_link('logstore', [
+            'userid' => 'privacy:metadata:logs:userid',
+            'ip' => 'privacy:metadata:logs:ip',
+            'objectid' => 'privacy:metadata:logs:objectid',
+            'other' => 'privacy:metadata:logs:other',
+        ], 'privacy:metadata:logs');
+        return $collection;
     }
 }

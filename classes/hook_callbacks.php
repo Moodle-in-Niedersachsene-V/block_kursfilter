@@ -17,24 +17,36 @@
 namespace block_kursfilter;
 
 /**
- * Releases pool accounts when their session ends.
+ * Hook callbacks of block_kursfilter.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class observer {
-    /**
-     * Free the pool account of a user who logged out; other users are ignored.
-     *
-     * @param \core\event\user_loggedout $event Logout event.
-     */
-    public static function user_loggedout(\core\event\user_loggedout $event): void {
-        global $DB;
+class hook_callbacks {
+    /** Scripts a pool account may not open: Moodle always allows users their own profile, no capability prevents it. */
+    const PROTECTED_SCRIPTS = [
+        '/user/profile.php',
+        '/user/view.php',
+        '/user/edit.php',
+        '/user/editadvanced.php',
+        '/user/preferences.php',
+        '/login/change_password.php',
+    ];
 
-        $username = $DB->get_field('user', 'username', ['id' => $event->userid]);
-        if ($username !== false && in_array($username, pool_manager::get_pool_usernames(), true)) {
-            pool_manager::mark_free($username);
+    /**
+     * Send pool accounts away from profile and account pages.
+     *
+     * @param \core\hook\output\before_http_headers $hook Hook.
+     */
+    public static function before_http_headers(\core\hook\output\before_http_headers $hook): void {
+        global $USER, $SCRIPT;
+
+        if (!isloggedin() || !in_array($SCRIPT, self::PROTECTED_SCRIPTS, true)) {
+            return;
+        }
+        if (pool_manager::is_pool_account($USER->username)) {
+            redirect(new \moodle_url('/'));
         }
     }
 }

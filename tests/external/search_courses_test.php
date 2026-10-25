@@ -182,6 +182,31 @@ final class search_courses_test extends \advanced_testcase {
         $this->assertSame([(int)$course->id], $this->ids($this->search()));
     }
 
+    public function test_guest_rate_limit_is_tracked_per_ip(): void {
+        $this->resetAfterTest();
+        $this->setGuestUser();
+        $course = $this->getDataGenerator()->create_course();
+        $server = $_SERVER;
+        try {
+            unset($_SERVER['HTTP_CLIENT_IP'], $_SERVER['HTTP_X_FORWARDED_FOR']);
+            $_SERVER['REMOTE_ADDR'] = '192.0.2.1';
+            for ($i = 0; $i < search_courses::RATE_LIMIT_REQUESTS; $i++) {
+                $this->search();
+            }
+            try {
+                $this->search();
+                $this->fail('The guest request over the limit must fail.');
+            } catch (\moodle_exception $e) {
+                $this->assertSame('ratelimitexceeded', $e->errorcode);
+            }
+
+            $_SERVER['REMOTE_ADDR'] = '192.0.2.2';
+            $this->assertSame([(int)$course->id], $this->ids($this->search()));
+        } finally {
+            $_SERVER = $server;
+        }
+    }
+
     public function test_search_requires_the_search_capability(): void {
         global $DB;
         $this->resetAfterTest();

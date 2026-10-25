@@ -88,7 +88,7 @@ final class tag_courses_test extends \advanced_testcase {
         (new tag_courses())->execute();
 
         $this->assertEqualsCanonicalizing(['Projekt', 'Mathematik'], $this->course_tags((int)$course->id));
-        $this->assertSame('applied', $DB->get_field('block_kursfilter_tag_pending', 'status', ['courseid' => $course->id]));
+        $this->assertSame('applied', $DB->get_field('block_kursfilter_tag_suggest', 'status', ['courseid' => $course->id]));
     }
 
     public function test_without_autoapply_the_suggestion_waits_for_review_and_is_not_requested_again(): void {
@@ -97,13 +97,13 @@ final class tag_courses_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $this->answer('{"subjects": ["Deutsch"]}');
 
-        $this->expectOutputRegex('/pending/');
+        $this->expectOutputRegex('/suggested/');
         (new tag_courses())->execute();
         (new tag_courses())->execute();
 
         $this->assertSame([], $this->course_tags((int)$course->id));
-        $record = $DB->get_record('block_kursfilter_tag_pending', ['courseid' => $course->id]);
-        $this->assertSame(['pending', 'Deutsch'], [$record->status, $record->tags]);
+        $record = $DB->get_record('block_kursfilter_tag_suggest', ['courseid' => $course->id]);
+        $this->assertSame(['suggested', 'Deutsch'], [$record->status, $record->tags]);
         $this->assertSame(0, $this->mock->count());
     }
 
@@ -118,7 +118,7 @@ final class tag_courses_test extends \advanced_testcase {
         (new tag_courses())->execute();
 
         $this->assertSame([], $this->course_tags((int)$course->id));
-        $this->assertSame('empty', $DB->get_field('block_kursfilter_tag_pending', 'status', ['courseid' => $course->id]));
+        $this->assertSame('empty', $DB->get_field('block_kursfilter_tag_suggest', 'status', ['courseid' => $course->id]));
         $this->assertSame(0, $this->mock->count());
     }
 
@@ -135,7 +135,7 @@ final class tag_courses_test extends \advanced_testcase {
         } catch (\moodle_exception $e) {
             $this->assertSame('error_ai_tagging_failed', $e->errorcode);
         }
-        $this->assertFalse($DB->record_exists('block_kursfilter_tag_pending', ['courseid' => $course->id]));
+        $this->assertFalse($DB->record_exists('block_kursfilter_tag_suggest', ['courseid' => $course->id]));
     }
 
     public function test_enabled_tagging_without_ai_provider_fails_loudly(): void {
@@ -154,6 +154,6 @@ final class tag_courses_test extends \advanced_testcase {
         $this->expectOutputRegex('/disabled/');
         (new tag_courses())->execute();
 
-        $this->assertSame(0, $DB->count_records('block_kursfilter_tag_pending'));
+        $this->assertSame(0, $DB->count_records('block_kursfilter_tag_suggest'));
     }
 }

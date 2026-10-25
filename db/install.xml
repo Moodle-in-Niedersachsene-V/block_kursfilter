@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<XMLDB PATH="blocks/kursfilter/db" VERSION="20260905" COMMENT="XMLDB file for block_kursfilter"
+<XMLDB PATH="blocks/kursfilter/db" VERSION="20261015" COMMENT="XMLDB file for block_kursfilter"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd"
 >
@@ -20,12 +20,12 @@
         <INDEX NAME="cookiehash_courseid"  UNIQUE="true"  FIELDS="cookiehash, courseid"/>
       </INDEXES>
     </TABLE>
-    <TABLE NAME="block_kursfilter_tag_pending" COMMENT="AI tag suggestion and its outcome (pending, applied, empty) per course">
+    <TABLE NAME="block_kursfilter_tag_suggest" COMMENT="AI tag suggestion and its outcome (suggested, applied, empty) per course">
       <FIELDS>
         <FIELD NAME="id"           TYPE="int"  LENGTH="10" NOTNULL="true" SEQUENCE="true"/>
         <FIELD NAME="courseid"     TYPE="int"  LENGTH="10" NOTNULL="true"/>
         <FIELD NAME="tags"         TYPE="text"             NOTNULL="true"/>
-        <FIELD NAME="status"       TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="pending"/>
+        <FIELD NAME="status"       TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="suggested"/>
         <FIELD NAME="timecreated"  TYPE="int"  LENGTH="10" NOTNULL="true"/>
         <FIELD NAME="timemodified" TYPE="int"  LENGTH="10" NOTNULL="true"/>
       </FIELDS>

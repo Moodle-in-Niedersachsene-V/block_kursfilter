@@ -21,8 +21,8 @@ use block_kursfilter\tag_suggester;
 /**
  * Scheduled task: AI tagging of public courses that have no tag suggestion yet.
  *
- * Each course is processed once; the outcome is kept in block_kursfilter_tag_pending:
- * 'applied' (tags added), 'pending' (waiting for review) or 'empty' (no value fits).
+ * Each course is processed once; the outcome is kept in block_kursfilter_tag_suggest:
+ * 'applied' (tags added), 'suggested' (tag suggestion waiting for review) or 'empty' (no value fits).
  * A failed request leaves no record, so the course is retried on the next run.
  *
  * @package   block_kursfilter
@@ -66,6 +66,11 @@ class tag_courses extends \core\task\scheduled_task {
                 $tags = tag_suggester::suggest($course, $course->categoryname, $userid);
                 $status = self::record_outcome($course, $tags, $autoapply);
                 mtrace("Course {$course->id}: {$status} (" . implode(', ', $tags) . ')');
+            } catch (\block_kursfilter\personal_data_exception $e) {
+                // The AI flagged possible personal data; record as 'skipped' so the course is
+                // not retried on every run. The admin must review and clean the course text.
+                self::record_skipped($course, $e->getMessage());
+                mtrace("Course {$course->id}: skipped — " . $e->getMessage());
             } catch (\Throwable $e) {
                 mtrace("Course {$course->id}: AI tagging failed: " . $e->getMessage());
                 $failed++;
@@ -93,10 +98,32 @@ class tag_courses extends \core\task\scheduled_task {
         $sql = "SELECT c.id, c.fullname, c.shortname, c.summary, cc.name AS categoryname
                   FROM {course} c
                   JOIN {course_categories} cc ON cc.id = c.category
-             LEFT JOIN {block_kursfilter_tag_pending} tp ON tp.courseid = c.id
+             LEFT JOIN {block_kursfilter_tag_suggest} tp ON tp.courseid = c.id
                  WHERE " . implode(' AND ', [$publicsql, 'tp.id IS NULL']) . "
               ORDER BY c.id ASC";
         return $DB->get_records_sql($sql, $params, 0, $limit);
+    }
+
+    /**
+     * Record a course as skipped because the AI flagged possible personal data.
+     *
+     * The course will not be retried until its row in block_kursfilter_tag_suggest is deleted.
+     * The admin can then review the course text, clean it and remove the row to trigger a retry.
+     *
+     * @param \stdClass $course Course record.
+     * @param string $reason Human-readable reason (from the exception message).
+     */
+    private static function record_skipped(\stdClass $course, string $reason): void {
+        global $DB;
+
+        $now = time();
+        $DB->insert_record('block_kursfilter_tag_suggest', [
+            'courseid'     => $course->id,
+            'tags'         => '',
+            'status'       => 'skipped',
+            'timecreated'  => $now,
+            'timemodified' => $now,
+        ]);
     }
 
     /**
@@ -119,11 +146,11 @@ class tag_courses extends \core\task\scheduled_task {
             }
             $status = 'applied';
         } else {
-            $status = 'pending';
+            $status = 'suggested';
         }
 
         $now = time();
-        $DB->insert_record('block_kursfilter_tag_pending', [
+        $DB->insert_record('block_kursfilter_tag_suggest', [
             'courseid' => $course->id,
             'tags' => implode(',', $tags),
             'status' => $status,

@@ -14,20 +14,20 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace block_kursfilter;
+
 /**
- * Event observers for block_kursfilter.
+ * Thrown by tag_suggester when the AI model flags personal data in a course text.
+ *
+ * Catching this exception separately from a generic \Throwable lets the caller
+ * record the course as 'skipped' instead of treating it as a hard failure.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
- * @author    Moodle in Niedersachsen e. V.
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
-
-$observers = [
-    [
-        'eventname' => '\core\event\user_loggedout',
-        'callback'  => '\block_kursfilter\observer::user_loggedout',
-    ],
-];
+class personal_data_exception extends \moodle_exception {
+    public function __construct() {
+        parent::__construct('error_ai_personal_data', 'block_kursfilter');
+    }
+}

@@ -39,7 +39,7 @@ class pool_manager {
     const POOL_SIZE_MAX = 50;
 
     /** Username prefix for pool accounts. */
-    const USERNAME_PREFIX = 'kursfilter_guest';
+    const USERNAME_PREFIX = 'kursfilter_pool';
 
     /** Role shortname for course access (non-editing teacher without access to personal data). */
     const ROLE_SHORTNAME = 'kursfilter_pool';
@@ -49,11 +49,10 @@ class pool_manager {
         'moodle/course:viewparticipants',
         'moodle/site:viewuseridentity',
         'moodle/grade:viewall',
+        'moodle/user:viewdetails',
         'moodle/user:editownprofile',
+        'moodle/user:changeownpassword',
     ];
-
-    /** Cache key prefix marking a pool account as occupied. */
-    const CACHE_PREFIX = 'pool_active_';
 
     /**
      * Return the configured pool size (from admin settings, capped at POOL_SIZE_MAX).
@@ -66,6 +65,16 @@ class pool_manager {
             $configured = self::POOL_SIZE_DEFAULT;
         }
         return min($configured, self::POOL_SIZE_MAX);
+    }
+
+    /**
+     * Whether the username belongs to a pool account.
+     *
+     * @param string $username Username.
+     * @return bool
+     */
+    public static function is_pool_account(string $username): bool {
+        return in_array($username, self::get_pool_usernames(), true);
     }
 
     /**
@@ -254,13 +263,10 @@ class pool_manager {
     public static function get_free_pool_account(): ?\stdClass {
         global $DB;
 
-        $cache = \cache::make('block_kursfilter', 'poolsessions');
+        $occupied = array_column(self::get_occupying_sessions(), 'userid');
         foreach (self::get_pool_usernames() as $username) {
-            if ($cache->get(self::CACHE_PREFIX . $username) !== false) {
-                continue;
-            }
             $user = $DB->get_record('user', ['username' => $username, 'deleted' => 0], '*', IGNORE_MISSING);
-            if ($user) {
+            if ($user && !in_array($user->id, $occupied)) {
                 return $user;
             }
         }
@@ -268,44 +274,58 @@ class pool_manager {
     }
 
     /**
-     * Hand a free pool account to a visitor for a preview of the course: enrol and occupy it.
+     * Occupy and log in a free pool account atomically, allowing one preview per IP.
      *
-     * @param int $courseid Public course to preview.
+     * @param int|null $courseid Public course to enrol into, or null for a preview without enrolment.
      * @return \stdClass|null The occupied pool account, or null if all are occupied.
+     * @throws \moodle_exception If this IP already has a preview or the pool lock times out.
      */
-    public static function occupy_free_account(int $courseid): ?\stdClass {
-        $account = self::get_free_pool_account();
-        if (!$account) {
-            return null;
+    public static function occupy_free_account(?int $courseid): ?\stdClass {
+        $factory = \core\lock\lock_config::get_lock_factory('block_kursfilter_pool');
+        $lock = $factory->get_lock('occupancy', 10);
+        if (!$lock) {
+            throw new \moodle_exception('locktimeout');
         }
-        self::enrol_pool_into_course($courseid);
-        self::mark_occupied($account->username);
-        return $account;
+        try {
+            $ip = getremoteaddr();
+            foreach (self::get_occupying_sessions() as $session) {
+                if ($session->firstip === $ip || $session->lastip === $ip) {
+                    throw new \moodle_exception('preview_in_use', 'block_kursfilter');
+                }
+            }
+            $account = self::get_free_pool_account();
+            if (!$account) {
+                return null;
+            }
+            if ($courseid !== null) {
+                self::enrol_pool_into_course($courseid);
+            }
+            \core\session\manager::destroy_user_sessions($account->id);
+            // Keep the lock until Moodle has recorded the new session, with no reservation/login gap.
+            complete_user_login(get_complete_user_data('id', $account->id));
+            return $account;
+        } finally {
+            $lock->release();
+        }
     }
 
     /**
-     * Mark a pool account as occupied and end its earlier sessions, so that two visitors never share it.
-     * The marker expires with the cache definition (db/caches.php).
+     * Return the sessions that occupy a pool account, i.e. have not reached Moodle's inactivity timeout.
      *
-     * @param string $username Pool account username.
+     * @return \stdClass[] Sessions, including accounts outside the configured pool size.
      */
-    public static function mark_occupied(string $username): void {
-        global $DB;
+    private static function get_occupying_sessions(): array {
+        global $DB, $CFG;
 
-        $userid = $DB->get_field('user', 'id', ['username' => $username, 'deleted' => 0]);
-        if ($userid) {
-            \core\session\manager::destroy_user_sessions($userid);
-        }
-        \cache::make('block_kursfilter', 'poolsessions')->set(self::CACHE_PREFIX . $username, time());
-    }
-
-    /**
-     * Release a pool account (logout).
-     *
-     * @param string $username Pool account username.
-     */
-    public static function mark_free(string $username): void {
-        \cache::make('block_kursfilter', 'poolsessions')->delete(self::CACHE_PREFIX . $username);
+        [$insql, $params] = $DB->get_in_or_equal(self::get_pool_usernames(self::POOL_SIZE_MAX), SQL_PARAMS_NAMED);
+        $params['cutoff'] = time() - $CFG->sessiontimeout;
+        return $DB->get_records_sql(
+            "SELECT s.id, s.userid, s.firstip, s.lastip
+               FROM {sessions} s
+               JOIN {user} u ON u.id = s.userid
+              WHERE u.username $insql AND u.deleted = 0 AND s.timemodified >= :cutoff",
+            $params
+        );
     }
 
     /**

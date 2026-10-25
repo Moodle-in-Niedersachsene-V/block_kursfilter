@@ -59,4 +59,82 @@ final class course_access_test extends \advanced_testcase {
         $this->assertNotContains((string)$hidden->id, $ids);
         $this->assertNotContains((string)SITEID, $ids);
     }
+
+    public function test_root_category_ids_returns_null_when_not_configured(): void {
+        $this->resetAfterTest();
+        set_config('rootcategory', '', 'block_kursfilter');
+
+        $this->assertNull(course_access::root_category_ids());
+    }
+
+    public function test_root_category_ids_returns_empty_for_unknown_name(): void {
+        $this->resetAfterTest();
+        set_config('rootcategory', 'Gibts Nicht', 'block_kursfilter');
+
+        $this->assertSame([], course_access::root_category_ids());
+    }
+
+    public function test_root_category_ids_includes_root_and_all_descendants(): void {
+        $this->resetAfterTest();
+        $gen = $this->getDataGenerator();
+        $root = $gen->create_category(['name' => 'Kurse']);
+        $child = $gen->create_category(['parent' => $root->id]);
+        $grandchild = $gen->create_category(['parent' => $child->id]);
+        $other = $gen->create_category(['name' => 'Andere']);
+
+        set_config('rootcategory', 'Kurse', 'block_kursfilter');
+        $ids = course_access::root_category_ids();
+
+        $this->assertContains($root->id, $ids);
+        $this->assertContains($child->id, $ids);
+        $this->assertContains($grandchild->id, $ids);
+        $this->assertNotContains($other->id, $ids);
+    }
+
+    public function test_root_category_ids_accepts_numeric_id(): void {
+        $this->resetAfterTest();
+        $gen = $this->getDataGenerator();
+        $root = $gen->create_category(['name' => 'Kurse']);
+        $child = $gen->create_category(['parent' => $root->id]);
+
+        set_config('rootcategory', (string)$root->id, 'block_kursfilter');
+        $ids = course_access::root_category_ids();
+
+        $this->assertContains($root->id, $ids);
+        $this->assertContains($child->id, $ids);
+    }
+
+    public function test_public_course_sql_with_root_category_excludes_courses_in_other_categories(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $gen = $this->getDataGenerator();
+        $rootcat = $gen->create_category(['name' => 'Kurse']);
+        $othercat = $gen->create_category(['name' => 'Andere']);
+        $courseinkurse = $gen->create_course(['category' => $rootcat->id]);
+        $courseinandere = $gen->create_course(['category' => $othercat->id]);
+
+        set_config('rootcategory', 'Kurse', 'block_kursfilter');
+        [$sql, $params] = course_access::public_course_sql('c');
+        $ids = $DB->get_fieldset_sql("SELECT c.id FROM {course} c WHERE $sql", $params);
+
+        $this->assertContains((string)$courseinkurse->id, $ids);
+        $this->assertNotContains((string)$courseinandere->id, $ids);
+    }
+
+    public function test_public_course_sql_without_root_category_includes_all_visible_courses(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $gen = $this->getDataGenerator();
+        $cat1 = $gen->create_category();
+        $cat2 = $gen->create_category();
+        $c1 = $gen->create_course(['category' => $cat1->id]);
+        $c2 = $gen->create_course(['category' => $cat2->id]);
+
+        set_config('rootcategory', '', 'block_kursfilter');
+        [$sql, $params] = course_access::public_course_sql('c');
+        $ids = $DB->get_fieldset_sql("SELECT c.id FROM {course} c WHERE $sql", $params);
+
+        $this->assertContains((string)$c1->id, $ids);
+        $this->assertContains((string)$c2->id, $ids);
+    }
 }

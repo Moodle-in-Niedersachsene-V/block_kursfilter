@@ -52,6 +52,53 @@ function xmldb_block_kursfilter_remove_ai_settings(): void {
 }
 
 /**
+ * Rename the pool accounts from the former prefix to the glossary name (idempotent, keeps user IDs and assignments).
+ */
+function xmldb_block_kursfilter_rename_pool_accounts(): void {
+    global $DB, $CFG;
+    require_once($CFG->dirroot . '/user/lib.php');
+
+    $old = 'kursfilter_guest';
+    $new = \block_kursfilter\pool_manager::USERNAME_PREFIX;
+    for ($i = 1; $i <= \block_kursfilter\pool_manager::POOL_SIZE_MAX; $i++) {
+        $suffix = str_pad((string)$i, 2, '0', STR_PAD_LEFT);
+        $user = $DB->get_record('user', ['username' => $old . $suffix, 'mnethostid' => $CFG->mnet_localhost_id]);
+        if (!$user || $DB->record_exists('user', ['username' => $new . $suffix, 'mnethostid' => $CFG->mnet_localhost_id])) {
+            continue;
+        }
+        $user->username = $new . $suffix;
+        $user->email = $new . $suffix . '@kursfilter.invalid';
+        user_update_user($user, false, false);
+    }
+}
+
+/**
+ * Rename the tag suggestion table and its status 'pending' to 'suggested' (idempotent, keeps all rows).
+ */
+function xmldb_block_kursfilter_rename_tag_suggestions(): void {
+    global $DB;
+
+    $dbman = $DB->get_manager();
+    $old = new \xmldb_table('block_kursfilter_tag_pending');
+    $new = new \xmldb_table('block_kursfilter_tag_suggest');
+    if ($dbman->table_exists($old) && !$dbman->table_exists($new)) {
+        $dbman->rename_table($old, 'block_kursfilter_tag_suggest');
+    }
+    if (!$dbman->table_exists($new)) {
+        return;
+    }
+    $DB->set_field('block_kursfilter_tag_suggest', 'status', 'suggested', ['status' => 'pending']);
+    $status = new \xmldb_field('status', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'suggested', 'tags');
+    // Moodle refuses to change a column that an index depends on.
+    $index = new \xmldb_index('status', XMLDB_INDEX_NOTUNIQUE, ['status']);
+    if ($dbman->index_exists($new, $index)) {
+        $dbman->drop_index($new, $index);
+    }
+    $dbman->change_field_default($new, $status);
+    $dbman->add_index($new, $index);
+}
+
+/**
  * Upgrade the block_kursfilter plugin.
  *
  * @param int $oldversion Previous plugin version.
@@ -61,6 +108,10 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
     global $DB;
 
     $dbman = $DB->get_manager();
+
+    // Glossary names (N1): the pool accounts must be renamed before the older steps look them up by name.
+    // Not a savepoint step: the rename is idempotent and the savepoint 2026101501 below covers it.
+    $oldversion < 2026101501 && xmldb_block_kursfilter_rename_pool_accounts();
 
     if ($oldversion < 2026100600) {
         // Pool accounts get a role without access to participants, user identity and grades.
@@ -132,6 +183,38 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
             }
         }
         upgrade_block_savepoint(true, 2026101028, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101029) {
+        // Profile, profile editing and password change are now also prohibited for the pool role.
+        $roleid = \block_kursfilter\pool_manager::ensure_role();
+        foreach (\block_kursfilter\pool_manager::PROHIBITED_CAPABILITIES as $capability) {
+            assign_capability($capability, CAP_PROHIBIT, $roleid, \context_system::instance()->id, true);
+        }
+        upgrade_block_savepoint(true, 2026101029, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101500) {
+        // Rebuild observer and cache definitions after removing the separate occupancy cache.
+        upgrade_block_savepoint(true, 2026101500, 'kursfilter');
+    }
+
+    if ($oldversion < 2026101501) {
+        // Glossary names (N1): tag suggestion table and status; the pool accounts were renamed above.
+        xmldb_block_kursfilter_rename_tag_suggestions();
+        upgrade_block_savepoint(true, 2026101501, 'kursfilter');
+    }
+
+    if ($oldversion < 2026102201) {
+        // New setting rootcategory: restricts automatic tagging and backups to a category subtree.
+        // No database schema change; the setting is a plain config value. Just bump the savepoint.
+        upgrade_block_savepoint(true, 2026102201, 'kursfilter');
+    }
+
+    if ($oldversion < 2026102501) {
+        // AI personal-data reports are now recorded as status='skipped' instead of failing the task.
+        // No schema change needed; the status column is a free-form CHAR(20).
+        upgrade_block_savepoint(true, 2026102501, 'kursfilter');
     }
 
     return true;

@@ -31,6 +31,13 @@ if ($ADMIN->fulltree) {
         get_string('settings_filters_heading', 'block_kursfilter'),
         get_string('settings_filters_desc', 'block_kursfilter')
     ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/rootcategory',
+        get_string('settings_rootcategory', 'block_kursfilter'),
+        get_string('settings_rootcategory_help', 'block_kursfilter'),
+        '',
+        PARAM_RAW_TRIMMED
+    ));
     $settings->add(new admin_setting_configtextarea(
         'block_kursfilter/schooltypes',
         get_string('settings_schooltypes', 'block_kursfilter'),
@@ -84,6 +91,29 @@ if ($ADMIN->fulltree) {
         get_string('settings_ai_enabled', 'block_kursfilter'),
         get_string('settings_ai_enabled_help', 'block_kursfilter'),
         0
+    ));
+    $settings->add(new admin_setting_configselect(
+        'block_kursfilter/ai_backend',
+        get_string('settings_ai_backend', 'block_kursfilter'),
+        get_string('settings_ai_backend_help', 'block_kursfilter'),
+        'coreai',
+        [
+            'coreai' => get_string('settings_ai_backend_coreai', 'block_kursfilter'),
+            'claude' => get_string('settings_ai_backend_claude', 'block_kursfilter'),
+        ]
+    ));
+    $settings->add(new admin_setting_configpasswordunmask(
+        'block_kursfilter/ai_claude_apikey',
+        get_string('settings_ai_claude_apikey', 'block_kursfilter'),
+        get_string('settings_ai_claude_apikey_help', 'block_kursfilter'),
+        ''
+    ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/ai_claude_model',
+        get_string('settings_ai_claude_model', 'block_kursfilter'),
+        get_string('settings_ai_claude_model_help', 'block_kursfilter'),
+        'claude-haiku-4-5',
+        PARAM_TEXT
     ));
     $settings->add(new admin_setting_configcheckbox(
         'block_kursfilter/ai_autoapply',
