@@ -27,6 +27,9 @@ namespace block_kursfilter;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class personal_data_exception extends \moodle_exception {
+    /**
+     * Constructor.
+     */
     public function __construct() {
         parent::__construct('error_ai_personal_data', 'block_kursfilter');
     }

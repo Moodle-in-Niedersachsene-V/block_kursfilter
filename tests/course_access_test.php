@@ -85,10 +85,10 @@ final class course_access_test extends \advanced_testcase {
         set_config('rootcategory', 'Kurse', 'block_kursfilter');
         $ids = course_access::root_category_ids();
 
-        $this->assertContains($root->id, $ids);
-        $this->assertContains($child->id, $ids);
-        $this->assertContains($grandchild->id, $ids);
-        $this->assertNotContains($other->id, $ids);
+        $this->assertContains((int)$root->id, $ids);
+        $this->assertContains((int)$child->id, $ids);
+        $this->assertContains((int)$grandchild->id, $ids);
+        $this->assertNotContains((int)$other->id, $ids);
     }
 
     public function test_root_category_ids_accepts_numeric_id(): void {
@@ -100,8 +100,8 @@ final class course_access_test extends \advanced_testcase {
         set_config('rootcategory', (string)$root->id, 'block_kursfilter');
         $ids = course_access::root_category_ids();
 
-        $this->assertContains($root->id, $ids);
-        $this->assertContains($child->id, $ids);
+        $this->assertContains((int)$root->id, $ids);
+        $this->assertContains((int)$child->id, $ids);
     }
 
     public function test_public_course_sql_with_root_category_excludes_courses_in_other_categories(): void {
