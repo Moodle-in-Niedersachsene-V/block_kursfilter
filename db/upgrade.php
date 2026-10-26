@@ -217,10 +217,15 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026102501, 'kursfilter');
     }
 
-    if ($oldversion < 2026102503) {
-        // Fix phpcs: lang file key ordering (settings_filters_heading before settings_rootcategory_help).
+    if ($oldversion < 2026102504) {
+        // Fix phpcs: sort all settings_* lang-file keys alphabetically (complete pass).
         // Fix phpunit: assertContains type safety for integer category IDs.
-        upgrade_block_savepoint(true, 2026102503, 'kursfilter');
+        upgrade_block_savepoint(true, 2026102504, 'kursfilter');
+    }
+
+    if ($oldversion < 2026102505) {
+        // Rebuild ZIP with corrected lang file order (no schema change).
+        upgrade_block_savepoint(true, 2026102505, 'kursfilter');
     }
 
     return true;
