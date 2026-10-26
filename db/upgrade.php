@@ -217,10 +217,10 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026102501, 'kursfilter');
     }
 
-    if ($oldversion < 2026102502) {
-        // Fix phpcs: docblock for personal_data_exception::__construct; lang file key order.
+    if ($oldversion < 2026102503) {
+        // Fix phpcs: lang file key ordering (settings_filters_heading before settings_rootcategory_help).
         // Fix phpunit: assertContains type safety for integer category IDs.
-        upgrade_block_savepoint(true, 2026102502, 'kursfilter');
+        upgrade_block_savepoint(true, 2026102503, 'kursfilter');
     }
 
     return true;
