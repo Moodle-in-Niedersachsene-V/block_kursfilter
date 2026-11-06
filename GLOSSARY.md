@@ -51,6 +51,11 @@ Ein Wert in der Liste einer Einstellung (Schulform, Fach, Niveaustufe), nach dem
 _Avoid_: Filteroption, Chip (nur Darstellung)
 Code: `filter value`
 
+**Filterart**:
+Eine Art von Filter (Schulform, Fach, Niveaustufe) mit eigener Liste von Filterwerten; ihr Suchparameter bestimmt die Kurs-Tags, nach denen gesucht wird.
+_Avoid_: Filtertyp, Filterkategorie
+Code: `filter kind`
+
 **Kurs-Tag**:
 Ein Schlagwort am Kurs; Schulform, Fach und Niveaustufe sind Kurs-Tags, deren Wert in der Liste der Einstellungen steht.
 _Avoid_: Präfix-Tag

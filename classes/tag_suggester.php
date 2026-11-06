@@ -32,9 +32,6 @@ class tag_suggester {
     /** Maximum length of the summary sent to the AI. */
     const SUMMARY_LENGTH = 800;
 
-    /** Filter settings the suggestions are taken from. */
-    const FILTER_SETTINGS = ['schooltypes', 'subjects', 'levels'];
-
     /** Backend setting value: Moodle's AI subsystem (default). */
     const BACKEND_COREAI = 'coreai';
 
@@ -73,8 +70,8 @@ class tag_suggester {
      */
     public static function suggest(\stdClass $course, string $categoryname, int $userid): array {
         $lists = [];
-        foreach (self::FILTER_SETTINGS as $setting) {
-            $lists[$setting] = self::filter_values($setting);
+        foreach (filter_values::kinds() as $kind) {
+            $lists[filter_values::setting($kind)] = filter_values::values($kind);
         }
 
         $prompt = self::build_prompt($course, $categoryname, $lists);
@@ -82,7 +79,7 @@ class tag_suggester {
             ? self::ask_claude($prompt)
             : self::ask_core_ai($prompt, \context_course::instance($course->id)->id, $userid);
 
-        return self::parse_answer($answer, $lists);
+        return self::parse_answer($answer);
     }
 
     /**
@@ -150,18 +147,6 @@ class tag_suggester {
     }
 
     /**
-     * Read the values of a filter setting, one per line; the single reader for block, tasks and AI.
-     *
-     * @param string $setting Setting name.
-     * @return string[] Non-empty, cleaned values.
-     */
-    public static function filter_values(string $setting): array {
-        $lines = explode("\n", (string)get_config('block_kursfilter', $setting));
-        $values = array_map(fn($line) => clean_param(trim($line), PARAM_TEXT), $lines);
-        return array_values(array_filter($values, 'strlen'));
-    }
-
-    /**
      * Build the prompt; the course content is passed as JSON data, never as instructions.
      *
      * @param \stdClass $course Course record.
@@ -214,14 +199,13 @@ class tag_suggester {
     }
 
     /**
-     * Keep only answer values that occur in the allowed lists.
+     * Keep only answer values that occur in the allowed filter values.
      *
      * @param string $answer Model answer.
-     * @param array $lists Allowed values per filter setting (setting name => string[]).
      * @return string[] Allowed values in their configured spelling, without duplicates.
      * @throws \moodle_exception If the answer contains no JSON object or flags personal data.
      */
-    private static function parse_answer(string $answer, array $lists): array {
+    private static function parse_answer(string $answer): array {
         // Models sometimes wrap the JSON in prose or code fences; take the outermost object.
         $start = strpos($answer, '{');
         $end = strrpos($answer, '}');
@@ -235,12 +219,11 @@ class tag_suggester {
         }
 
         $tags = [];
-        foreach ($lists as $setting => $allowed) {
-            $byname = array_combine(array_map('core_text::strtolower', $allowed), $allowed);
-            foreach ((array)($data[$setting] ?? []) as $value) {
-                $key = \core_text::strtolower(trim((string)$value));
-                if (isset($byname[$key])) {
-                    $tags[$byname[$key]] = $byname[$key];
+        foreach (filter_values::kinds() as $kind) {
+            foreach ((array)($data[filter_values::setting($kind)] ?? []) as $value) {
+                $tag = filter_values::match($kind, (string)$value);
+                if ($tag !== null) {
+                    $tags[$tag] = $tag;
                 }
             }
         }

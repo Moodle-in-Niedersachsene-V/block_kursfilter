@@ -102,7 +102,7 @@ class search_courses extends external_api {
 
         $records = self::find_courses(
             $params['category'],
-            array_filter([$params['schooltype'], $params['subject'], $params['level']], 'strlen'),
+            array_filter(array_intersect_key($params, array_flip(\block_kursfilter\filter_values::kinds())), 'strlen'),
             $params['searchterm'],
             self::effective_limit($params['limit'])
         );

@@ -32,7 +32,7 @@ if ($ADMIN->fulltree) {
         get_string('settings_filters_desc', 'block_kursfilter')
     ));
     $settings->add(new admin_setting_configtextarea(
-        'block_kursfilter/schooltypes',
+        'block_kursfilter/' . \block_kursfilter\filter_values::setting('schooltype'),
         get_string('settings_schooltypes', 'block_kursfilter'),
         get_string('settings_schooltypes_help', 'block_kursfilter'),
         "Grundschule\nHauptschule\nRealschule\nOberschule\nGymnasium\nIGS\nKGS\nFörderschule\nFreie Waldorfschule\n" .
@@ -40,7 +40,7 @@ if ($ADMIN->fulltree) {
             "Fachoberschule\nBerufsoberschule\nBerufliches Gymnasium\nFachschule"
     ));
     $settings->add(new admin_setting_configtextarea(
-        'block_kursfilter/subjects',
+        'block_kursfilter/' . \block_kursfilter\filter_values::setting('subject'),
         get_string('settings_subjects', 'block_kursfilter'),
         get_string('settings_subjects_help', 'block_kursfilter'),
         "Mathematik\nDeutsch\nEnglisch\nFranzösisch\nSpanisch\nLatein\nNaturwissenschaften\nBiologie\nChemie\nPhysik\n" .
@@ -48,7 +48,7 @@ if ($ADMIN->fulltree) {
             "Darstellendes Spiel\nSport\nInformatik\nArbeit-Wirtschaft-Technik\nHauswirtschaft\nTextiles Gestalten"
     ));
     $settings->add(new admin_setting_configtextarea(
-        'block_kursfilter/levels',
+        'block_kursfilter/' . \block_kursfilter\filter_values::setting('level'),
         get_string('settings_levels', 'block_kursfilter'),
         get_string('settings_levels_help', 'block_kursfilter'),
         "Klasse 1-4\nKlasse 5-6\nKlasse 7-9\nKlasse 10\nOberstufe"
