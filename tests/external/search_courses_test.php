@@ -313,6 +313,32 @@ final class search_courses_test extends \advanced_testcase {
         $this->assertFalse($byid[(int)$other->id]['alreadyrated']);
     }
 
+    public function test_visible_course_in_hidden_category_has_empty_category_name(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $category = $this->getDataGenerator()->create_category(['visible' => 0]);
+        $course = $this->getDataGenerator()->create_course(['category' => $category->id, 'visible' => 1]);
+
+        $courses = $this->search(['category' => (int)$category->id])['courses'];
+
+        $this->assertSame([(int)$course->id], $this->ids(['courses' => $courses]));
+        $this->assertSame('', $courses[0]['categoryname']);
+    }
+
+    public function test_tag_names_are_returned_like_the_former_tag_api(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $category = $this->getDataGenerator()->create_category();
+        $course = $this->getDataGenerator()->create_course(['category' => $category->id]);
+        \core_tag_tag::set_item_tags('core', 'course', $course->id, \context_course::instance($course->id), ['Mathe & Physik']);
+        $expected = array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id));
+        $this->assertCount(1, $expected);
+
+        $courses = $this->search(['category' => (int)$category->id])['courses'];
+
+        $this->assertSame($expected, $courses[0]['tags']);
+    }
+
     /**
      * Creates a visible course in a category with the tag "Oberstufe".
      *

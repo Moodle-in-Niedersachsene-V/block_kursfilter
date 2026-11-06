@@ -237,7 +237,8 @@ class search_courses extends external_api {
     }
 
     /**
-     * Full category path of each category, loaded in one query.
+     * Full category path of each category the visitor may see, loaded in one query.
+     * Hidden or missing categories get no entry.
      *
      * @param int[] $categoryids Category IDs of the hits.
      * @return array<int, string> Path by category ID.
@@ -245,7 +246,9 @@ class search_courses extends external_api {
     private static function category_names(array $categoryids): array {
         $names = [];
         foreach (\core_course_category::get_many(array_values(array_unique($categoryids))) as $id => $category) {
-            $names[$id] = $category->get_nested_name(false);
+            if ($category && $category->is_uservisible()) {
+                $names[$id] = $category->get_nested_name(false);
+            }
         }
         return $names;
     }
