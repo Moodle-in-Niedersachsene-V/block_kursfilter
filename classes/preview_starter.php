@@ -97,9 +97,10 @@ final class preview_starter {
                 $occupied[(int)$session->userid] = true;
             }
 
+            $configured = pool_manager::get_pool_usernames();
             $free = null;
             foreach ($accounts as $account) {
-                $isconfigured = in_array($account->username, pool_manager::get_pool_usernames(), true);
+                $isconfigured = in_array($account->username, $configured, true);
                 if ($isconfigured && !isset($occupied[(int)$account->id])) {
                     $free = $account;
                     break;

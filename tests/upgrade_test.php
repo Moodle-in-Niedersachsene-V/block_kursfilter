@@ -100,7 +100,7 @@ final class upgrade_test extends \advanced_testcase {
         $this->assertFalse(get_config('block_kursfilter', 'ai_claude_apikey'));
     }
 
-    public function test_upgrade_2026110601_restores_prohibitions_and_pool_size(): void {
+    public function test_upgrade_2026110601_restores_prohibitions(): void {
         global $CFG, $DB;
         require_once($CFG->libdir . '/upgradelib.php');
         require_once($CFG->dirroot . '/blocks/kursfilter/db/upgrade.php');
