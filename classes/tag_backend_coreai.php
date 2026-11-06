@@ -23,12 +23,12 @@ namespace block_kursfilter;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class tag_backend_coreai implements tag_backend {
-    /** @inheritdoc */
+    /** @inheritDoc */
     public function is_available(): bool {
         return \core\di::get(\core_ai\manager::class)->is_action_available(\core_ai\aiactions\generate_text::class);
     }
 
-    /** @inheritdoc */
+    /** @inheritDoc */
     public function ask(string $prompt, int $contextid, int $userid): string {
         $action = new \core_ai\aiactions\generate_text(contextid: $contextid, userid: $userid, prompttext: $prompt);
         $response = \core\di::get(\core_ai\manager::class)->process_action($action);

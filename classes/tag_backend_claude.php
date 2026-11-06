@@ -34,12 +34,12 @@ class tag_backend_claude implements tag_backend {
     /** Seconds before a request is given up. */
     const TIMEOUT = 30;
 
-    /** @inheritdoc */
+    /** @inheritDoc */
     public function is_available(): bool {
         return (string)get_config('block_kursfilter', 'ai_claude_apikey') !== '';
     }
 
-    /** @inheritdoc */
+    /** @inheritDoc */
     public function ask(string $prompt, int $contextid, int $userid): string {
         $model = (string)get_config('block_kursfilter', 'ai_claude_model') ?: self::DEFAULT_MODEL;
         try {

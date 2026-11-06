@@ -236,16 +236,22 @@ final class tag_suggester_test extends \advanced_testcase {
      */
     private function fake_backend(string $answer = '', ?\Throwable $error = null): object {
         $backend = new class($answer, $error) implements tag_backend {
-            /** @var array Requests received. */
+            /** @var array<int, array{prompt: string, contextid: int, userid: int}> Requests received. */
             public array $calls = [];
 
+            /**
+             * @param string $answer Text to answer with.
+             * @param \Throwable|null $error Exception to throw instead.
+             */
             public function __construct(private string $answer, private ?\Throwable $error) {
             }
 
+            /** @inheritDoc */
             public function is_available(): bool {
                 return true;
             }
 
+            /** @inheritDoc */
             public function ask(string $prompt, int $contextid, int $userid): string {
                 $this->calls[] = ['prompt' => $prompt, 'contextid' => $contextid, 'userid' => $userid];
                 if ($this->error) {
@@ -281,7 +287,6 @@ final class tag_suggester_test extends \advanced_testcase {
     }
 
     public function test_autoapply_adds_the_tags_and_stores_applied(): void {
-        global $DB;
         set_config('ai_autoapply', 1, 'block_kursfilter');
         $course = $this->getDataGenerator()->create_course();
         $this->fake_backend('{"subjects": ["Mathematik"]}');
@@ -370,5 +375,33 @@ final class tag_suggester_test extends \advanced_testcase {
     private function outcome(\stdClass $course): \stdClass {
         global $DB;
         return $DB->get_record('block_kursfilter_tag_suggest', ['courseid' => $course->id], '*', MUST_EXIST);
+    }
+
+    public function test_claude_transport_error_is_reported_as_request_failure(): void {
+        $course = $this->getDataGenerator()->create_course();
+        set_config('ai_backend', 'claude', 'block_kursfilter');
+        set_config('ai_claude_apikey', 'sk-test-key', 'block_kursfilter');
+        $this->mock->append(new \GuzzleHttp\Exception\ConnectException('no route', new \GuzzleHttp\Psr7\Request('POST', 'x')));
+
+        try {
+            tag_suggester::suggest($course, 'X', (int)get_admin()->id);
+            $this->fail('A transport error must be reported.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_ai_request_failed', $e->errorcode);
+        }
+    }
+
+    public function test_claude_answer_without_text_is_reported_as_request_failure(): void {
+        $course = $this->getDataGenerator()->create_course();
+        set_config('ai_backend', 'claude', 'block_kursfilter');
+        set_config('ai_claude_apikey', 'sk-test-key', 'block_kursfilter');
+        $this->mock->append(new Response(200, [], json_encode(['type' => 'message', 'content' => []])));
+
+        try {
+            tag_suggester::suggest($course, 'X', (int)get_admin()->id);
+            $this->fail('An answer without text must be reported.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_ai_request_failed', $e->errorcode);
+        }
     }
 }
