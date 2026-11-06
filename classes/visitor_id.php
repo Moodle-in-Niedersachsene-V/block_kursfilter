@@ -71,6 +71,7 @@ class visitor_id {
                 setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
             }
             // Makes the new ID visible to later calls of this request.
+            // phpcs:ignore moodle.Commenting.InlineComment.NotCapital,moodle.Commenting.InlineComment.InvalidEndChar -- Semgrep marker syntax.
             $_COOKIE[self::COOKIE_NAME] = $hash; // nosemgrep: moodle-superglobal-direkt
         }
         return $hash;
