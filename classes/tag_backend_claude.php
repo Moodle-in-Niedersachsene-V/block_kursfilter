@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 namespace block_kursfilter;
 
 /**
@@ -34,12 +35,24 @@ class tag_backend_claude implements tag_backend {
     /** Seconds before a request is given up. */
     const TIMEOUT = 30;
 
-    /** @inheritDoc */
+    /**
+     * Whether an API key is configured.
+     *
+     * @return bool
+     */
     public function is_available(): bool {
         return (string)get_config('block_kursfilter', 'ai_claude_apikey') !== '';
     }
 
-    /** @inheritDoc */
+    /**
+     * Send the prompt to the Messages API and return the answer text.
+     *
+     * @param string $prompt Prompt.
+     * @param int $contextid Unused; kept for the interface.
+     * @param int $userid Unused; kept for the interface.
+     * @return string Generated text.
+     * @throws \moodle_exception error_ai_request_failed if the request fails.
+     */
     public function ask(string $prompt, int $contextid, int $userid): string {
         $model = (string)get_config('block_kursfilter', 'ai_claude_model') ?: self::DEFAULT_MODEL;
         try {

@@ -235,23 +235,45 @@ final class tag_suggester_test extends \advanced_testcase {
      * @return object Fake backend; $calls holds prompt, contextid and userid per request.
      */
     private function fake_backend(string $answer = '', ?\Throwable $error = null): object {
-        $backend = new class($answer, $error) implements tag_backend {
+        $backend = new class ($answer, $error) implements tag_backend {
+            /** @var string Text to answer with. */
+            private string $answer;
+
+            /** @var \Throwable|null Exception to throw instead. */
+            private ?\Throwable $error;
+
             /** @var array<int, array{prompt: string, contextid: int, userid: int}> Requests received. */
             public array $calls = [];
 
             /**
+             * Store the canned answer and optional error.
+             *
              * @param string $answer Text to answer with.
              * @param \Throwable|null $error Exception to throw instead.
              */
-            public function __construct(private string $answer, private ?\Throwable $error) {
+            public function __construct(string $answer, ?\Throwable $error) {
+                $this->answer = $answer;
+                $this->error = $error;
             }
 
-            /** @inheritDoc */
+            /**
+             * Report the fake as available.
+             *
+             * @return bool
+             */
             public function is_available(): bool {
                 return true;
             }
 
-            /** @inheritDoc */
+            /**
+             * Record the request and return the canned answer or throw the error.
+             *
+             * @param string $prompt Prompt.
+             * @param int $contextid Course context.
+             * @param int $userid User.
+             * @return string Canned answer.
+             * @throws \Throwable The configured error, if any.
+             */
             public function ask(string $prompt, int $contextid, int $userid): string {
                 $this->calls[] = ['prompt' => $prompt, 'contextid' => $contextid, 'userid' => $userid];
                 if ($this->error) {

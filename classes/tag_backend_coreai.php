@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 namespace block_kursfilter;
 
 /**
@@ -23,12 +24,24 @@ namespace block_kursfilter;
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class tag_backend_coreai implements tag_backend {
-    /** @inheritDoc */
+    /**
+     * Whether the core_ai generate_text action is available.
+     *
+     * @return bool
+     */
     public function is_available(): bool {
         return \core\di::get(\core_ai\manager::class)->is_action_available(\core_ai\aiactions\generate_text::class);
     }
 
-    /** @inheritDoc */
+    /**
+     * Send the prompt through core_ai and return the generated text.
+     *
+     * @param string $prompt Prompt.
+     * @param int $contextid Course context the request is logged for.
+     * @param int $userid User the request is logged for.
+     * @return string Generated text.
+     * @throws \moodle_exception error_ai_request_failed if the request fails.
+     */
     public function ask(string $prompt, int $contextid, int $userid): string {
         $action = new \core_ai\aiactions\generate_text(contextid: $contextid, userid: $userid, prompttext: $prompt);
         $response = \core\di::get(\core_ai\manager::class)->process_action($action);
