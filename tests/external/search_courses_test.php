@@ -16,6 +16,7 @@
 
 namespace block_kursfilter\external;
 
+use block_kursfilter\visitor_id;
 use core_external\external_api;
 use PHPUnit\Framework\Attributes\CoversClass;
 
@@ -249,7 +250,7 @@ final class search_courses_test extends \advanced_testcase {
         $category = $this->getDataGenerator()->create_category();
         $args = ['category' => (int)$category->id];
         $this->create_tagged_course($category->id);
-        // Warm up caches (categories, tags), so that only the query shape is measured.
+        // Creating courses invalidates the category cache, so warm up after each setup step.
         $this->search($args);
 
         $before = $DB->perf_get_reads();
@@ -259,6 +260,7 @@ final class search_courses_test extends \advanced_testcase {
         for ($i = 0; $i < 9; $i++) {
             $this->create_tagged_course($category->id);
         }
+        $this->search($args);
         $before = $DB->perf_get_reads();
         $result = $this->search($args);
         $manyhits = $DB->perf_get_reads() - $before;

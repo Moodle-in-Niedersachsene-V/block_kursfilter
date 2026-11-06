@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 namespace block_kursfilter;
 
 /**
@@ -144,7 +143,7 @@ class rating_helper {
      *
      * @param int    $courseid  Course ID.
      * @param string $visitorid Visitor ID.
-     * @return int|null
+     * @return int|null The stars already given, or null if the visitor did not rate.
      */
     private static function get_existing_rating(int $courseid, string $visitorid): ?int {
         global $DB;

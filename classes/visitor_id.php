@@ -14,7 +14,6 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 namespace block_kursfilter;
 
 /**
@@ -68,9 +67,11 @@ class visitor_id {
         $hash = self::renew();
         if ($hash === null) {
             $hash = hash('sha256', bin2hex(random_bytes(32)));
-            setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
+            if (!headers_sent()) {
+                setcookie(self::COOKIE_NAME, $hash, self::get_cookie_options());
+            }
             // Makes the new ID visible to later calls of this request.
-            $_COOKIE[self::COOKIE_NAME] = $hash;
+            $_COOKIE[self::COOKIE_NAME] = $hash; // nosemgrep: moodle-superglobal-direkt
         }
         return $hash;
     }
@@ -78,7 +79,7 @@ class visitor_id {
     /**
      * Valid visitor ID sent by the browser, if any.
      *
-     * @return string|null
+     * @return string|null The valid visitor ID from the cookie, or null.
      */
     private static function read(): ?string {
         // Moodle offers no *_param() for cookies; only 64 hex characters pass.

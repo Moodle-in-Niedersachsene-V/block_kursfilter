@@ -103,7 +103,7 @@ Code: `rating`; Cookie `kf_rater_id` bleibt unverändert (ADR 0003, 0005): eine 
 **Besucher-Kennung**:
 Zufällige 64-stellige Hex-Kennung eines Besuchers im Cookie `kf_rater_id` (ein Jahr, nur HTTPS, HttpOnly, SameSite=Lax); sie verbindet Bewertungen mit einem Besucher, ohne Konto und ohne Klarnamen.
 _Avoid_: Cookie-Hash, Rater-ID, Session-ID, Tracking-ID
-Code: `visitor id`
+Code: `visitor_id` (Klasse), `$visitorid`
 
 **Kurssicherung**:
 Die nächtlich erzeugte Sicherungsdatei (.mbz) eines öffentlichen Kurses ohne Nutzerdaten; je Kurs gibt es höchstens eine.
