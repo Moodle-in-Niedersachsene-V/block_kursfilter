@@ -44,9 +44,8 @@ class setup_pool extends \core\task\scheduled_task {
      * Execute the task.
      */
     public function execute(): void {
-        $created  = \block_kursfilter\pool_manager::create_pool_accounts();
-        $enrolled = \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
+        $result = \block_kursfilter\pool_manager::sync();
 
-        mtrace("Course Filter pool: {$created} pool accounts created, {$enrolled} enrolments added.");
+        mtrace("Course Filter pool: {$result['created']} pool accounts created, {$result['enrolled']} enrolments added.");
     }
 }

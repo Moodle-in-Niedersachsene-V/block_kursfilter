@@ -18,7 +18,7 @@
  * Pool manager for the course preview of block_kursfilter.
  *
  * Manages the pool accounts that let visitors preview a public course
- * with the pool role.
+ * with the pool role. Occupancy lives in preview_starter.
  *
  * @package   block_kursfilter
  * @copyright 2026 Moodle in Niedersachsen e. V.
@@ -29,7 +29,7 @@
 namespace block_kursfilter;
 
 /**
- * Manages the pool accounts, their pool role and their occupancy.
+ * Manages the pool accounts and their pool role (Pool-Abgleich).
  */
 class pool_manager {
     /** Default number of pool accounts (documented in the setting). */
@@ -74,7 +74,7 @@ class pool_manager {
      * @return bool
      */
     public static function is_pool_account(string $username): bool {
-        return in_array($username, self::get_pool_usernames(), true);
+        return in_array($username, self::get_pool_usernames(self::POOL_SIZE_MAX), true);
     }
 
     /**
@@ -128,30 +128,42 @@ class pool_manager {
     }
 
     /**
-     * Create the pool role if missing: a non-editing teacher that may not see participants, user identity or grades.
+     * Create the pool role if missing and re-apply its prohibited capabilities on every call.
      *
      * @return int Role ID.
      */
     public static function ensure_role(): int {
         global $DB;
 
-        $roleid = $DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
-        if ($roleid) {
-            return (int)$roleid;
+        $roleid = (int)$DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
+        if (!$roleid) {
+            $roleid = create_role(
+                get_string('role_pool_name', 'block_kursfilter'),
+                self::ROLE_SHORTNAME,
+                get_string('role_pool_description', 'block_kursfilter'),
+                'teacher'
+            );
+            set_role_contextlevels($roleid, get_default_contextlevels('teacher'));
+            // Take over the default capabilities of the archetype (create_role() does not).
+            reset_role_capabilities($roleid);
         }
-        $roleid = create_role(
-            get_string('role_pool_name', 'block_kursfilter'),
-            self::ROLE_SHORTNAME,
-            get_string('role_pool_description', 'block_kursfilter'),
-            'teacher'
-        );
-        set_role_contextlevels($roleid, get_default_contextlevels('teacher'));
-        // Take over the default capabilities of the archetype (create_role() does not).
-        reset_role_capabilities($roleid);
         foreach (self::PROHIBITED_CAPABILITIES as $capability) {
             assign_capability($capability, CAP_PROHIBIT, $roleid, \context_system::instance()->id, true);
         }
-        return (int)$roleid;
+        return $roleid;
+    }
+
+    /**
+     * Pool sync (Pool-Abgleich): idempotent setup of accounts, role, role assignments and enrolments.
+     *
+     * @return array{created: int, enrolled: int} Number of new accounts and new enrolments.
+     */
+    public static function sync(): array {
+        $created = self::create_pool_accounts();
+        self::ensure_role();
+        self::migrate_to_pool_role();
+        $enrolled = self::enrol_pool_into_all_courses();
+        return ['created' => $created, 'enrolled' => $enrolled];
     }
 
     /**
@@ -174,7 +186,7 @@ class pool_manager {
 
         $teacherid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
         $poolroleid = self::ensure_role();
-        [$insql, $params] = $DB->get_in_or_equal(self::get_pool_usernames(), SQL_PARAMS_NAMED);
+        [$insql, $params] = $DB->get_in_or_equal(self::get_pool_usernames(self::POOL_SIZE_MAX), SQL_PARAMS_NAMED);
         $assignments = $DB->get_records_sql(
             "SELECT ra.id, ra.userid, ra.contextid
                FROM {role_assignments} ra
@@ -253,79 +265,6 @@ class pool_manager {
             $total += self::enrol_pool_into_course((int)$course->id);
         }
         return $total;
-    }
-
-    /**
-     * Find the first free pool account.
-     *
-     * @return \stdClass|null User record, or null if all pool accounts are occupied.
-     */
-    public static function get_free_pool_account(): ?\stdClass {
-        global $DB;
-
-        $occupied = array_column(self::get_occupying_sessions(), 'userid');
-        foreach (self::get_pool_usernames() as $username) {
-            $user = $DB->get_record('user', ['username' => $username, 'deleted' => 0], '*', IGNORE_MISSING);
-            if ($user && !in_array($user->id, $occupied)) {
-                return $user;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Occupy and log in a free pool account atomically, allowing one preview per IP.
-     *
-     * @param int|null $courseid Public course to enrol into, or null for a preview without enrolment.
-     * @return \stdClass|null The occupied pool account, or null if all are occupied.
-     * @throws \moodle_exception If this IP already has a preview or the pool lock times out.
-     */
-    public static function occupy_free_account(?int $courseid): ?\stdClass {
-        $factory = \core\lock\lock_config::get_lock_factory('block_kursfilter_pool');
-        $lock = $factory->get_lock('occupancy', 10);
-        if (!$lock) {
-            throw new \moodle_exception('locktimeout');
-        }
-        try {
-            $ip = getremoteaddr();
-            foreach (self::get_occupying_sessions() as $session) {
-                if ($session->firstip === $ip || $session->lastip === $ip) {
-                    throw new \moodle_exception('preview_in_use', 'block_kursfilter');
-                }
-            }
-            $account = self::get_free_pool_account();
-            if (!$account) {
-                return null;
-            }
-            if ($courseid !== null) {
-                self::enrol_pool_into_course($courseid);
-            }
-            \core\session\manager::destroy_user_sessions($account->id);
-            // Keep the lock until Moodle has recorded the new session, with no reservation/login gap.
-            complete_user_login(get_complete_user_data('id', $account->id));
-            return $account;
-        } finally {
-            $lock->release();
-        }
-    }
-
-    /**
-     * Return the sessions that occupy a pool account, i.e. have not reached Moodle's inactivity timeout.
-     *
-     * @return \stdClass[] Sessions, including accounts outside the configured pool size.
-     */
-    private static function get_occupying_sessions(): array {
-        global $DB, $CFG;
-
-        [$insql, $params] = $DB->get_in_or_equal(self::get_pool_usernames(self::POOL_SIZE_MAX), SQL_PARAMS_NAMED);
-        $params['cutoff'] = time() - $CFG->sessiontimeout;
-        return $DB->get_records_sql(
-            "SELECT s.id, s.userid, s.firstip, s.lastip
-               FROM {sessions} s
-               JOIN {user} u ON u.id = s.userid
-              WHERE u.username $insql AND u.deleted = 0 AND s.timemodified >= :cutoff",
-            $params
-        );
     }
 
     /**

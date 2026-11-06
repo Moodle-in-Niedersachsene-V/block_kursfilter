@@ -83,6 +83,11 @@ Die Rolle der Pool-Konten in öffentlichen Kursen: sieht den Kurs wie eine Lehrk
 _Avoid_: Trainer-Rolle, Gastrolle
 Code: `pool role`
 
+**Pool-Abgleich**:
+Idempotenter Abgleich der Pool-Konten: legt fehlende Pool-Konten bis zur eingestellten Größe an, stellt die Pool-Rolle und ihre verbotenen Rechte sicher, überführt Lehrer-Zuweisungen der Pool-Konten in die Pool-Rolle und schreibt die Pool-Konten in öffentliche Kurse ein. Läuft bei Installation, Upgrade und im geplanten Task.
+_Avoid_: Pool-Sync, Pool-Einrichtung, Pool-Setup
+Code: `pool sync` (`pool_manager::sync()`)
+
 **Belegt / frei**:
 Ein Pool-Konto ist belegt, solange ein Besucher es für eine Vorschau nutzt, sonst frei.
 _Avoid_: aktiv, besetzt

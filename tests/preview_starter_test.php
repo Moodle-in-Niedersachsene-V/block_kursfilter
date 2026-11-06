@@ -137,7 +137,6 @@ final class preview_starter_test extends \advanced_testcase {
         $this->assertSame(0, $DB->count_records('user_enrolments', ['userid' => $USER->id]));
         $this->assertSame(0, $DB->count_records('role_assignments', ['userid' => $USER->id]));
         $this->assertSame(1, $DB->count_records('sessions', ['userid' => $USER->id]));
-        $this->assertNull(pool_manager::get_free_pool_account());
     }
 
     public function test_course_independent_start_reports_pool_full(): void {

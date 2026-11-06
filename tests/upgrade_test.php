@@ -49,7 +49,7 @@ final class upgrade_test extends \advanced_testcase {
         foreach (['schulformen', 'faecher', 'niveaustufen', 'backup_adminid', 'ai_claude_apikey'] as $old) {
             $this->assertFalse(get_config('block_kursfilter', $old), $old);
         }
-        $this->assertSame('2026101501', get_config('block_kursfilter', 'version'));
+        $this->assertSame('2026110601', get_config('block_kursfilter', 'version'));
     }
 
     public function test_upgrade_from_main_1_4_0_moves_pool_accounts_from_teacher_to_pool_role(): void {
@@ -98,6 +98,27 @@ final class upgrade_test extends \advanced_testcase {
         $this->assertTrue(user_has_role_assignment($userid, $poolroleid, $context->id));
         $this->assertFalse(user_has_role_assignment($userid, $teacherid, $context->id));
         $this->assertFalse(get_config('block_kursfilter', 'ai_claude_apikey'));
+    }
+
+    public function test_upgrade_2026110601_restores_prohibitions_and_pool_size(): void {
+        global $CFG, $DB;
+        require_once($CFG->libdir . '/upgradelib.php');
+        require_once($CFG->dirroot . '/blocks/kursfilter/db/upgrade.php');
+        $this->resetAfterTest();
+        set_config('poolsize', 2, 'block_kursfilter');
+        pool_manager::sync();
+        $roleid = (int)$DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
+        $systemcontext = \context_system::instance()->id;
+        unassign_capability('moodle/course:viewparticipants', $roleid, $systemcontext);
+        set_config('version', 2026101501, 'block_kursfilter');
+
+        xmldb_block_kursfilter_upgrade(2026101501);
+
+        $this->assertTrue($DB->record_exists('role_capabilities', [
+            'roleid' => $roleid, 'contextid' => $systemcontext,
+            'capability' => 'moodle/course:viewparticipants', 'permission' => CAP_PROHIBIT,
+        ]));
+        $this->assertSame('2026110601', get_config('block_kursfilter', 'version'));
     }
 
     public function test_upgrade_from_2026101500_renames_pool_accounts_and_tag_suggestion_table_without_data_loss(): void {

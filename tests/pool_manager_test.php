@@ -19,7 +19,7 @@ namespace block_kursfilter;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Tests for the pool accounts (creation, enrolment, role rights, occupancy).
+ * Tests for the pool accounts (Pool-Abgleich, pool role, enrolments, recognition).
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
@@ -28,13 +28,14 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(pool_manager::class)]
 final class pool_manager_test extends \advanced_testcase {
     /**
-     * Returns the pool account IDs according to the current pool size.
+     * Returns the pool account IDs according to the given pool size (all accounts up to the maximum by default).
      *
+     * @param int|null $size Pool size.
      * @return int[] User IDs.
      */
-    private function pool_userids(): array {
+    private function pool_userids(?int $size = null): array {
         global $DB;
-        [$insql, $params] = $DB->get_in_or_equal(pool_manager::get_pool_usernames());
+        [$insql, $params] = $DB->get_in_or_equal(pool_manager::get_pool_usernames($size));
         return array_keys($DB->get_records_select('user', "username $insql", $params, '', 'id'));
     }
 
@@ -49,25 +50,50 @@ final class pool_manager_test extends \advanced_testcase {
         $this->assertCount(pool_manager::POOL_SIZE_MAX, pool_manager::get_pool_usernames());
     }
 
-    public function test_create_pool_accounts_creates_missing_accounts_only_once(): void {
+    public function test_sync_creates_missing_accounts_and_is_idempotent(): void {
+        global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 12, 'block_kursfilter');
-        $existing = count($this->pool_userids());
 
-        $first = pool_manager::create_pool_accounts();
-        $second = pool_manager::create_pool_accounts();
+        $first = pool_manager::sync();
+        $second = pool_manager::sync();
 
         // New accounts must not trigger Moodle validation warnings (e.g. language not installed).
         $this->assertDebuggingNotCalled();
-
-        $this->assertSame(0, $second);
+        $this->assertSame(12, $first['created']);
+        $this->assertSame(['created' => 0, 'enrolled' => 0], $second);
         $this->assertCount(12, $this->pool_userids());
-        $this->assertSame(12 - $existing, $first);
+        $this->assertSame(12, $DB->count_records_select('user', "username LIKE 'kursfilter_pool%'"));
+    }
+
+    public function test_sync_adds_accounts_when_the_pool_grows(): void {
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::sync();
+
+        set_config('poolsize', 3, 'block_kursfilter');
+        $result = pool_manager::sync();
+
+        $this->assertSame(2, $result['created']);
+        $this->assertCount(3, $this->pool_userids());
+    }
+
+    public function test_reduced_pool_keeps_profile_lock_of_accounts_above_the_size(): void {
+        $this->resetAfterTest();
+        set_config('poolsize', 3, 'block_kursfilter');
+        pool_manager::sync();
+        set_config('poolsize', 1, 'block_kursfilter');
+
+        $this->assertSame([pool_manager::USERNAME_PREFIX . '01'], pool_manager::get_pool_usernames());
+        $this->assertTrue(pool_manager::is_pool_account(pool_manager::USERNAME_PREFIX . '03'));
+        $this->assertFalse(pool_manager::is_pool_account('kursfilter_pool51'));
+        $this->assertFalse(pool_manager::is_pool_account('kursfilter_pool4'));
+        $this->assertFalse(pool_manager::is_pool_account('teacher01'));
     }
 
     public function test_pool_accounts_cannot_be_logged_into_with_guessable_passwords(): void {
         $this->resetAfterTest();
-        pool_manager::create_pool_accounts();
+        pool_manager::sync();
         $username = pool_manager::get_pool_usernames()[0];
         $_SERVER['HTTP_USER_AGENT'] = 'phpunit';
 
@@ -76,11 +102,68 @@ final class pool_manager_test extends \advanced_testcase {
         }
     }
 
+    public function test_sync_restores_prohibited_capabilities_on_every_run(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::sync();
+        $roleid = (int)$DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
+        $systemcontext = \context_system::instance()->id;
+        $capability = 'moodle/course:viewparticipants';
+        unassign_capability($capability, $roleid, $systemcontext);
+
+        pool_manager::sync();
+
+        $this->assertTrue($DB->record_exists('role_capabilities', [
+            'roleid' => $roleid, 'contextid' => $systemcontext, 'capability' => $capability, 'permission' => CAP_PROHIBIT,
+        ]));
+    }
+
+    public function test_sync_moves_teacher_assignments_of_pool_accounts_only(): void {
+        global $DB;
+        $this->resetAfterTest();
+        set_config('poolsize', 1, 'block_kursfilter');
+        pool_manager::sync();
+        $course = $this->getDataGenerator()->create_course();
+        $context = \context_course::instance($course->id);
+        $teacherid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
+        $poolid = $this->pool_userids()[0];
+        $realteacher = $this->getDataGenerator()->create_user();
+        role_assign($teacherid, $poolid, $context->id);
+        $this->getDataGenerator()->enrol_user($realteacher->id, $course->id, 'teacher');
+
+        pool_manager::sync();
+        pool_manager::sync();
+
+        $poolroleid = $DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
+        $this->assertTrue(user_has_role_assignment($poolid, $poolroleid, $context->id));
+        $this->assertFalse(user_has_role_assignment($poolid, $teacherid, $context->id));
+        $this->assertTrue(user_has_role_assignment($realteacher->id, $teacherid, $context->id));
+        $this->assertFalse(has_capability('moodle/course:viewparticipants', $context, $poolid));
+    }
+
+    public function test_sync_enrols_pool_into_public_courses_only_once(): void {
+        $this->resetAfterTest();
+        set_config('poolsize', 2, 'block_kursfilter');
+        pool_manager::sync();
+        $visible = $this->getDataGenerator()->create_course();
+        $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
+
+        $first = pool_manager::sync();
+        $second = pool_manager::sync();
+
+        $userid = $this->pool_userids()[0];
+        $this->assertSame(2, $first['enrolled']);
+        $this->assertSame(0, $second['enrolled']);
+        $this->assertTrue(is_enrolled(\context_course::instance($visible->id), $userid, '', true));
+        $this->assertFalse(is_enrolled(\context_course::instance($hidden->id), $userid));
+    }
+
     public function test_enrol_pool_into_course_assigns_pool_role_once(): void {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 3, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
+        pool_manager::sync();
         $course = $this->getDataGenerator()->create_course();
         $other = $this->getDataGenerator()->create_course();
         $context = \context_course::instance($course->id);
@@ -101,7 +184,7 @@ final class pool_manager_test extends \advanced_testcase {
     public function test_pool_role_has_no_write_rights_in_course(): void {
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
+        pool_manager::sync();
         $course = $this->getDataGenerator()->create_course();
         pool_manager::enrol_pool_into_course($course->id);
         $userid = $this->pool_userids()[0];
@@ -121,11 +204,9 @@ final class pool_manager_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         set_config('poolsize', 2, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
+        pool_manager::sync();
         $visible = $this->getDataGenerator()->create_course();
         $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
-
-        pool_manager::enrol_pool_into_all_courses();
 
         $userid = $this->pool_userids()[0];
         $this->assertTrue(is_enrolled(\context_course::instance($visible->id), $userid, '', true));
@@ -133,40 +214,10 @@ final class pool_manager_test extends \advanced_testcase {
         $this->assertFalse($DB->record_exists('enrol', ['courseid' => SITEID, 'enrol' => 'manual']));
     }
 
-    public function test_free_pool_account_changes_with_occupancy(): void {
-        $this->resetAfterTest();
-        set_config('poolsize', 2, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
-        [$first, $second] = pool_manager::get_pool_usernames();
-
-        $this->assertSame($first, pool_manager::get_free_pool_account()->username);
-        $firstsession = $this->create_session($this->pool_userids()[0]);
-        $this->assertSame($second, pool_manager::get_free_pool_account()->username);
-        $this->create_session($this->pool_userids()[1]);
-        $this->assertNull(pool_manager::get_free_pool_account());
-        \core\session\manager::destroy($firstsession->sid);
-        $this->assertSame($first, pool_manager::get_free_pool_account()->username);
-    }
-
-    public function test_expired_preview_session_releases_pool_account(): void {
-        global $DB, $CFG;
-        $this->resetAfterTest();
-        set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
-        $username = pool_manager::get_pool_usernames()[0];
-        $DB->insert_record('sessions', (object)[
-            'state' => 0, 'sid' => 'expired-preview', 'userid' => $this->pool_userids()[0], 'sessdata' => null,
-            'timecreated' => time() - $CFG->sessiontimeout - 1, 'timemodified' => time() - $CFG->sessiontimeout - 1,
-            'firstip' => '192.0.2.1', 'lastip' => '192.0.2.1',
-        ]);
-
-        $this->assertSame($username, pool_manager::get_free_pool_account()->username);
-    }
-
     public function test_pool_role_cannot_see_participants_identity_or_grades(): void {
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
+        pool_manager::sync();
         $course = $this->getDataGenerator()->create_course();
         pool_manager::enrol_pool_into_course($course->id);
         $userid = $this->pool_userids()[0];
@@ -180,7 +231,7 @@ final class pool_manager_test extends \advanced_testcase {
     public function test_pool_role_still_sees_hidden_activities(): void {
         $this->resetAfterTest();
         set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
+        pool_manager::sync();
         $course = $this->getDataGenerator()->create_course();
         $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'visible' => 0]);
         pool_manager::enrol_pool_into_course($course->id);
@@ -190,29 +241,6 @@ final class pool_manager_test extends \advanced_testcase {
             \context_module::instance($page->cmid),
             $this->pool_userids()[0]
         ));
-    }
-
-    public function test_migrate_moves_teacher_assignments_of_pool_accounts_only(): void {
-        global $DB;
-        $this->resetAfterTest();
-        set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::create_pool_accounts();
-        $course = $this->getDataGenerator()->create_course();
-        $context = \context_course::instance($course->id);
-        $teacherid = $DB->get_field('role', 'id', ['shortname' => 'teacher']);
-        $poolid = $this->pool_userids()[0];
-        $realteacher = $this->getDataGenerator()->create_user();
-        $this->getDataGenerator()->enrol_user($poolid, $course->id, 'teacher');
-        $this->getDataGenerator()->enrol_user($realteacher->id, $course->id, 'teacher');
-
-        pool_manager::migrate_to_pool_role();
-        pool_manager::migrate_to_pool_role();
-
-        $poolroleid = $DB->get_field('role', 'id', ['shortname' => pool_manager::ROLE_SHORTNAME]);
-        $this->assertTrue(user_has_role_assignment($poolid, $poolroleid, $context->id));
-        $this->assertFalse(user_has_role_assignment($poolid, $teacherid, $context->id));
-        $this->assertTrue(user_has_role_assignment($realteacher->id, $teacherid, $context->id));
-        $this->assertFalse(has_capability('moodle/course:viewparticipants', $context, $poolid));
     }
 
     public function test_remove_role_deletes_the_pool_role(): void {
@@ -225,21 +253,5 @@ final class pool_manager_test extends \advanced_testcase {
         pool_manager::remove_role();
 
         $this->assertFalse($DB->record_exists('role', ['shortname' => pool_manager::ROLE_SHORTNAME]));
-    }
-
-    /**
-     * Create a session that occupies a pool account as a fixture; PHPUnit itself has no browser session.
-     *
-     * @param int $userid Pool account ID.
-     * @return \stdClass Session record.
-     */
-    private function create_session(int $userid): \stdClass {
-        global $DB;
-        $session = (object)[
-            'state' => 0, 'sid' => random_string(32), 'userid' => $userid, 'sessdata' => null,
-            'timecreated' => time(), 'timemodified' => time(), 'firstip' => '192.0.2.1', 'lastip' => '192.0.2.1',
-        ];
-        $session->id = $DB->insert_record('sessions', $session);
-        return $session;
     }
 }
