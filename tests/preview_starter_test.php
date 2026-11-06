@@ -93,6 +93,28 @@ final class preview_starter_test extends \advanced_testcase {
         $this->assertSame(preview_starter::POOL_FULL, preview_starter::start((int)$course->id, false));
     }
 
+    public function test_accounts_above_the_pool_size_are_never_handed_out(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        set_config('poolsize', 2, 'block_kursfilter');
+        pool_manager::create_pool_accounts();
+        set_config('poolsize', 1, 'block_kursfilter');
+        // The only configured account is occupied; the second account exists but is above the size.
+        $DB->insert_record('sessions', [
+            'state' => 0,
+            'sid' => 'kfpreviewabove',
+            'userid' => $DB->get_field('user', 'id', ['username' => pool_manager::get_pool_usernames()[0]]),
+            'sessdata' => null,
+            'timecreated' => time(),
+            'timemodified' => time(),
+            'firstip' => '203.0.113.10',
+            'lastip' => '203.0.113.10',
+        ]);
+
+        $this->assertSame(preview_starter::POOL_FULL, preview_starter::start((int)$course->id, false));
+    }
+
     public function test_ip_in_use_when_this_ip_already_occupies_an_account(): void {
         global $DB;
         $this->resetAfterTest();
@@ -137,7 +159,6 @@ final class preview_starter_test extends \advanced_testcase {
         $this->assertSame(0, $DB->count_records('user_enrolments', ['userid' => $USER->id]));
         $this->assertSame(0, $DB->count_records('role_assignments', ['userid' => $USER->id]));
         $this->assertSame(1, $DB->count_records('sessions', ['userid' => $USER->id]));
-        $this->assertNull(pool_manager::get_free_pool_account());
     }
 
     public function test_course_independent_start_reports_pool_full(): void {

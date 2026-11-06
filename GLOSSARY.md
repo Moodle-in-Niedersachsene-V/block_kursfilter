@@ -51,6 +51,11 @@ Ein Wert in der Liste einer Einstellung (Schulform, Fach, Niveaustufe), nach dem
 _Avoid_: Filteroption, Chip (nur Darstellung)
 Code: `filter value`
 
+**Filterart**:
+Eine Art von Filter (Schulform, Fach, Niveaustufe) mit eigener Liste von Filterwerten; ihr Suchparameter bestimmt die Kurs-Tags, nach denen gesucht wird.
+_Avoid_: Filtertyp, Filterkategorie
+Code: `filter kind`
+
 **Kurs-Tag**:
 Ein Schlagwort am Kurs; Schulform, Fach und Niveaustufe sind Kurs-Tags, deren Wert in der Liste der Einstellungen steht.
 _Avoid_: Präfix-Tag
@@ -83,6 +88,11 @@ Die Rolle der Pool-Konten in öffentlichen Kursen: sieht den Kurs wie eine Lehrk
 _Avoid_: Trainer-Rolle, Gastrolle
 Code: `pool role`
 
+**Pool-Abgleich**:
+Idempotenter Abgleich der Pool-Konten: legt fehlende Pool-Konten bis zur eingestellten Größe an, stellt die Pool-Rolle und ihre verbotenen Rechte sicher, überführt Lehrer-Zuweisungen der Pool-Konten in die Pool-Rolle und schreibt die Pool-Konten in öffentliche Kurse ein. Läuft bei Installation, Upgrade und im geplanten Task.
+_Avoid_: Pool-Sync, Pool-Einrichtung, Pool-Setup
+Code: `pool sync` (`pool_manager::sync()`)
+
 **Belegt / frei**:
 Ein Pool-Konto ist belegt, solange ein Besucher es für eine Vorschau nutzt, sonst frei.
 _Avoid_: aktiv, besetzt
@@ -94,6 +104,11 @@ Code: `occupied` / `free`
 Ein bis fünf Sterne, die ein Besucher einem öffentlichen Kurs gibt; höchstens eine je Besucher und Kurs.
 _Avoid_: Rating, Kursbewertung, Stimme
 Code: `rating`; Cookie `kf_rater_id` bleibt unverändert (ADR 0003, 0005): eine Umbenennung trennte bestehende Besucher von ihren Bewertungen und ließe sie erneut bewerten. Das WS-Feld heißt `visitorrating` (ersetzt `userrating`).
+
+**Besucher-Kennung**:
+Zufällige 64-stellige Hex-Kennung eines Besuchers im Cookie `kf_rater_id` (ein Jahr, nur HTTPS, HttpOnly, SameSite=Lax); sie verbindet Bewertungen mit einem Besucher, ohne Konto und ohne Klarnamen.
+_Avoid_: Cookie-Hash, Rater-ID, Session-ID, Tracking-ID
+Code: `visitor_id` (Klasse), `$visitorid`
 
 **Kurssicherung**:
 Die nächtlich erzeugte Sicherungsdatei (.mbz) eines öffentlichen Kurses ohne Nutzerdaten; je Kurs gibt es höchstens eine.

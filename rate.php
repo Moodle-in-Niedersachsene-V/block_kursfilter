@@ -53,12 +53,7 @@ if (!confirm_sesskey()) {
 $courseid = required_param('courseid', PARAM_INT);
 $stars = required_param('stars', PARAM_INT);
 
-$result = \block_kursfilter\rating_helper::submit(
-    $courseid,
-    $stars,
-    fn() => \block_kursfilter\rating_helper::renew_cookie_hash()
-        ?? \block_kursfilter\rating_helper::create_cookie_hash()
-);
+$result = \block_kursfilter\rating_helper::rate($courseid, $stars);
 
 echo json_encode($result);
 exit;

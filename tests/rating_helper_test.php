@@ -19,7 +19,7 @@ namespace block_kursfilter;
 use PHPUnit\Framework\Attributes\CoversClass;
 
 /**
- * Tests for storing course ratings and the Moodle event raised by it.
+ * Tests for rating a course, reading course ratings and the Moodle event raised by a rating.
  *
  * @package    block_kursfilter
  * @copyright  2026 Moodle in Niedersachsen e. V.
@@ -30,18 +30,26 @@ final class rating_helper_test extends \advanced_testcase {
     /** @var string Visitor cookie hash used by the tests. */
     private const HASH = 'a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1';
 
-    public function test_saving_a_rating_raises_course_rated_event_without_visitor_hash(): void {
+    /**
+     * Gives the request the visitor cookie used by the tests.
+     */
+    private function visit(): void {
+        $_COOKIE[visitor_id::COOKIE_NAME] = self::HASH;
+    }
+
+    public function test_rating_raises_course_rated_event_once_without_visitor_hash(): void {
         $this->resetAfterTest();
+        $this->visit();
         $course = $this->getDataGenerator()->create_course();
         $sink = $this->redirectEvents();
 
-        $saved = rating_helper::save_rating((int)$course->id, self::HASH, 4);
+        $result = rating_helper::rate((int)$course->id, 4);
 
         $events = array_values(array_filter(
             $sink->get_events(),
             fn($event) => $event instanceof event\course_rated
         ));
-        $this->assertTrue($saved);
+        $this->assertSame(['success' => true, 'saved' => true, 'already_rated' => false, 'stars' => 4], $result);
         $this->assertCount(1, $events);
         $this->assertEquals(\context_course::instance($course->id), $events[0]->get_context());
         $this->assertSame((int)$course->id, (int)$events[0]->courseid);
@@ -49,115 +57,102 @@ final class rating_helper_test extends \advanced_testcase {
         $this->assertStringNotContainsString(self::HASH, json_encode($events[0]->get_data()));
     }
 
-    public function test_repeated_rating_raises_no_event_and_keeps_the_first(): void {
-        $this->resetAfterTest();
-        $course = $this->getDataGenerator()->create_course();
-        rating_helper::save_rating((int)$course->id, self::HASH, 3);
-        $sink = $this->redirectEvents();
-
-        $again = rating_helper::save_rating((int)$course->id, self::HASH, 5);
-
-        $this->assertFalse($again);
-        $this->assertCount(0, $sink->get_events());
-        $this->assertSame(3, rating_helper::get_existing_rating((int)$course->id, self::HASH));
-    }
-
-    public function test_invalid_stars_throw_and_store_nothing(): void {
+    public function test_repeated_rating_keeps_the_first_and_raises_no_event(): void {
         global $DB;
         $this->resetAfterTest();
+        $this->visit();
+        $course = $this->getDataGenerator()->create_course();
+        rating_helper::rate((int)$course->id, 2);
+        $sink = $this->redirectEvents();
+
+        $again = rating_helper::rate((int)$course->id, 5);
+
+        $this->assertSame(['success' => true, 'saved' => false, 'already_rated' => true, 'stars' => 2], $again);
+        $this->assertCount(0, $sink->get_events());
+        $this->assertSame(1, $DB->count_records('block_kursfilter_ratings'));
+        $this->assertSame(2, (int)$DB->get_field('block_kursfilter_ratings', 'stars', ['courseid' => $course->id]));
+    }
+
+    public function test_invalid_stars_store_nothing_and_set_no_cookie(): void {
+        global $DB;
+        $this->resetAfterTest();
+        unset($_COOKIE[visitor_id::COOKIE_NAME]);
         $course = $this->getDataGenerator()->create_course();
         $sink = $this->redirectEvents();
 
         foreach ([0, 6] as $stars) {
-            try {
-                rating_helper::save_rating((int)$course->id, self::HASH, $stars);
-                $this->fail("Stars $stars must throw.");
-            } catch (\invalid_parameter_exception $e) {
-                $this->assertStringContainsString('between 1 and 5', $e->getMessage());
-            }
+            $this->assertSame(
+                ['success' => false, 'error' => 'Invalid rating'],
+                rating_helper::rate((int)$course->id, $stars)
+            );
         }
+
         $this->assertCount(0, $sink->get_events());
         $this->assertSame(0, $DB->count_records('block_kursfilter_ratings'));
+        $this->assertArrayNotHasKey(visitor_id::COOKIE_NAME, $_COOKIE);
     }
 
-    public function test_submit_saves_a_rating_for_a_public_course(): void {
-        $this->resetAfterTest();
-        $course = $this->getDataGenerator()->create_course();
-
-        $result = rating_helper::submit((int)$course->id, 4, fn() => self::HASH);
-
-        $this->assertSame(['success' => true, 'saved' => true, 'already_rated' => false, 'stars' => 4], $result);
-        $this->assertSame(4, rating_helper::get_existing_rating((int)$course->id, self::HASH));
-    }
-
-    public function test_submit_reports_a_repeated_rating_without_changing_it(): void {
-        $this->resetAfterTest();
-        $course = $this->getDataGenerator()->create_course();
-        rating_helper::submit((int)$course->id, 2, fn() => self::HASH);
-
-        $result = rating_helper::submit((int)$course->id, 5, fn() => self::HASH);
-
-        $this->assertSame(['success' => true, 'saved' => false, 'already_rated' => true, 'stars' => 2], $result);
-        $this->assertSame(2, rating_helper::get_existing_rating((int)$course->id, self::HASH));
-    }
-
-    public function test_submit_rejects_invalid_stars_before_touching_the_cookie(): void {
-        $this->resetAfterTest();
-        $course = $this->getDataGenerator()->create_course();
-        $cookiecalls = 0;
-        $cookie = function () use (&$cookiecalls) {
-            $cookiecalls++;
-            return self::HASH;
-        };
-
-        $zero = rating_helper::submit((int)$course->id, 0, $cookie);
-        $six = rating_helper::submit((int)$course->id, 6, $cookie);
-
-        $this->assertSame(['success' => false, 'error' => 'Invalid rating'], $zero);
-        $this->assertSame(['success' => false, 'error' => 'Invalid rating'], $six);
-        $this->assertSame(0, $cookiecalls);
-    }
-
-    public function test_submit_rejects_hidden_and_unknown_courses_before_touching_the_cookie(): void {
+    public function test_hidden_and_unknown_courses_store_nothing_and_set_no_cookie(): void {
         global $DB;
         $this->resetAfterTest();
+        unset($_COOKIE[visitor_id::COOKIE_NAME]);
         $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
-        $cookiecalls = 0;
-        $cookie = function () use (&$cookiecalls) {
-            $cookiecalls++;
-            return self::HASH;
-        };
 
-        $resulthidden = rating_helper::submit((int)$hidden->id, 3, $cookie);
-        $resultunknown = rating_helper::submit(99999, 3, $cookie);
+        $resulthidden = rating_helper::rate((int)$hidden->id, 3);
+        $resultunknown = rating_helper::rate(99999, 3);
 
         $this->assertSame(['success' => false, 'error' => 'Course not found'], $resulthidden);
         $this->assertSame(['success' => false, 'error' => 'Course not found'], $resultunknown);
-        $this->assertSame(0, $cookiecalls);
         $this->assertSame(0, $DB->count_records('block_kursfilter_ratings'));
+        $this->assertArrayNotHasKey(visitor_id::COOKIE_NAME, $_COOKIE);
     }
 
-    public function test_cookie_options_expire_after_one_year_and_stay_protected(): void {
-        $before = time();
-        $options = rating_helper::get_cookie_options();
+    public function test_first_rating_without_cookie_creates_one_and_stores_its_hash(): void {
+        global $DB;
+        $this->resetAfterTest();
+        unset($_COOKIE[visitor_id::COOKIE_NAME]);
+        $course = $this->getDataGenerator()->create_course();
 
-        $this->assertGreaterThanOrEqual($before + YEARSECS, $options['expires']);
-        $this->assertLessThanOrEqual(time() + YEARSECS, $options['expires']);
-        $this->assertTrue($options['secure']);
-        $this->assertTrue($options['httponly']);
-        $this->assertSame('Lax', $options['samesite']);
-        $this->assertSame('/', $options['path']);
+        rating_helper::rate((int)$course->id, 5);
+
+        $cookie = $_COOKIE[visitor_id::COOKIE_NAME];
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $cookie);
+        $this->assertSame($cookie, $DB->get_field('block_kursfilter_ratings', 'cookiehash', ['courseid' => $course->id]));
     }
 
-    public function test_renew_cookie_hash_returns_a_valid_cookie_and_ignores_an_invalid_one(): void {
-        $hash = str_repeat('a', 64);
-        $_COOKIE[rating_helper::COOKIE_NAME] = $hash;
-        $this->assertSame($hash, rating_helper::renew_cookie_hash());
+    public function test_course_ratings_of_unrated_courses_are_zero_zero_null(): void {
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
 
-        $_COOKIE[rating_helper::COOKIE_NAME] = 'not-a-hash';
-        $this->assertNull(rating_helper::renew_cookie_hash());
+        $ratings = rating_helper::get_course_ratings([(int)$course->id], self::HASH);
 
-        unset($_COOKIE[rating_helper::COOKIE_NAME]);
-        $this->assertNull(rating_helper::renew_cookie_hash());
+        $this->assertSame(['avg' => 0.0, 'count' => 0, 'own' => null], $ratings[(int)$course->id]);
+    }
+
+    public function test_course_ratings_give_average_count_and_own_rating(): void {
+        $this->resetAfterTest();
+        $rated = $this->getDataGenerator()->create_course();
+        $other = $this->getDataGenerator()->create_course();
+        $this->visit();
+        rating_helper::rate((int)$rated->id, 4);
+        $_COOKIE[visitor_id::COOKIE_NAME] = str_repeat('b', 64);
+        rating_helper::rate((int)$rated->id, 5);
+        $_COOKIE[visitor_id::COOKIE_NAME] = self::HASH;
+
+        $ratings = rating_helper::get_course_ratings([(int)$rated->id, (int)$other->id], self::HASH);
+
+        $this->assertSame(['avg' => 4.5, 'count' => 2, 'own' => 4], $ratings[(int)$rated->id]);
+        $this->assertSame(['avg' => 0.0, 'count' => 0, 'own' => null], $ratings[(int)$other->id]);
+    }
+
+    public function test_course_ratings_without_visitor_give_no_own_rating(): void {
+        $this->resetAfterTest();
+        $this->visit();
+        $course = $this->getDataGenerator()->create_course();
+        rating_helper::rate((int)$course->id, 3);
+
+        $ratings = rating_helper::get_course_ratings([(int)$course->id], null);
+
+        $this->assertSame(['avg' => 3.0, 'count' => 1, 'own' => null], $ratings[(int)$course->id]);
     }
 }

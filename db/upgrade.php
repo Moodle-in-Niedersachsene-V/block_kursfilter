@@ -205,5 +205,11 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101501, 'kursfilter');
     }
 
+    if ($oldversion < 2026110601) {
+        // Pool sync: pool accounts up to the configured size, prohibitions of the pool role, role migration, enrolments.
+        \block_kursfilter\pool_manager::sync();
+        upgrade_block_savepoint(true, 2026110601, 'kursfilter');
+    }
+
     return true;
 }

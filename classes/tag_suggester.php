@@ -17,8 +17,7 @@
 namespace block_kursfilter;
 
 /**
- * Tag suggestions for a course through Moodle's AI subsystem (core_ai, action generate_text) or,
- * optionally, directly through the Anthropic Claude API (ADR 0007).
+ * Tag suggestions and their storage for a course, answered by the configured tag_backend (ADR 0006, ADR 0007).
  *
  * Course text is filtered before sending: full name, short name, category and a shortened summary.
  * The model may only pick values from the configured filter value lists; code enforces this,
@@ -32,34 +31,16 @@ class tag_suggester {
     /** Maximum length of the summary sent to the AI. */
     const SUMMARY_LENGTH = 800;
 
-    /** Filter settings the suggestions are taken from. */
-    const FILTER_SETTINGS = ['schooltypes', 'subjects', 'levels'];
-
-    /** Backend setting value: Moodle's AI subsystem (default). */
-    const BACKEND_COREAI = 'coreai';
-
     /** Backend setting value: direct request to the Anthropic Claude API. */
     const BACKEND_CLAUDE = 'claude';
 
-    /** Anthropic Messages API endpoint. */
-    const CLAUDE_ENDPOINT = 'https://api.anthropic.com/v1/messages';
-
-    /** Claude model used when none is configured. */
-    const CLAUDE_DEFAULT_MODEL = 'claude-haiku-4-5';
-
-    /** Seconds before a Claude request is given up. */
-    const CLAUDE_TIMEOUT = 30;
-
     /**
-     * Whether the configured backend can answer: a Claude API key, or an AI provider with generate_text.
+     * Whether the configured backend can answer.
      *
      * @return bool
      */
     public static function is_available(): bool {
-        if (self::uses_claude()) {
-            return (string)get_config('block_kursfilter', 'ai_claude_apikey') !== '';
-        }
-        return \core\di::get(\core_ai\manager::class)->is_action_available(\core_ai\aiactions\generate_text::class);
+        return self::backend()->is_available();
     }
 
     /**
@@ -73,92 +54,77 @@ class tag_suggester {
      */
     public static function suggest(\stdClass $course, string $categoryname, int $userid): array {
         $lists = [];
-        foreach (self::FILTER_SETTINGS as $setting) {
-            $lists[$setting] = self::filter_values($setting);
+        foreach (filter_values::kinds() as $kind) {
+            $lists[filter_values::setting($kind)] = filter_values::values($kind);
         }
 
         $prompt = self::build_prompt($course, $categoryname, $lists);
-        $answer = self::uses_claude()
-            ? self::ask_claude($prompt)
-            : self::ask_core_ai($prompt, \context_course::instance($course->id)->id, $userid);
+        $answer = self::backend()->ask($prompt, \context_course::instance($course->id)->id, $userid);
 
-        return self::parse_answer($answer, $lists);
+        return self::parse_answer($answer);
     }
 
     /**
-     * Whether the direct Claude backend is selected.
+     * Suggest tags for a course, apply or keep them, and store the outcome.
      *
-     * @return bool
+     * Nothing is stored if the request fails, so the course is retried on the next run.
+     *
+     * @param \stdClass $course Course record with id, fullname, shortname, summary.
+     * @param string $categoryname Name of the course category.
+     * @param int $userid User the AI request is made for.
+     * @return array{status: string, tags: string[]} Status 'empty', 'applied' or 'suggested', and the tags.
+     * @throws \moodle_exception If the request fails, the answer is invalid or the AI flags personal data.
      */
-    private static function uses_claude(): bool {
-        return get_config('block_kursfilter', 'ai_backend') === self::BACKEND_CLAUDE;
-    }
+    public static function tag_course(\stdClass $course, string $categoryname, int $userid): array {
+        $tags = self::suggest($course, $categoryname, $userid);
+        $autoapply = (bool)get_config('block_kursfilter', 'ai_autoapply');
 
-    /**
-     * Send the prompt through Moodle's AI subsystem.
-     *
-     * @param string $prompt Prompt.
-     * @param int $contextid Course context the request is logged for.
-     * @param int $userid User the request is logged for.
-     * @return string Generated text.
-     * @throws \moodle_exception If the request fails.
-     */
-    private static function ask_core_ai(string $prompt, int $contextid, int $userid): string {
-        $action = new \core_ai\aiactions\generate_text(contextid: $contextid, userid: $userid, prompttext: $prompt);
-        $response = \core\di::get(\core_ai\manager::class)->process_action($action);
-        if (!$response->get_success()) {
-            throw new \moodle_exception('error_ai_request_failed', 'block_kursfilter', '', $response->get_errormessage());
-        }
-        return (string)($response->get_response_data()['generatedcontent'] ?? '');
-    }
-
-    /**
-     * Send the prompt directly to the Anthropic Claude API (ADR 0007).
-     *
-     * Goes through Moodle's HTTP client, so proxy and blocked-host settings apply. Nothing but the prompt is sent.
-     *
-     * @param string $prompt Prompt.
-     * @return string Generated text.
-     * @throws \moodle_exception If the request fails or the API answers with an error.
-     */
-    private static function ask_claude(string $prompt): string {
-        $model = (string)get_config('block_kursfilter', 'ai_claude_model') ?: self::CLAUDE_DEFAULT_MODEL;
-        try {
-            $response = \core\di::get(\core\http_client::class)->post(self::CLAUDE_ENDPOINT, [
-                'headers' => [
-                    'x-api-key' => (string)get_config('block_kursfilter', 'ai_claude_apikey'),
-                    'anthropic-version' => '2023-06-01',
-                ],
-                'json' => [
-                    'model' => $model,
-                    'max_tokens' => 300,
-                    'messages' => [['role' => 'user', 'content' => $prompt]],
-                ],
-                'timeout' => self::CLAUDE_TIMEOUT,
-                'http_errors' => false,
-            ]);
-        } catch (\GuzzleHttp\Exception\GuzzleException $e) {
-            throw new \moodle_exception('error_ai_request_failed', 'block_kursfilter', '', $e->getMessage());
+        if (!$tags) {
+            $status = 'empty';
+        } else if ($autoapply) {
+            $context = \context_course::instance($course->id);
+            foreach ($tags as $tag) {
+                \core_tag_tag::add_item_tag('core', 'course', $course->id, $context, $tag);
+            }
+            $status = 'applied';
+        } else {
+            $status = 'suggested';
         }
 
-        $data = json_decode((string)$response->getBody(), true);
-        if ($response->getStatusCode() >= 400 || !isset($data['content'][0]['text'])) {
-            $message = $data['error']['message'] ?? ('HTTP ' . $response->getStatusCode());
-            throw new \moodle_exception('error_ai_request_failed', 'block_kursfilter', '', $message);
-        }
-        return (string)$data['content'][0]['text'];
+        self::store_outcome($course, $tags, $status);
+        return ['status' => $status, 'tags' => $tags];
     }
 
     /**
-     * Read the values of a filter setting, one per line; the single reader for block, tasks and AI.
+     * The backend selected in the settings, resolved through Moodle's DI container.
      *
-     * @param string $setting Setting name.
-     * @return string[] Non-empty, cleaned values.
+     * @return tag_backend
      */
-    public static function filter_values(string $setting): array {
-        $lines = explode("\n", (string)get_config('block_kursfilter', $setting));
-        $values = array_map(fn($line) => clean_param(trim($line), PARAM_TEXT), $lines);
-        return array_values(array_filter($values, 'strlen'));
+    private static function backend(): tag_backend {
+        $class = get_config('block_kursfilter', 'ai_backend') === self::BACKEND_CLAUDE
+            ? tag_backend_claude::class
+            : tag_backend_coreai::class;
+        return \core\di::get($class);
+    }
+
+    /**
+     * Store the outcome of a course in block_kursfilter_tag_suggest.
+     *
+     * @param \stdClass $course Course record.
+     * @param string[] $tags Tags, stored comma-separated.
+     * @param string $status 'empty', 'applied' or 'suggested'.
+     */
+    private static function store_outcome(\stdClass $course, array $tags, string $status): void {
+        global $DB;
+
+        $now = time();
+        $DB->insert_record('block_kursfilter_tag_suggest', [
+            'courseid' => $course->id,
+            'tags' => implode(',', $tags),
+            'status' => $status,
+            'timecreated' => $now,
+            'timemodified' => $now,
+        ]);
     }
 
     /**
@@ -214,14 +180,13 @@ class tag_suggester {
     }
 
     /**
-     * Keep only answer values that occur in the allowed lists.
+     * Keep only answer values that occur in the allowed filter values.
      *
      * @param string $answer Model answer.
-     * @param array $lists Allowed values per filter setting (setting name => string[]).
      * @return string[] Allowed values in their configured spelling, without duplicates.
      * @throws \moodle_exception If the answer contains no JSON object or flags personal data.
      */
-    private static function parse_answer(string $answer, array $lists): array {
+    private static function parse_answer(string $answer): array {
         // Models sometimes wrap the JSON in prose or code fences; take the outermost object.
         $start = strpos($answer, '{');
         $end = strrpos($answer, '}');
@@ -235,12 +200,11 @@ class tag_suggester {
         }
 
         $tags = [];
-        foreach ($lists as $setting => $allowed) {
-            $byname = array_combine(array_map('core_text::strtolower', $allowed), $allowed);
-            foreach ((array)($data[$setting] ?? []) as $value) {
-                $key = \core_text::strtolower(trim((string)$value));
-                if (isset($byname[$key])) {
-                    $tags[$byname[$key]] = $byname[$key];
+        foreach (filter_values::kinds() as $kind) {
+            foreach ((array)($data[filter_values::setting($kind)] ?? []) as $value) {
+                $tag = filter_values::match($kind, (string)$value);
+                if ($tag !== null) {
+                    $tags[$tag] = $tag;
                 }
             }
         }

@@ -149,4 +149,29 @@ class backup_helper {
     public static function has_backup(int $courseid): bool {
         return self::get_backup_file($courseid) !== null;
     }
+
+    /**
+     * Which of the given courses have a stored backup file, in one query.
+     *
+     * @param int[] $courseids Course IDs.
+     * @return array<int, bool> Course IDs with a backup as keys.
+     */
+    public static function has_backup_many(array $courseids): array {
+        global $DB;
+
+        $courseids = array_values(array_unique(array_map('intval', $courseids)));
+        if (!$courseids) {
+            return [];
+        }
+        [$insql, $params] = $DB->get_in_or_equal($courseids, SQL_PARAMS_NAMED, 'bkid');
+        $found = $DB->get_fieldset_sql(
+            "SELECT DISTINCT itemid
+               FROM {files}
+              WHERE contextid = :contextid AND component = :component AND filearea = :filearea
+                    AND itemid $insql AND filename <> '.'",
+            ['contextid' => \context_system::instance()->id, 'component' => self::COMPONENT,
+                'filearea' => self::FILEAREA] + $params
+        );
+        return array_fill_keys(array_map('intval', $found), true);
+    }
 }
