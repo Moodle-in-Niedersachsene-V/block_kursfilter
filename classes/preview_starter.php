@@ -75,17 +75,18 @@ final class preview_starter {
                 'id, username'
             );
             $allids = array_keys($accounts);
-            [$idsql, $idparams] = $DB->get_in_or_equal(
-                array_merge([0], $allids),
-                SQL_PARAMS_NAMED
-            );
-            $sessions = $DB->get_records_select(
-                'sessions',
-                "userid $idsql AND timemodified >= :cutoff",
-                $idparams + ['cutoff' => time() - $CFG->sessiontimeout],
-                '',
-                'id, userid, firstip, lastip'
-            );
+            $sessions = [];
+            if ($allids) {
+                // Only pool sessions count: guest sessions of the same IP must not block the preview.
+                [$idsql, $idparams] = $DB->get_in_or_equal($allids, SQL_PARAMS_NAMED);
+                $sessions = $DB->get_records_select(
+                    'sessions',
+                    "userid $idsql AND timemodified >= :cutoff",
+                    $idparams + ['cutoff' => time() - $CFG->sessiontimeout],
+                    '',
+                    'id, userid, firstip, lastip'
+                );
+            }
 
             $ip = getremoteaddr();
             $occupied = [];

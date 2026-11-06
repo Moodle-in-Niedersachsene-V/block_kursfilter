@@ -53,6 +53,8 @@ final class pool_manager_test extends \advanced_testcase {
     public function test_sync_creates_missing_accounts_and_is_idempotent(): void {
         global $DB;
         $this->resetAfterTest();
+        // The installation already created the default accounts.
+        $existing = count($this->pool_userids(12));
         set_config('poolsize', 12, 'block_kursfilter');
 
         $first = pool_manager::sync();
@@ -60,7 +62,7 @@ final class pool_manager_test extends \advanced_testcase {
 
         // New accounts must not trigger Moodle validation warnings (e.g. language not installed).
         $this->assertDebuggingNotCalled();
-        $this->assertSame(12, $first['created']);
+        $this->assertSame(12 - $existing, $first['created']);
         $this->assertSame(['created' => 0, 'enrolled' => 0], $second);
         $this->assertCount(12, $this->pool_userids());
         $this->assertSame(12, $DB->count_records_select('user', "username LIKE 'kursfilter_pool%'"));
@@ -68,14 +70,14 @@ final class pool_manager_test extends \advanced_testcase {
 
     public function test_sync_adds_accounts_when_the_pool_grows(): void {
         $this->resetAfterTest();
-        set_config('poolsize', 1, 'block_kursfilter');
-        pool_manager::sync();
+        // The installation already created the default accounts; grow by two beyond them.
+        $existing = count($this->pool_userids(pool_manager::POOL_SIZE_MAX));
+        set_config('poolsize', $existing + 2, 'block_kursfilter');
 
-        set_config('poolsize', 3, 'block_kursfilter');
         $result = pool_manager::sync();
 
         $this->assertSame(2, $result['created']);
-        $this->assertCount(3, $this->pool_userids());
+        $this->assertCount($existing + 2, $this->pool_userids());
     }
 
     public function test_reduced_pool_keeps_profile_lock_of_accounts_above_the_size(): void {
@@ -207,6 +209,7 @@ final class pool_manager_test extends \advanced_testcase {
         pool_manager::sync();
         $visible = $this->getDataGenerator()->create_course();
         $hidden = $this->getDataGenerator()->create_course(['visible' => 0]);
+        pool_manager::sync();
 
         $userid = $this->pool_userids()[0];
         $this->assertTrue(is_enrolled(\context_course::instance($visible->id), $userid, '', true));
