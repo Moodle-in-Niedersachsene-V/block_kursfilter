@@ -18,6 +18,7 @@ namespace block_kursfilter\external;
 
 use block_kursfilter\backup_helper;
 use block_kursfilter\rating_helper;
+use block_kursfilter\visitor_id;
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
@@ -106,12 +107,8 @@ class search_courses extends external_api {
             self::effective_limit($params['limit'])
         );
 
-        // Once per request: renews the rating cookie of a returning visitor.
-        $cookiehash = rating_helper::renew_cookie_hash();
-        $courses = [];
-        foreach ($records as $course) {
-            $courses[] = self::course_result($course, $cookiehash);
-        }
+        // Once per request: renews the visitor ID of a returning visitor.
+        $courses = self::course_results($records, visitor_id::renew());
         return ['courses' => $courses, 'total' => count($courses)];
     }
 
@@ -208,39 +205,91 @@ class search_courses extends external_api {
     }
 
     /**
+     * Build the result entries of the hits. Tags, categories, backups and ratings are loaded
+     * in one query each, whatever the number of hits.
+     *
+     * @param \stdClass[]  $records   Course records.
+     * @param string|null  $visitorid Visitor ID of this request, null if none.
+     * @return array Result entries.
+     */
+    private static function course_results(array $records, ?string $visitorid): array {
+        if (!$records) {
+            return [];
+        }
+        $ids = array_map(fn($course) => (int)$course->id, $records);
+        $tags = \core_tag_tag::get_items_tags('core', 'course', $ids);
+        $categorynames = self::category_names(array_map(fn($course) => (int)$course->category, $records));
+        $backups = backup_helper::has_backup_many($ids);
+        $ratings = rating_helper::get_course_ratings($ids, $visitorid);
+
+        $courses = [];
+        foreach ($records as $course) {
+            $id = (int)$course->id;
+            $courses[] = self::course_result(
+                $course,
+                array_values(array_map(fn($tag) => $tag->get_display_name(true), $tags[$id] ?? [])),
+                $categorynames[(int)$course->category] ?? '',
+                !empty($backups[$id]),
+                $ratings[$id]
+            );
+        }
+        return $courses;
+    }
+
+    /**
+     * Full category path of each category, loaded in one query.
+     *
+     * @param int[] $categoryids Category IDs of the hits.
+     * @return array<int, string> Path by category ID.
+     */
+    private static function category_names(array $categoryids): array {
+        $names = [];
+        foreach (\core_course_category::get_many(array_values(array_unique($categoryids))) as $id => $category) {
+            $names[$id] = $category->get_nested_name(false);
+        }
+        return $names;
+    }
+
+    /**
      * Build the result entry of one course.
      *
-     * @param \stdClass   $course     Course record.
-     * @param string|null $cookiehash Rating cookie of this visitor, null if none.
+     * @param \stdClass $course        Course record.
+     * @param string[]  $tags          Display names of the course tags.
+     * @param string    $categoryname  Category path.
+     * @param bool      $hasbackup     Whether a backup exists.
+     * @param array     $rating        Rating figures: avg, count, own (null if none).
      * @return array Result entry.
      */
-    private static function course_result(\stdClass $course, ?string $cookiehash): array {
-        $category = \core_course_category::get($course->category, IGNORE_MISSING);
+    private static function course_result(
+        \stdClass $course,
+        array $tags,
+        string $categoryname,
+        bool $hasbackup,
+        array $rating
+    ): array {
         $summary = html_to_text(format_text($course->summary, FORMAT_HTML, ['filter' => false]), 0, false);
         if (\core_text::strlen($summary) > self::SUMMARY_LENGTH) {
             $summary = \core_text::substr($summary, 0, self::SUMMARY_LENGTH) . '…';
         }
         // The backup download is public for every public course (see backup.php).
-        $backupurl = backup_helper::has_backup($course->id)
+        $backupurl = $hasbackup
             ? (new \moodle_url('/blocks/kursfilter/backup.php', ['courseid' => $course->id]))->out(false)
             : '';
-        $rating = rating_helper::get_course_rating($course->id);
-        $visitorrating = $cookiehash === null ? null : rating_helper::get_existing_rating($course->id, $cookiehash);
 
         return [
             'id'            => (int)$course->id,
             'fullname'      => format_string($course->fullname),
             'shortname'     => format_string($course->shortname),
             'summary'       => $summary,
-            'categoryname'  => $category ? $category->get_nested_name(false) : '',
-            'tags'          => array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id)),
+            'categoryname'  => $categoryname,
+            'tags'          => $tags,
             'courseurl'     => (new \moodle_url('/course/view.php', ['id' => $course->id]))->out(false),
             'backupurl'     => $backupurl,
-            'hasbackup'     => $backupurl !== '',
+            'hasbackup'     => $hasbackup,
             'ratingavg'     => $rating['avg'],
             'ratingcount'   => $rating['count'],
-            'visitorrating' => $visitorrating ?? 0,
-            'alreadyrated'  => $visitorrating !== null,
+            'visitorrating' => $rating['own'] ?? 0,
+            'alreadyrated'  => $rating['own'] !== null,
         ];
     }
 
