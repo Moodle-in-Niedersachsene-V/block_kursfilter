@@ -226,4 +226,149 @@ final class tag_suggester_test extends \advanced_testcase {
             $this->assertSame('error_ai_personal_data', $e->errorcode);
         }
     }
+
+    /**
+     * Replace the AI backend with a fake that records its requests.
+     *
+     * @param string $answer Text the fake answers with.
+     * @param \Throwable|null $error Exception the fake throws instead of answering.
+     * @return object Fake backend; $calls holds prompt, contextid and userid per request.
+     */
+    private function fake_backend(string $answer = '', ?\Throwable $error = null): object {
+        $backend = new class($answer, $error) implements tag_backend {
+            /** @var array Requests received. */
+            public array $calls = [];
+
+            public function __construct(private string $answer, private ?\Throwable $error) {
+            }
+
+            public function is_available(): bool {
+                return true;
+            }
+
+            public function ask(string $prompt, int $contextid, int $userid): string {
+                $this->calls[] = ['prompt' => $prompt, 'contextid' => $contextid, 'userid' => $userid];
+                if ($this->error) {
+                    throw $this->error;
+                }
+                return $this->answer;
+            }
+        };
+        \core\di::set(tag_backend_coreai::class, $backend);
+        return $backend;
+    }
+
+    /**
+     * Number of stored tag outcomes for the course.
+     *
+     * @param \stdClass $course Course.
+     * @return int
+     */
+    private function outcome_count(\stdClass $course): int {
+        global $DB;
+        return $DB->count_records('block_kursfilter_tag_suggest', ['courseid' => $course->id]);
+    }
+
+    public function test_empty_answer_is_stored_as_empty(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $this->fake_backend('{"schooltypes": [], "subjects": [], "levels": []}');
+
+        $result = tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
+
+        $this->assertSame(['status' => 'empty', 'tags' => []], $result);
+        $this->assertSame(1, $this->outcome_count($course));
+        $this->assertSame('empty', $this->outcome($course)->status);
+    }
+
+    public function test_autoapply_adds_the_tags_and_stores_applied(): void {
+        global $DB;
+        set_config('ai_autoapply', 1, 'block_kursfilter');
+        $course = $this->getDataGenerator()->create_course();
+        $this->fake_backend('{"subjects": ["Mathematik"]}');
+
+        $result = tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
+
+        $this->assertSame(['status' => 'applied', 'tags' => ['Mathematik']], $result);
+        $this->assertSame(['Mathematik'], array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id)));
+        $outcome = $this->outcome($course);
+        $this->assertSame('applied', $outcome->status);
+        $this->assertSame('Mathematik', $outcome->tags);
+    }
+
+    public function test_without_autoapply_the_tags_wait_as_suggestion(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $this->fake_backend('{"subjects": ["Mathematik"]}');
+
+        $result = tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
+
+        $this->assertSame(['status' => 'suggested', 'tags' => ['Mathematik']], $result);
+        $this->assertSame([], \core_tag_tag::get_item_tags_array('core', 'course', $course->id));
+        $outcome = $this->outcome($course);
+        $this->assertSame('suggested', $outcome->status);
+        $this->assertSame('Mathematik', $outcome->tags);
+    }
+
+    public function test_backend_gets_course_context_and_user_for_logging(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $backend = $this->fake_backend('{"subjects": []}');
+
+        tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
+
+        $this->assertSame(\context_course::instance($course->id)->id, $backend->calls[0]['contextid']);
+        $this->assertSame((int)get_admin()->id, $backend->calls[0]['userid']);
+    }
+
+    public function test_personal_data_stops_tagging_and_stores_nothing(): void {
+        $course = $this->getDataGenerator()->create_course(['fullname' => 'Lyrik von Erika Musterfrau']);
+        $backend = $this->fake_backend('{"personaldata": true, "subjects": ["Deutsch"]}');
+
+        try {
+            tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
+            $this->fail('Personal data flagged by the AI must stop tagging.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_ai_personal_data', $e->errorcode);
+        }
+
+        $this->assertStringNotContainsString('Musterfrau', $backend->calls[0]['prompt']);
+        $this->assertSame(0, $this->outcome_count($course));
+    }
+
+    public function test_invalid_answer_stores_nothing(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $this->fake_backend('no json here');
+
+        try {
+            tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
+            $this->fail('An invalid answer must not be stored.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_ai_answer_invalid', $e->errorcode);
+        }
+
+        $this->assertSame(0, $this->outcome_count($course));
+    }
+
+    public function test_backend_error_stores_nothing_so_the_course_is_retried(): void {
+        $course = $this->getDataGenerator()->create_course();
+        $this->fake_backend('', new \moodle_exception('error_ai_request_failed', 'block_kursfilter', '', 'down'));
+
+        try {
+            tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
+            $this->fail('A backend error must be rethrown.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_ai_request_failed', $e->errorcode);
+        }
+
+        $this->assertSame(0, $this->outcome_count($course));
+    }
+
+    /**
+     * Stored tag outcome of the course.
+     *
+     * @param \stdClass $course Course.
+     * @return \stdClass Record.
+     */
+    private function outcome(\stdClass $course): \stdClass {
+        global $DB;
+        return $DB->get_record('block_kursfilter_tag_suggest', ['courseid' => $course->id], '*', MUST_EXIST);
+    }
 }
