@@ -128,7 +128,9 @@ class pool_manager {
     }
 
     /**
-     * Create the pool role if missing and re-apply its prohibited capabilities on every call.
+     * Return the pool role; create it (with its prohibited capabilities) if missing.
+     *
+     * Cheap on purpose: it runs on every preview. Prohibitions are re-applied only by sync().
      *
      * @return int Role ID.
      */
@@ -136,21 +138,31 @@ class pool_manager {
         global $DB;
 
         $roleid = (int)$DB->get_field('role', 'id', ['shortname' => self::ROLE_SHORTNAME]);
-        if (!$roleid) {
-            $roleid = create_role(
-                get_string('role_pool_name', 'block_kursfilter'),
-                self::ROLE_SHORTNAME,
-                get_string('role_pool_description', 'block_kursfilter'),
-                'teacher'
-            );
-            set_role_contextlevels($roleid, get_default_contextlevels('teacher'));
-            // Take over the default capabilities of the archetype (create_role() does not).
-            reset_role_capabilities($roleid);
+        if ($roleid) {
+            return $roleid;
         }
+        $roleid = create_role(
+            get_string('role_pool_name', 'block_kursfilter'),
+            self::ROLE_SHORTNAME,
+            get_string('role_pool_description', 'block_kursfilter'),
+            'teacher'
+        );
+        set_role_contextlevels($roleid, get_default_contextlevels('teacher'));
+        // Take over the default capabilities of the archetype (create_role() does not).
+        reset_role_capabilities($roleid);
+        self::apply_prohibitions($roleid);
+        return $roleid;
+    }
+
+    /**
+     * Set the prohibited capabilities of the pool role (again).
+     *
+     * @param int $roleid Pool role ID.
+     */
+    private static function apply_prohibitions(int $roleid): void {
         foreach (self::PROHIBITED_CAPABILITIES as $capability) {
             assign_capability($capability, CAP_PROHIBIT, $roleid, \context_system::instance()->id, true);
         }
-        return $roleid;
     }
 
     /**
@@ -160,7 +172,7 @@ class pool_manager {
      */
     public static function sync(): array {
         $created = self::create_pool_accounts();
-        self::ensure_role();
+        self::apply_prohibitions(self::ensure_role());
         self::migrate_to_pool_role();
         $enrolled = self::enrol_pool_into_all_courses();
         return ['created' => $created, 'enrolled' => $enrolled];

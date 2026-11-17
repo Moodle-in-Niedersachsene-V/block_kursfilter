@@ -345,19 +345,18 @@ final class tag_suggester_test extends \advanced_testcase {
         $this->assertSame((int)get_admin()->id, $backend->calls[0]['userid']);
     }
 
-    public function test_personal_data_stops_tagging_and_stores_nothing(): void {
+    public function test_personal_data_skips_the_course_without_tags(): void {
+        global $DB;
         $course = $this->getDataGenerator()->create_course(['fullname' => 'Lyrik von Erika Musterfrau']);
         $backend = $this->fake_backend('{"personaldata": true, "subjects": ["Deutsch"]}');
 
-        try {
-            tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
-            $this->fail('Personal data flagged by the AI must stop tagging.');
-        } catch (\moodle_exception $e) {
-            $this->assertSame('error_ai_personal_data', $e->errorcode);
-        }
+        $result = tag_suggester::tag_course($course, 'X', (int)get_admin()->id);
 
+        $this->assertSame(['status' => 'skipped', 'tags' => []], $result);
         $this->assertStringNotContainsString('Musterfrau', $backend->calls[0]['prompt']);
-        $this->assertSame(0, $this->outcome_count($course));
+        $record = $DB->get_record('block_kursfilter_tag_suggest', ['courseid' => $course->id], '*', MUST_EXIST);
+        $this->assertSame(['skipped', ''], [$record->status, $record->tags]);
+        $this->assertEmpty(\core_tag_tag::get_item_tags_array('core', 'course', $course->id));
     }
 
     public function test_invalid_answer_stores_nothing(): void {

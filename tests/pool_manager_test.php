@@ -104,6 +104,16 @@ final class pool_manager_test extends \advanced_testcase {
         }
     }
 
+    public function test_ensure_role_of_an_existing_role_changes_no_capabilities(): void {
+        $this->resetAfterTest();
+        pool_manager::ensure_role();
+        $sink = $this->redirectEvents();
+
+        pool_manager::ensure_role();
+
+        $this->assertCount(0, $sink->get_events());
+    }
+
     public function test_sync_restores_prohibited_capabilities_on_every_run(): void {
         global $DB;
         $this->resetAfterTest();
