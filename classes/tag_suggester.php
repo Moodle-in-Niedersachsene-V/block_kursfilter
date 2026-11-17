@@ -72,8 +72,9 @@ class tag_suggester {
      * @param \stdClass $course Course record with id, fullname, shortname, summary.
      * @param string $categoryname Name of the course category.
      * @param int $userid User the AI request is made for.
-     * @return array{status: string, tags: string[]} Status 'empty', 'applied', 'suggested' or 'skipped' (personal data flagged), and the tags.
-     * @throws \moodle_exception If the request fails, the answer is invalid or the AI flags personal data.
+     * @return array{status: string, tags: string[]} Status ('empty', 'applied', 'suggested' or 'skipped' for flagged
+     *         personal data) and the tags.
+     * @throws \moodle_exception If the request fails or the answer is invalid.
      */
     public static function tag_course(\stdClass $course, string $categoryname, int $userid): array {
         try {
