@@ -205,6 +205,29 @@ function xmldb_block_kursfilter_upgrade($oldversion): bool {
         upgrade_block_savepoint(true, 2026101501, 'kursfilter');
     }
 
+    if ($oldversion < 2026102201) {
+        // New setting rootcategory: restricts automatic tagging and backups to a category subtree.
+        // No database schema change; the setting is a plain config value. Just bump the savepoint.
+        upgrade_block_savepoint(true, 2026102201, 'kursfilter');
+    }
+
+    if ($oldversion < 2026102501) {
+        // AI personal-data reports are now recorded as status='skipped' instead of failing the task.
+        // No schema change needed; the status column is a free-form CHAR(20).
+        upgrade_block_savepoint(true, 2026102501, 'kursfilter');
+    }
+
+    if ($oldversion < 2026102504) {
+        // Fix phpcs: sort all settings_* lang-file keys alphabetically (complete pass).
+        // Fix phpunit: assertContains type safety for integer category IDs.
+        upgrade_block_savepoint(true, 2026102504, 'kursfilter');
+    }
+
+    if ($oldversion < 2026102505) {
+        // Rebuild ZIP with corrected lang file order (no schema change).
+        upgrade_block_savepoint(true, 2026102505, 'kursfilter');
+    }
+
     if ($oldversion < 2026110601) {
         // Pool sync: pool accounts up to the configured size, prohibitions of the pool role, role migration, enrolments.
         \block_kursfilter\pool_manager::sync();

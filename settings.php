@@ -31,6 +31,13 @@ if ($ADMIN->fulltree) {
         get_string('settings_filters_heading', 'block_kursfilter'),
         get_string('settings_filters_desc', 'block_kursfilter')
     ));
+    $settings->add(new admin_setting_configtext(
+        'block_kursfilter/rootcategory',
+        get_string('settings_rootcategory', 'block_kursfilter'),
+        get_string('settings_rootcategory_help', 'block_kursfilter'),
+        '',
+        PARAM_RAW_TRIMMED
+    ));
     $settings->add(new admin_setting_configtextarea(
         'block_kursfilter/' . \block_kursfilter\filter_values::setting('schooltype'),
         get_string('settings_schooltypes', 'block_kursfilter'),

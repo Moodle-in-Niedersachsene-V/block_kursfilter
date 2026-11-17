@@ -72,11 +72,17 @@ class tag_suggester {
      * @param \stdClass $course Course record with id, fullname, shortname, summary.
      * @param string $categoryname Name of the course category.
      * @param int $userid User the AI request is made for.
-     * @return array{status: string, tags: string[]} Status 'empty', 'applied' or 'suggested', and the tags.
+     * @return array{status: string, tags: string[]} Status 'empty', 'applied', 'suggested' or 'skipped' (personal data flagged), and the tags.
      * @throws \moodle_exception If the request fails, the answer is invalid or the AI flags personal data.
      */
     public static function tag_course(\stdClass $course, string $categoryname, int $userid): array {
-        $tags = self::suggest($course, $categoryname, $userid);
+        try {
+            $tags = self::suggest($course, $categoryname, $userid);
+        } catch (personal_data_exception $e) {
+            // Recorded as 'skipped', so the course is not asked again on every run; the admin cleans the text and removes the row.
+            self::store_outcome($course, [], 'skipped');
+            return ['status' => 'skipped', 'tags' => []];
+        }
         $autoapply = (bool)get_config('block_kursfilter', 'ai_autoapply');
 
         if (!$tags) {
@@ -196,7 +202,7 @@ class tag_suggester {
         }
 
         if (!empty($data['personaldata'])) {
-            throw new \moodle_exception('error_ai_personal_data', 'block_kursfilter');
+            throw new personal_data_exception();
         }
 
         $tags = [];
