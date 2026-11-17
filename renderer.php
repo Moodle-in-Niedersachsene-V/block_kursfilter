@@ -39,12 +39,11 @@ class block_kursfilter_renderer extends plugin_renderer_base {
             $categories[] = ['value' => (string)$id, 'label' => $name];
         }
 
-        return $this->render_from_template('block_kursfilter/block', [
-            'blockid'     => $blockid,
-            'categories'  => $categories,
-            'schooltypes' => \block_kursfilter\tag_suggester::filter_values('schooltypes'),
-            'subjects'    => \block_kursfilter\tag_suggester::filter_values('subjects'),
-            'levels'      => \block_kursfilter\tag_suggester::filter_values('levels'),
-        ]);
+        $context = ['blockid' => $blockid, 'categories' => $categories];
+        foreach (\block_kursfilter\filter_values::kinds() as $kind) {
+            $context[\block_kursfilter\filter_values::setting($kind)] = \block_kursfilter\filter_values::values($kind);
+        }
+
+        return $this->render_from_template('block_kursfilter/block', $context);
     }
 }

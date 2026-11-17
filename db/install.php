@@ -30,9 +30,6 @@
  * Post-install tasks for block_kursfilter.
  */
 function xmldb_block_kursfilter_install(): void {
-    // Create the pool accounts.
-    \block_kursfilter\pool_manager::create_pool_accounts();
-
-    // Enrol them in all existing visible courses.
-    \block_kursfilter\pool_manager::enrol_pool_into_all_courses();
+    // Pool sync: create the pool accounts and enrol them in all existing public courses.
+    \block_kursfilter\pool_manager::sync();
 }

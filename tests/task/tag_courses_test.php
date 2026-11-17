@@ -122,6 +122,21 @@ final class tag_courses_test extends \advanced_testcase {
         $this->assertSame(0, $this->mock->count());
     }
 
+    public function test_personal_data_skips_the_course_without_failing_and_is_not_requested_again(): void {
+        global $DB;
+        $this->provider();
+        $course = $this->getDataGenerator()->create_course();
+        $this->answer('{"personaldata": true, "subjects": ["Deutsch"]}');
+
+        $this->expectOutputRegex('/Course ' . $course->id . ': skipped/');
+        (new tag_courses())->execute();
+        (new tag_courses())->execute();
+
+        $this->assertSame([], $this->course_tags((int)$course->id));
+        $this->assertSame('skipped', $DB->get_field('block_kursfilter_tag_suggest', 'status', ['courseid' => $course->id]));
+        $this->assertSame(0, $this->mock->count());
+    }
+
     public function test_failed_request_fails_the_task_and_leaves_the_course_for_the_next_run(): void {
         global $DB;
         $this->provider();

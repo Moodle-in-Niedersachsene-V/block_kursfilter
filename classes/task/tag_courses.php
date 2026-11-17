@@ -56,16 +56,14 @@ class tag_courses extends \core\task\scheduled_task {
             throw new \moodle_exception('error_ai_unavailable', 'block_kursfilter');
         }
 
-        $autoapply = (bool)get_config('block_kursfilter', 'ai_autoapply');
         $userid = (int)get_admin()->id;
         $courses = self::next_courses((int)get_config('block_kursfilter', 'ai_batch_size') ?: self::DEFAULT_BATCH_SIZE);
 
         $failed = 0;
         foreach ($courses as $course) {
             try {
-                $tags = tag_suggester::suggest($course, $course->categoryname, $userid);
-                $status = self::record_outcome($course, $tags, $autoapply);
-                mtrace("Course {$course->id}: {$status} (" . implode(', ', $tags) . ')');
+                $result = tag_suggester::tag_course($course, $course->categoryname, $userid);
+                mtrace("Course {$course->id}: {$result['status']} (" . implode(', ', $result['tags']) . ')');
             } catch (\Throwable $e) {
                 mtrace("Course {$course->id}: AI tagging failed: " . $e->getMessage());
                 $failed++;
@@ -97,39 +95,5 @@ class tag_courses extends \core\task\scheduled_task {
                  WHERE " . implode(' AND ', [$publicsql, 'tp.id IS NULL']) . "
               ORDER BY c.id ASC";
         return $DB->get_records_sql($sql, $params, 0, $limit);
-    }
-
-    /**
-     * Apply or keep the suggestion and record the outcome for the course.
-     *
-     * @param \stdClass $course Course record.
-     * @param string[] $tags Suggested filter values.
-     * @param bool $autoapply Whether suggestions become course tags at once.
-     * @return string Recorded status.
-     */
-    private static function record_outcome(\stdClass $course, array $tags, bool $autoapply): string {
-        global $DB;
-
-        if (!$tags) {
-            $status = 'empty';
-        } else if ($autoapply) {
-            $context = \context_course::instance($course->id);
-            foreach ($tags as $tag) {
-                \core_tag_tag::add_item_tag('core', 'course', $course->id, $context, $tag);
-            }
-            $status = 'applied';
-        } else {
-            $status = 'suggested';
-        }
-
-        $now = time();
-        $DB->insert_record('block_kursfilter_tag_suggest', [
-            'courseid' => $course->id,
-            'tags' => implode(',', $tags),
-            'status' => $status,
-            'timecreated' => $now,
-            'timemodified' => $now,
-        ]);
-        return $status;
     }
 }

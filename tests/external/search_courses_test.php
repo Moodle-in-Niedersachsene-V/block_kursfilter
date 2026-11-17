@@ -16,6 +16,7 @@
 
 namespace block_kursfilter\external;
 
+use block_kursfilter\visitor_id;
 use core_external\external_api;
 use PHPUnit\Framework\Attributes\CoversClass;
 
@@ -240,5 +241,113 @@ final class search_courses_test extends \advanced_testcase {
 
         $this->assertStringNotContainsString('<script', $summary);
         $this->assertStringNotContainsString('<b>', $summary);
+    }
+
+    public function test_query_count_does_not_grow_with_the_number_of_hits(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $category = $this->getDataGenerator()->create_category();
+        $args = ['category' => (int)$category->id];
+        $this->create_tagged_course($category->id);
+        // Creating courses invalidates the category cache, so warm up after each setup step.
+        $this->search($args);
+
+        $before = $DB->perf_get_reads();
+        $this->search($args);
+        $onehit = $DB->perf_get_reads() - $before;
+
+        for ($i = 0; $i < 9; $i++) {
+            $this->create_tagged_course($category->id);
+        }
+        $this->search($args);
+        $before = $DB->perf_get_reads();
+        $result = $this->search($args);
+        $manyhits = $DB->perf_get_reads() - $before;
+
+        $this->assertCount(10, $result['courses']);
+        $this->assertSame($onehit, $manyhits);
+    }
+
+    public function test_result_bundles_tags_category_backup_and_ratings(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $category = $this->getDataGenerator()->create_category(['name' => 'Oberstufe-Bereich']);
+        $course = $this->create_tagged_course($category->id);
+        $other = $this->getDataGenerator()->create_course(['category' => $category->id]);
+        get_file_storage()->create_file_from_string([
+            'contextid' => \context_system::instance()->id,
+            'component' => 'block_kursfilter',
+            'filearea' => 'course_backups',
+            'itemid' => (int)$course->id,
+            'filepath' => '/',
+            'filename' => 'backup.mbz',
+        ], 'backup');
+        $_COOKIE[visitor_id::COOKIE_NAME] = str_repeat('d', 64);
+        $DB->insert_record('block_kursfilter_ratings', (object)[
+            'courseid' => $course->id,
+            'cookiehash' => str_repeat('d', 64),
+            'stars' => 3,
+            'timecreated' => time(),
+        ]);
+
+        $courses = $this->search(['category' => (int)$category->id])['courses'];
+        $byid = [];
+        foreach ($courses as $entry) {
+            $byid[$entry['id']] = $entry;
+        }
+
+        $this->assertSame('Oberstufe-Bereich', $byid[(int)$course->id]['categoryname']);
+        $this->assertSame(['Oberstufe'], $byid[(int)$course->id]['tags']);
+        $this->assertTrue($byid[(int)$course->id]['hasbackup']);
+        $this->assertStringContainsString('courseid=' . $course->id, $byid[(int)$course->id]['backupurl']);
+        $this->assertSame(3.0, $byid[(int)$course->id]['ratingavg']);
+        $this->assertSame(1, $byid[(int)$course->id]['ratingcount']);
+        $this->assertSame(3, $byid[(int)$course->id]['visitorrating']);
+        $this->assertTrue($byid[(int)$course->id]['alreadyrated']);
+        $this->assertFalse($byid[(int)$other->id]['hasbackup']);
+        $this->assertSame('', $byid[(int)$other->id]['backupurl']);
+        $this->assertSame(0.0, $byid[(int)$other->id]['ratingavg']);
+        $this->assertSame(0, $byid[(int)$other->id]['visitorrating']);
+        $this->assertFalse($byid[(int)$other->id]['alreadyrated']);
+    }
+
+    public function test_visible_course_in_hidden_category_has_empty_category_name(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $category = $this->getDataGenerator()->create_category(['visible' => 0]);
+        $course = $this->getDataGenerator()->create_course(['category' => $category->id, 'visible' => 1]);
+
+        $courses = $this->search(['category' => (int)$category->id])['courses'];
+
+        $this->assertSame([(int)$course->id], $this->ids(['courses' => $courses]));
+        $this->assertSame('', $courses[0]['categoryname']);
+    }
+
+    public function test_tag_names_are_returned_like_the_former_tag_api(): void {
+        $this->resetAfterTest();
+        $this->setUser($this->getDataGenerator()->create_user());
+        $category = $this->getDataGenerator()->create_category();
+        $course = $this->getDataGenerator()->create_course(['category' => $category->id]);
+        \core_tag_tag::set_item_tags('core', 'course', $course->id, \context_course::instance($course->id), ['Mathe & Physik']);
+        $expected = array_values(\core_tag_tag::get_item_tags_array('core', 'course', $course->id));
+        $this->assertCount(1, $expected);
+
+        $courses = $this->search(['category' => (int)$category->id])['courses'];
+
+        $this->assertSame($expected, $courses[0]['tags']);
+    }
+
+    /**
+     * Creates a visible course in a category with the tag "Oberstufe".
+     *
+     * @param int $categoryid Category ID.
+     * @return \stdClass Course record.
+     */
+    private function create_tagged_course(int $categoryid): \stdClass {
+        $course = $this->getDataGenerator()->create_course(['category' => $categoryid]);
+        \core_tag_tag::set_item_tags('core', 'course', $course->id, \context_course::instance($course->id), ['Oberstufe']);
+        return $course;
     }
 }
